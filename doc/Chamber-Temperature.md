@@ -1,6 +1,7 @@
-OrcaSlicer use `M141/M191` command to control active chamber heater.  
+OrcaSlicer uses `M141/M191` command to control active chamber heater.  
 
-If `Activate temperature control` is checked, OrcaSlicer will insert `M191` command at the beginning of the gcode(before `Machine G-code`).  
+If `Activate temperature control` is checked, OrcaSlicer will insert `M191` command at the beginning of the gcode (before `Machine G-code`).  
+
 ![image](./images/activate_chamber_heater.jpg)  
 *Note: If the machine is equipped with an auxiliary fan, OrcaSlicer will automatically activate the fan during the heating period to help circulate air in the chamber.*  
 
@@ -12,7 +13,7 @@ To use the overall chamber temperature, which is the highest chamber temperature
 `M191 S{overall_chamber_temperature}`
 
 
---------------------------Klipper--------------------------  
+### --------------------------Klipper--------------------------  
 If you are using Klipper, you can define these macros to control the active chamber heater.  
 Bellow is a reference configuration for Klipper.   
 *Note: Don't forget to change the pin name/values to the actual values you are using in the configuration*
