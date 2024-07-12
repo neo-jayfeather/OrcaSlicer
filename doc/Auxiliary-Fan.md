@@ -1,4 +1,6 @@
-OrcaSlicer use `M106 P2` command to control auxiliary cooling fan.
+OrcaSlicer uses the `M106 P2` command to control auxiliary cooling fan.
+
+Auxiliary fans are not attached to printheads, and are used to cool parts, but used in addition to a part cooling fan, which may be mounted on the printhead or connected via a duct.
 
 If you are using Klipper, you can define a `M106` macro to control the both normal part cooling fan and auxiliary fan and exhaust fan.  
 Below is a reference configuration for Klipper.   
