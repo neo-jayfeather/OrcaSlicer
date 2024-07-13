@@ -16,3 +16,6 @@ The wiki has been divided into several pages which can be found below.
   </ul>
 </details>
 
+
+<style>p{color:red;}</style>
+*foo*
