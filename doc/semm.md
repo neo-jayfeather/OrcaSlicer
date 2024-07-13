@@ -4,7 +4,7 @@
 In this guide, we will explain the parameters for single extruder multimaterial printing in OrcaSlicer. The whole process and parameters are same as PrusaSlicer as OrcaSlicer is based on PrusaSlicer (with features ported from Bambu Studio and Cura). OrcaSlicer has some additional features ande G-Code for BBL machines. 
 
 ## Ramming
-*Note: This section does **not** apply to BBL printers, unless you are trying to use the AMS like an MMU*
+*Note: This section does **not** apply to BBL printers, unless you are trying to use the AMS like an MMU* <br>
 Ramming is forming the tip of the filament by purging filament. Less ramming creates a short tip and more stringing, while more ramming creates a longer and thicker tip with less stringing. 
 
 ## Manual filament change
