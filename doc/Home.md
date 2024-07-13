@@ -10,19 +10,8 @@ The wiki has been divided into several pages which can be found below.
 
 <details>
 <summary> Year 1 (2021 - 2022) </summary>
-  <details>
-  <summary> Refreshers </summary>
   <ul>
-    <li> Algorithmics </li>
-    <li> Basic tools </li>
+    <li>hi</li>
+    <li>hey</li>
   </ul>
-  </details>
-
-  <details>
-  <summary> Semester 1 </summary>
-  <ul>
-    <li> Data Visualization </li>
-    <li> Ethics </li>
-  </ul>
-  </details>
 </details>
