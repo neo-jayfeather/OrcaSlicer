@@ -8,9 +8,8 @@ The wiki has been divided into several pages which can be found below.
 - [How to build OrcaSlicer](./How-to-build)
 - [Developer Reference](./developer-reference/Home)
 
-
+<details>
 <summary> Year 1 (2021 - 2022) </summary>
-  
   <details>
   <summary> Refreshers </summary>
   <ul>
@@ -26,3 +25,4 @@ The wiki has been divided into several pages which can be found below.
     <li> Ethics </li>
   </ul>
   </details>
+</details>
