@@ -9,12 +9,10 @@ The wiki has been divided into several pages which can be found below.
 - [Developer Reference](./developer-reference/Home)
 
 <details>
-<summary> Year 1 (2021 - 2022) </summary>
+<summary>[Calibration](./Calibration)</summary>
   <ul>
     <li>hi</li>
     <li>hey</li>
   </ul>
 </details>
 
-
-This is a <span style="color:red">red</span> word.
