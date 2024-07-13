@@ -17,10 +17,4 @@ The wiki has been divided into several pages which can be found below.
 </details>
 
 
-<style
-  type="text/css">
-h1 {color:red;}
-
-p {color:blue;}
-</style>
-<p>okay</p>
+This is a <span style="color:red">red</span> word.
