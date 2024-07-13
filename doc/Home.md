@@ -9,7 +9,7 @@ The wiki has been divided into several pages which can be found below.
 - [Developer Reference](./developer-reference/Home)
 
 <details>
-<summary>[Calibration](./Calibration)</summary>
+<summary> - [Calibration](./Calibration) </summary>
   <ul>
     <li>hi</li>
     <li>hey</li>
