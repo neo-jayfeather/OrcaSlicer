@@ -1,4 +1,5 @@
-WIP...
+### Seam position
+
 
 ### Scarf joint seam
 WIP...
