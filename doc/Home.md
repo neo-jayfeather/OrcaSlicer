@@ -9,7 +9,6 @@ The wiki has been divided into several pages which can be found below.
 - [Developer Reference](./developer-reference/Home)
 
 
-<details>
 <summary> Year 1 (2021 - 2022) </summary>
   
   <details>
@@ -27,5 +26,3 @@ The wiki has been divided into several pages which can be found below.
     <li> Ethics </li>
   </ul>
   </details>
-  
-</details>
