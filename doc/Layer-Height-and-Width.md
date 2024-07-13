@@ -2,7 +2,7 @@
 Layer height defines how thick each slice is, and how much the Z axis moves when the printer is finished with on layer. It is usually recommended for it to not exceed the nozzle diameter, and usually is 1/4 to 1/2 of the nozzle's diameter. The first layer's height can be thickened to increase bed adhesion or to assist with very minor bed leveling issues. 
 
 # Line Width
-These parameters control how thick lines are. The lines are defined by their type, like walls, surfaces, and infill. If you don't understand line types, you can select `Line Type` as your color scheme, and select/deselect options to understand their resepctive parts better.
+These parameters control how thick lines are. The lines are defined by their type, like walls, surfaces, and infill. If you don't understand line types, you can select `Line Type` as your color scheme, and select/deselect options to understand their resepctive parts better. Please note that these parameters can also be noted in percentages of the nozzle diameter. 
 <details>
   <summary><h2>Line width types</h2></summary>
     <dl>
