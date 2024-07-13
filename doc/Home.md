@@ -23,5 +23,6 @@ The wiki has been divided into several pages which can be found below.
 
 
 - [[g]]
-  - [huui]
-= [hu]
+  - [[huui]]
+= [[hu]]
+]
