@@ -6,7 +6,7 @@ The wiki has been divided into several pages which can be found below.
 - [Calibration](./Calibration)
   - For all your filament and printer calibration needs.
 - [Print settings](./Print-settings)
-- [Single Extruder Multi-Material](./semm)
+- [Single Extruder Multi-Material](./semm.md)
 - [How to build OrcaSlicer](./How-to-build)
 - [Developer Reference](./developer-reference/Home)
 
