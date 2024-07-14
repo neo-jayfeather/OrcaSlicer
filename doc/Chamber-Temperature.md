@@ -13,7 +13,8 @@ To use the overall chamber temperature, which is the highest chamber temperature
 `M191 S{overall_chamber_temperature}`
 
 
---------------------------Klipper--------------------------  
+---
+## Klipper
 If you are using Klipper, you can define these macros to control the active chamber heater.  
 Bellow is a reference configuration for Klipper.   
 > [!IMPORTANT]
@@ -52,3 +53,8 @@ gcode:
     {% endif %}
 
 ```
+
+
+---
+## Marlin
+If you would like to set a maximum temperature without waiting (for example, to heat up the chamber, but also do bed-leveling and preparation during it), use `M141` which sets the temperature, but does not make your machine wait until it reaches the temperature. 
