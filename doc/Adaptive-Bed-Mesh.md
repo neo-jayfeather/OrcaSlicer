@@ -25,18 +25,19 @@ The implementation is designed to be straightforward, requiring no additional pl
 `ALGORITHM`: Identifies the algorithm used for adaptive bed mesh interpolation. This variable is useful for Klipper users. If bed_mesh_probe_count is less than 4, the algorithm is set to `lagrange`. Otherwise, it is set to `bicubic`. 
 
 ## Example of Adaptive Bed Mesh usage in Orca Slicer:  
-
 ### Marlin:
 ```
 ; Marlin don't support speicify the probe count yet, so we only specify the probe area
 G29 L{adaptive_bed_mesh_min[0]} R{adaptive_bed_mesh_max[0]} F{adaptive_bed_mesh_min[1]} B{adaptive_bed_mesh_max[1]} T V4
 ```
+---
 ### Klipper:
 ```
 ; Always pass `ADAPTIVE_MARGIN=0` because Orca has already handled `adaptive_bed_mesh_margin` internally
 ; Make sure to set ADAPTIVE to 0 otherwise Klipper will use it's own adaptive bed mesh logic
 BED_MESH_CALIBRATE mesh_min={adaptive_bed_mesh_min[0]},{adaptive_bed_mesh_min[1]} mesh_max={adaptive_bed_mesh_max[0]},{adaptive_bed_mesh_max[1]} ALGORITHM=[bed_mesh_algo] PROBE_COUNT={bed_mesh_probe_count[0]},{bed_mesh_probe_count[1]} ADAPTIVE=0 ADAPTIVE_MARGIN=0
 ```
+---
 ### RRF:
 ```
 M557 X{adaptive_bed_mesh_min[0]}:{adaptive_bed_mesh_max[0]} Y{adaptive_bed_mesh_min[1]}:{adaptive_bed_mesh_max[1]} P{bed_mesh_probe_count[0]}:{bed_mesh_probe_count[1]}  
