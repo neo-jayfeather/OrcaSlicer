@@ -1,36 +1,38 @@
-# Localization and translation guide
+# Localization and Translation Guide
 
-The purpose of this guide is to describe how to contribute to the Orca Slicer translations. We use GNUgettext for extracting string resources from the project and PoEdit for editing translations.
+The purpose of this guide is to describe how to contribute to the OrcaSlicer translations. We use GNUgettext for extracting string resources from the project and PoEdit for editing translations.
 
 Those can be downloaded here: 
--    https://sourceforge.net/directory/os:windows/?q=gnu+gettext GNUgettext package contains a set of tools to extract strings from the source code and to create the translation Catalog.
--    https://poedit.net PoEdit provides good interface for the translators.
-
+-    https://sourceforge.net/directory/os:windows/?q=gnu+gettext  
+	- GNUgettext package contains a set of tools to extract strings from the source code and to create the translation Catalog.
+-    https://poedit.net  
+  	- PoEdit provides good interface for the translators.
+	
 After GNUgettext is installed, it is recommended to add the path to gettext/bin to PATH variable.
 
 Full manual for GNUgettext can be seen here: http://www.gnu.org/software/gettext/manual/gettext.html
 
 
 ### Scenario 1. How do I add a translation or fix an existing translation
-1. Get PO-file 'OrcaSlicer_xx.pot' from corresponding sub-folder here:
+1. Get PO-file `OrcaSlicer_xx.pot` from corresponding sub-folder here:
 https://github.com/softfever/OrcaSlicer/tree/master/localization/i18n
-2. Open this file in PoEdit as "Edit a translation"
-3. Apply your corrections to the translation
-4. Push changed OrcaSlicer_xx.po into the original folder
-5. copy OrcaSlicer_xx.mo into resources/i18n/xx and rename it to OrcaSlicer.mo, then push the changed file.
+2. Open this file in PoEdit as "Edit a translation."
+3. Apply your corrections to the translation.
+4. Push changed OrcaSlicer_xx.po into the original folder.
+5. Copy `OrcaSlicer_xx.mo` into `resources/i18n/xx` and rename it to `OrcaSlicer.mo`, then push the changed file.
 
 ### Scenario 2. How do I add a new language support
-1. Get file OrcaSlicer.pot here :
+1. Get file `OrcaSlicer.pot` here :
 https://github.com/softfever/OrcaSlicer/tree/master/localization/i18n
 2. Open it in PoEdit for "Create new translation"
-3. Select Translation Language (for example French).
+3. Select Translation Language (i.e. French).
 4. As a result you will have fr.po - the file containing translation to French.
 Notice. When the translation is complete you need to:
-    - Rename the file to OrcaSlicer_fr.po
-    - Click "Save file" button. OrcaSlicer_fr.mo will be created immediately
-    - Bambu_Studio_fr.po needs to be copied into the sub-folder fr of https://github.com/softfever/OrcaSlicer/tree/master/localization/i18n, and be pushed
-	- copy OrcaSlicer_xx.mo into resources/i18n/xx and rename it to OrcaSlicer.mo, then push the changed file.
-( name of folder "fr" means "French" - the translation language). 
+    - Rename the file to `OrcaSlicer_fr.po`
+    - Click "Save file" button. `OrcaSlicer_fr.mo` will be created immediately
+    - `Bambu_Studio_fr.po` needs to be copied into the sub-folder fr of https://github.com/softfever/OrcaSlicer/tree/master/localization/i18n, and be pushed
+	- Copy `OrcaSlicer_xx.mo` into `resources/i18n/xx` and rename it to `OrcaSlicer.mo`, then push the changed file.
+(name of folder "fr" means "French" -- the translation language). 
 
 ### Scenario 3. How do I add a new text resource when implementing a feature to Orca Slicer
 Each string resource in Orca Slicer available for translation needs to be explicitly marked using L() macro like this:
@@ -40,8 +42,7 @@ auto msg = L("This message to be localized")
 To get translated text use one of needed macro/function (`_(s)` or `_CHB(s)` ).
 If you add new file resource, add it to the list of files containing macro `L()`
 
-### Scenario 4. How do I use GNUgettext to localize my own application taking Orca Slicer as an example
-
+### Scenario 4. How do I use GNUgettext to localize my own application taking Orca Slicer as an example  
 1.  For convenience create a list of files with this macro `L(s)`. We have 
 https://github.com/softfever/OrcaSlicer/blob/master/localization/i18n/list.txt.
 
