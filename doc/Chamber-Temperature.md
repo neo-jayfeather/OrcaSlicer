@@ -4,7 +4,7 @@ If `Activate temperature control` is checked, OrcaSlicer will insert `M191` comm
 ![image](./images/activate_chamber_heater.jpg)  
 
 > [!NOTE]
-> If the machine is equipped with an auxiliary fan, OrcaSlicer will automatically activate the fan during the heating period to help circulate air in the chamber.
+> If the machine is equipped with an [auxiliary fan](./Auxiliary-Fan), OrcaSlicer will automatically activate the fan (`M106 P2`) during the heating period to help circulate air in the chamber.
 
 There are two chamber temperature variables available that we can use in `Machine G-code` to control the chamber temperature, if you prefer:  
 To access the chamber temperature set in the first filament, use:  
