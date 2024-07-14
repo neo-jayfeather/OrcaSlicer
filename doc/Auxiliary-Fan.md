@@ -6,7 +6,7 @@ Auxiliary fans are not attached to printheads, and are used to cool parts, but u
 > If you are using Klipper, you can define a `M106` macro to control the both normal part cooling fan and auxiliary fan and exhaust fan. Below is a reference configuration for Klipper.   
 
 > [!NOTE]
-> Don't forget to change the pin name to the actual pin name you are using in the configuration
+> Don't forget to change the pin name to the actual pin name you are using in the configuration.
 
 ```
 # instead of using [fan], we define the default part cooling fan with [fan_generic] here
