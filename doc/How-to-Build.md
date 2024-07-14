@@ -5,7 +5,7 @@
 
 - Mac 64-bit  
   - Tools needed: Xcode, Cmake, git, gettext
-  - run `build_release_macos.sh`
+  - Run `build_release_macos.sh`
 
 - Ubuntu  
-  - run `BuildLinux.sh -udisr`
+  - Run `BuildLinux.sh -udisr`
