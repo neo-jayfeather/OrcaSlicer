@@ -1,3 +1,7 @@
+## Description
+Seams are where extrusions start and stop, and may create a visible line or small blob. Seams are mostly inevitable, but OrcaSlicer has some settings that make it more configurable, and potentially make them almost invisible. Seams are completely invisible in vase mode/spiral vase. They can also be hidden using sharp corners, but are harder to hide on cylindrical surfaces. 
+
+
 ### Seam position
 
 
