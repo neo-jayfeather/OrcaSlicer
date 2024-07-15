@@ -8,7 +8,7 @@
 - [Orca Tolerance Test](#Orca-Tolerance-Test)
 - [Advanced calibration](#Advanced-Calibration)
   1. [Max Volumetric speed](#Max-Volumetric-speed)
-  2. [VFA]  
+  2. [VFA](#VFA)
 
 > [!IMPORTANT]
 > After completing the calibration process, remember to create a new project in order to exit the calibration mode.
@@ -141,6 +141,21 @@ You can also return to OrcaSlicer in the "Preview" tab, make sure the color sche
 
 > [!NOTE]
 > You may also choose to conservatively reduce the flow by 5-10% to ensure print quality.
+
+## VFA
+
+VFA refers to thin, vertical lines or striations that can appear on a 3D print. These repeating patterns often indicate inconsistencies in extrusion or layer adhesion. They can be caused by factors such as:
+
+- Mechanical issues: Loose belts, ringing (vibrations), or printer frame flex.
+- Extrusion problems: Under- or over-extrusion, inconsistent filament flow.
+- Slicer settings: Incorrect configuration of print speed, acceleration, or retraction.
+VFAs can be particularly noticeable on smooth surfaces and can significantly impact print quality. This test is designed to help identify and address VFAs while also optimizing print speed.
+
+> [!NOTE]
+> Randomly spaced lines might indicate different issues like wood grain patterns and may require flow calibration.
+
+[ADD IMAGES]
+
 
 ***
 *Credits:*  
