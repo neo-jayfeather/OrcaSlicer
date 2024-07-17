@@ -1,5 +1,12 @@
 ## Bed Types
 OrcaSlicer supports rectangular, circular, and custom shaped (via an imported `.stl`) beds. 
+> [!CAUTION]
+> Only modify your bed size if you know how large it is and are creating a custom profile. Make sure your exclusion areas are same, or remove the uncessary ones.
+
+![bed selection](./images/bed-selection1.png)
+![bed selection](./images/bed-selection2.png)
+
+
 
 ## Build Plate Types
 Differnet biuld plate types can be enabled in printer settings. Once enabled, a build plate can be selectedin the drop-down menu, and corresponding bed temperature will be set automatically. You can set the bed temperature for each bed type in the filament settings as demonstrated in the following animation.  
