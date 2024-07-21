@@ -6,9 +6,12 @@ Seams are where extrusions start and stop, and may create a visible line or smal
 
 
 ### Scarf joint seam
-WIP...
+Scarf joint seams follow woodworking scarf joints and use a sloping interface to help hide the seam. [finish]
 
 ### Seam gap
+Seam gap is the gap between the start and stop of an extrusion for a single wall. It can be expressed as a % of the nozzle width, or in mm. 
+A higher number will result in a less visible seam but may cause gaps, and a lower number will result in a more visible seam but less gaps. 
+10% is a good starting point for regular and scarf seams. 
 ![image](https://user-images.githubusercontent.com/103989404/215331359-236874c9-ca91-4dd4-b969-3cefc70ebe1b.png)
 
 ### Role-based wipe speed(auto)
