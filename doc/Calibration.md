@@ -149,12 +149,48 @@ VFA refers to thin, vertical lines or striations that can appear on a 3D print. 
 - Mechanical issues: Loose belts, ringing (vibrations), or printer frame flex.
 - Extrusion problems: Under- or over-extrusion, inconsistent filament flow.
 - Slicer settings: Incorrect configuration of print speed, acceleration, or retraction.
-VFAs can be particularly noticeable on smooth surfaces and can significantly impact print quality. This test is designed to help identify and address VFAs while also optimizing print speed.
+VFAs can be particularly noticeable on smooth surfaces and can significantly impact print quality. This test is designed to help identify and address VFAs while also optimizing print speed. If your VFA's are around 2mm apart, they are most likely caused by belt/pulley/idler teeth imperfections somewhere. Please ensure that what you think are VFA's are perfectly vertical, otherwise it may be another issue, like ringing.
+Using OrcaSlicer's VFA test, you may notice patterns with different angles of motion. CoreXY printers may experience more issues in a single diagonal, or combined motions (parallel to X and Y axes).
+
+This guide from Ellis' Print Tuning Guide may help you with CoreXY VFA's and finding out which motors are causing the issue.
+
+Artifacts are equally prominent in all directions:  
+> A and B motor pulleys  
+> X and Y linear rails  
+> A and B belts  
+> A and B motors
+
+Artifacts are most prominent in in A:  
+> Bearings in A belt path  
+> A motor pulley 
+> A belt  
+> A motor
+
+Artifacts are most prominent in in B:
+> Bearings in B belt path  
+> B motor pulley  
+> B belt  
+> B motor
+
+Artifacts are most prominent in in X:
+> XY joint idlers  
+> X linear rails(s)
+
+Artifacts are most prominent in in Y:
+> Y linear rails
+
+Artifacts are most prominent in in A/B/X, but not Y:
+> XY joint idlers  
+> X linear rail(s)
+
+Artifacts are most prominent in in A/B/Y, but not X:
+> Y linear rails
+
+Artifacts are most prominent in in X/Y, but not A/B:
+> A and B motors
 
 > [!NOTE]
 > Randomly spaced lines might indicate different issues like wood grain patterns and may require flow calibration.
-
-[ADD IMAGES]
 
 
 ***
