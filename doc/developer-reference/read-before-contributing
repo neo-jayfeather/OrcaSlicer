@@ -1,0 +1,66 @@
+# Trying to contribute? 
+Let's get started! 
+If you would like to contribute to the wiki, please make sure that you understand how to use OrcaSlicer and most of its features, are familiar with printers, and are fluent and know some 3D printing jargon in the wiki language (only English right now).
+This wiki is written in markdown (.md) files which are found under `OrcaSlicer/doc`. 
+
+## Markdown
+Basic markdown knowledge is needed for this, but markdown is relatively simple and has a lot of [documentation](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax). 
+Here's some basic information
+
+# Heading 1
+`# This is a heading, like the one at the top of this page labeled "Trying to contribute?"`
+## Heading 2
+`## This is also a heading, but smaller, like the one stated "Markdown"`
+### Heading 3
+`### This is an even smaller heading`
+#### Headings 4-6
+Your headings can have up to 6 #'s, but you sohuld only need up to 3 (if you need that many, please create a separate wiki page for that content)
+Make sure there is a space between the last # and the first character of the title.
+
+This text is plaintext, it is what the majority of the wiki should be, and looks like any of the descriptive text.
+You do not need any modifiers for this.
+To add a break you can use `<br>`, or press enter twice to create a blank line between sections of text.
+Make each sentence a new line, so the markdown file is more readable.
+(It will still appear together in the render, as long as there is no blank line separation.)
+
+## GitHub Markers
+GitHub has some markers/cards you can use to point out important points. 
+> [!NOTE]
+> `> [!NOTE]`
+> Use this to add additional information that may be helpful to the user that should stand out a little.
+
+> [!TIP]
+> `> [!TIP]`
+> To give a user a tip that will help them succeed, that not all users may need. 
+
+> [!WARNING]
+> `> [!WARNING]`
+> To warn of potential dangers, or unexpected things that could happen that the user may not expect. 
+
+> [!IMPORTANT]
+> `> [!IMPORTANT]`
+> An important step or item that the user should complete before the next part.
+
+> [!CAUTION]
+> `> [!CAUTION]`
+> To emphaize the important of caution or state potential dangers.
+
+## Code 
+You will use this to display G-Code or any relevant code needed for the wiki.
+```
+Multi
+Line
+Codeblock
+```
+````
+```
+This is a codeblock, for single lines, use single backtick.
+
+```
+````
+
+`Single Line Codeblock`
+```
+`This is a Single Line Codeblock`
+```
+
