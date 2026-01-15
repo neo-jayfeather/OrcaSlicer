@@ -22,6 +22,9 @@
 #include <cstring>
 #include <iostream>
 #include <math.h>
+#include <filesystem>
+
+namespace stdfs = std::filesystem;
 
 #if defined(__linux__) || defined(__LINUX__)
 #include <condition_variable>
@@ -453,7 +456,7 @@ void record_exit_reson(std::string outputdir, int code, int plate_id, std::strin
 
 static int decode_png_to_thumbnail(std::string png_file, ThumbnailData& thumbnail_data)
 {
-    if (!boost::filesystem::exists(png_file))
+    if (!stdfs::exists(png_file))
     {
         BOOST_LOG_TRIVIAL(error) << boost::format("can not find file %1%")%png_file;
         return -1;
@@ -6805,7 +6808,7 @@ int CLI::run(int argc, char **argv)
 
             Print *print = dynamic_cast<Print *>(print_base);
 
-             //don't render calibration picture
+            // don't render calibration picture
             /*BuildVolume build_volume(part_plate->get_shape(), print_height);
             const std::vector<BoundingBoxf3>& exclude_bounding_box = part_plate->get_exclude_areas();
             Slic3r::GUI::GCodeViewer gcode_viewer;
@@ -6819,13 +6822,13 @@ int CLI::run(int argc, char **argv)
 
             ThumbnailData* calibration_data = new ThumbnailData();
             const ThumbnailsParams calibration_params = { {}, false, true, true, true, i };
-            //BBS fixed size
+            // BBS fixed size
             const int cali_thumbnail_width = 2560;
             const int cali_thumbnail_height = 2560;
             gcode_viewer.render_calibration_thumbnail(*calibration_data, cali_thumbnail_width, cali_thumbnail_height,
                 calibration_params, partplate_list, opengl_mgr);
-            //generate_calibration_thumbnail(*calibration_data, thumbnail_width, thumbnail_height, calibration_params);
-            //*plate_bboxes[index] = p->generate_first_layer_bbox();
+            // generate_calibration_thumbnail(*calibration_data, thumbnail_width, thumbnail_height, calibration_params);
+            // *plate_bboxes[index] = p->generate_first_layer_bbox();
             calibration_thumbnails.push_back(calibration_data);*/
 
             PlateBBoxData* plate_bbox = new PlateBBoxData();
