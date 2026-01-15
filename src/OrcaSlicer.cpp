@@ -37,7 +37,6 @@ using namespace nlohmann;
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/cstdlib.hpp>
 #include <boost/nowide/iostream.hpp>
@@ -462,11 +461,11 @@ static int decode_png_to_thumbnail(std::string png_file, ThumbnailData& thumbnai
         return -1;
     }
 
-    const std::size_t &size  = boost::filesystem::file_size(png_file);
+    const std::size_t &size  = stdfs::file_size(png_file);
     std::string png_buffer(size, '\0');
     png_buffer.reserve(size);
 
-    boost::filesystem::ifstream ifs(png_file, std::ios::binary);
+    stdfs::ifstream ifs(png_file, std::ios::binary);
     ifs.read(png_buffer.data(), png_buffer.size());
     ifs.close();
 
@@ -1194,7 +1193,7 @@ int CLI::run(int argc, char **argv)
     XInitThreads();
 #endif
 
-	// Switch boost::filesystem to utf8.
+	// Switch std::filesystem/stdfs to utf8.
     try {
         boost::nowide::nowide_filesystem();
     } catch (const std::runtime_error& ex) {
@@ -1230,6 +1229,7 @@ int CLI::run(int argc, char **argv)
             false;
 #else
             // On Unix systems, the prusa-slicer binary may be symlinked to give the application a different meaning.
+            // boost filesystem is no longer an included file: this code will not work --v
             boost::algorithm::iends_with(boost::filesystem::path(argv[0]).filename().string(), "gcodeviewer");
 #endif // _WIN32*/
 
