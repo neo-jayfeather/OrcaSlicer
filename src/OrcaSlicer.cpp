@@ -601,10 +601,10 @@ static void load_default_gcodes_to_config(DynamicPrintConfig& config, Preset::Ty
 static int load_assemble_plate_list(std::string config_file, std::vector<assemble_plate_info_t> &assemble_plate_info_list)
 {
     int ret = 0;
-    boost::filesystem::path directory_path(config_file);
+    stdfs::path directory_path(config_file);
 
     BOOST_LOG_TRIVIAL(info) << boost::format("%1% enter, file %2%")%__FUNCTION__ % config_file;
-    if (!fs::exists(directory_path)) {
+    if (!stdfs::exists(directory_path)) {
         BOOST_LOG_TRIVIAL(error) << boost::format("directory %1% not exist.")%config_file;
         return CLI_FILE_NOTFOUND;
     }
@@ -890,8 +890,8 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
             TriangleMesh mesh;
             bool skip_filament = false;
 
-            boost::filesystem::path object_path(assemble_object.path);
-            if (!fs::exists(object_path)) {
+            stdfs::path object_path(assemble_object.path);
+            if (!stdfs::exists(object_path)) {
                 BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": directory %1% not exist in plate %2%") % assemble_object.path % (index + 1);
                 return CLI_FILE_NOTFOUND;
             }
@@ -1130,10 +1130,10 @@ static void load_downward_settings_list_from_config(std::string config_file, std
 {
     std::map<std::string, std::string> printer_params;
 
-    boost::filesystem::path directory_path(config_file);
+    stdfs::path directory_path(config_file);
 
     BOOST_LOG_TRIVIAL(info) << boost::format("%1%, will parse file %2% for printer mode %3%, printer name %4%")%__FUNCTION__ % config_file %printer_model %printer_name;
-    if (!fs::exists(directory_path)) {
+    if (!stdfs::exists(directory_path)) {
         BOOST_LOG_TRIVIAL(warning) << boost::format("file %1% not exist.")%config_file;
     }
     else {
@@ -1485,7 +1485,7 @@ int CLI::run(int argc, char **argv)
     }
 
     /*for (const std::string& file : m_input_files)
-        if (is_gcode_file(file) && boost::filesystem::exists(file)) {
+        if (is_gcode_file(file) && stdfs::exists(file)) {
             start_as_gcodeviewer = true;
             BOOST_LOG_TRIVIAL(info) << "found a gcode file:" << file << ", will start as gcode viewer\n";
             break;
@@ -1501,7 +1501,7 @@ int CLI::run(int argc, char **argv)
     }
     if (load_assemble_list.empty()) {
         for (const std::string& file : m_input_files) {
-            if (!boost::filesystem::exists(file)) {
+            if (!stdfs::exists(file)) {
                 boost::nowide::cerr << "No such file: " << file << std::endl;
                 record_exit_reson(outfile_dir, CLI_FILE_NOTFOUND, 0, cli_errors[CLI_FILE_NOTFOUND], sliced_info);
                 flush_and_exit(CLI_FILE_NOTFOUND);
@@ -1794,7 +1794,7 @@ int CLI::run(int argc, char **argv)
             }
         }
         catch (std::exception& e) {
-            boost::nowide::cerr << construct_assemble_list << ": " << e.what() << std::endl;
+            boost::nowide::cerr << "construct_assemble_list: " << e.what() << std::endl;
             record_exit_reson(outfile_dir, CLI_DATA_FILE_ERROR, 0, cli_errors[CLI_DATA_FILE_ERROR], sliced_info);
             flush_and_exit(CLI_DATA_FILE_ERROR);
         }
@@ -1813,7 +1813,7 @@ int CLI::run(int argc, char **argv)
     if (!custom_gcode_file.empty()) {
         // parse the custom gcode json file
         std::string file = custom_gcode_file;
-        if(!boost::filesystem::exists(file)) {
+        if(!stdfs::exists(file)) {
             boost::nowide::cerr << __FUNCTION__ << ": can not find custom_gcode file: " << file << std::endl;
             record_exit_reson(outfile_dir, CLI_FILE_NOTFOUND, 0, cli_errors[CLI_FILE_NOTFOUND], sliced_info);
             flush_and_exit(CLI_FILE_NOTFOUND);
@@ -1845,7 +1845,7 @@ int CLI::run(int argc, char **argv)
 
     auto load_config_file = [config_substitution_rule](const std::string& file, DynamicPrintConfig& config, std::string& config_type,
                                 std::string& config_name, std::string& filament_id, std::string& config_from) {
-        if (! boost::filesystem::exists(file)) {
+        if (! stdfs::exists(file)) {
             boost::nowide::cerr << __FUNCTION__<< ": can not find setting file: " << file << std::endl;
             return CLI_FILE_NOTFOUND;
         }
@@ -1944,7 +1944,7 @@ int CLI::run(int argc, char **argv)
             printer_model = config.option<ConfigOptionString>("printer_model", true)->value;
             if (!printer_model.empty()) {
                 std::string printer_model_path = resources_dir() + "/profiles/BBL/machine_full/"+printer_model+".json";
-                if (boost::filesystem::exists(printer_model_path))
+                if (stdfs::exists(printer_model_path))
                 {
                     std::map<std::string, std::string> key_values;
 
@@ -2201,7 +2201,7 @@ int CLI::run(int argc, char **argv)
                         printer_model = config.option<ConfigOptionString>("printer_model", true)->value;
                         if (!printer_model.empty()) {
                             std::string printer_model_path = resources_dir() + "/profiles/BBL/machine_full/"+printer_model+".json";
-                            if (boost::filesystem::exists(printer_model_path))
+                            if (stdfs::exists(printer_model_path))
                             {
                                 std::map<std::string, std::string> key_values;
 
@@ -2262,7 +2262,7 @@ int CLI::run(int argc, char **argv)
             if (new_printer_name.empty() && !current_printer_system_name.empty()) {
                 //use the original printer name in 3mf
                 std::string system_printer_path = resources_dir() + "/profiles/BBL/machine_full/"+current_printer_system_name+".json";
-                if (! boost::filesystem::exists(system_printer_path)) {
+                if (! stdfs::exists(system_printer_path)) {
                     BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_printer_path;
                     //use original one
                 }
@@ -2282,7 +2282,7 @@ int CLI::run(int argc, char **argv)
                     printer_model = config.option<ConfigOptionString>("printer_model", true)->value;
                     if (!printer_model.empty()) {
                         std::string printer_model_path = resources_dir() + "/profiles/BBL/machine_full/"+printer_model+".json";
-                        if (boost::filesystem::exists(printer_model_path))
+                        if (stdfs::exists(printer_model_path))
                         {
                             std::map<std::string, std::string> key_values;
 
@@ -2303,7 +2303,7 @@ int CLI::run(int argc, char **argv)
             if (new_process_name.empty() && !current_process_system_name.empty()) {
                 //use the original printer name in 3mf
                 std::string system_process_path = resources_dir() + "/profiles/BBL/process_full/"+current_process_system_name+".json";
-                if (! boost::filesystem::exists(system_process_path)) {
+                if (! stdfs::exists(system_process_path)) {
                     BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_process_path;
                     //use original one
                 }
@@ -2374,7 +2374,7 @@ int CLI::run(int argc, char **argv)
                 {
                     std::string system_filament_path = resources_dir() + "/profiles/BBL/filament_full/"+current_filaments_system_name[index]+".json";
                     current_index++;
-                    if (! boost::filesystem::exists(system_filament_path)) {
+                    if (! stdfs::exists(system_filament_path)) {
                         BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_filament_path;
                         continue;
                     }
@@ -2412,7 +2412,7 @@ int CLI::run(int argc, char **argv)
         if (!current_printer_system_name.empty()) {
             //use the original printer name in 3mf
             std::string system_printer_path = resources_dir() + "/profiles/BBL/machine_full/"+current_printer_system_name+".json";
-            if (! boost::filesystem::exists(system_printer_path)) {
+            if (! stdfs::exists(system_printer_path)) {
                 BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_printer_path;
                 //skip
             }
@@ -2434,7 +2434,7 @@ int CLI::run(int argc, char **argv)
         if (!current_process_system_name.empty()) {
             //use the original printer name in 3mf
             std::string system_process_path = resources_dir() + "/profiles/BBL/process_full/"+current_process_system_name+".json";
-            if (! boost::filesystem::exists(system_process_path)) {
+            if (! stdfs::exists(system_process_path)) {
                 BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_process_path;
                 //use original one
             }
@@ -2765,10 +2765,10 @@ int CLI::run(int argc, char **argv)
                 BOOST_LOG_TRIVIAL(info) << boost::format("check printer cli safe params, current_printer_name %1%, new_printer_name %2%, printer_model %3%")%current_printer_name %new_printer_name %printer_model;
                 std::map<std::string, std::string> printer_params;
                 std::string cli_config_file = resources_dir() + "/profiles/BBL/cli_config.json";
-                boost::filesystem::path directory_path(cli_config_file);
+                stdfs::path directory_path(cli_config_file);
 
                 BOOST_LOG_TRIVIAL(info) << boost::format("line %1% , will parse file %2%")%__LINE__ % cli_config_file;
-                if (!fs::exists(directory_path)) {
+                if (!stdfs::exists(directory_path)) {
                     BOOST_LOG_TRIVIAL(warning) << boost::format("file %1% not exist.")%cli_config_file;
                 }
                 else {
@@ -4596,7 +4596,7 @@ int CLI::run(int argc, char **argv)
                     }
                 }
 
-                if (!arrange_cfg.is_seq_print && (assemble_plate.filaments_count > 1)||(enable_wrapping_detect && !current_wrapping_exclude_area.empty()))
+                if ((!arrange_cfg.is_seq_print && assemble_plate.filaments_count > 1) || (enable_wrapping_detect && !current_wrapping_exclude_area.empty()))
                 {
                     //prepare the wipe tower
                     int plate_count = partplate_list.get_plate_count();
@@ -6149,8 +6149,8 @@ int CLI::run(int argc, char **argv)
                                     if (ret) {
                                         BOOST_LOG_TRIVIAL(error) << "plate "<< index+1<< ": export Slicing data error, ret=" << ret;
                                         export_slicedata_error = true;
-                                        if (fs::exists(plate_dir))
-                                            fs::remove_all(plate_dir);
+                                        if (stdfs::exists(plate_dir))
+                                            stdfs::remove_all(plate_dir);
                                         record_exit_reson(outfile_dir, ret, index+1, cli_errors[ret], sliced_info);
                                         flush_and_exit(ret);
                                     }
@@ -6305,7 +6305,7 @@ int CLI::run(int argc, char **argv)
                 if (!oriented_or_arranged && !regenerate_thumbnails && plate_data_src.size() > i)
                     plate_data->thumbnail_file = plate_data_src[i]->thumbnail_file;
                 BOOST_LOG_TRIVIAL(info) << boost::format("thumbnails stage: plate %1%'s thumbnail data is invalid, check the file %2% exist or not")%(i+1) %plate_data->thumbnail_file;
-                if (plate_data->thumbnail_file.empty() || (!boost::filesystem::exists(plate_data->thumbnail_file))) {
+                if (plate_data->thumbnail_file.empty() || (!stdfs::exists(plate_data->thumbnail_file))) {
                     BOOST_LOG_TRIVIAL(info) << boost::format("thumbnails stage: plate %1%'s thumbnail file also not there, need to regenerate")%(i+1);
                     if (!skip_this_plate) {
                         need_regenerate_thumbnail = true;
@@ -6334,7 +6334,7 @@ int CLI::run(int argc, char **argv)
                 if (!regenerate_thumbnails && (plate_data_src.size() > i)) {
                     plate_data->no_light_thumbnail_file = plate_data_src[i]->no_light_thumbnail_file;
                 }
-                if (plate_data->no_light_thumbnail_file.empty() || (!boost::filesystem::exists(plate_data->no_light_thumbnail_file))) {
+                if (plate_data->no_light_thumbnail_file.empty() || (!stdfs::exists(plate_data->no_light_thumbnail_file))) {
                     BOOST_LOG_TRIVIAL(info) << boost::format("thumbnails stage: plate %1%'s no_light_thumbnail_file %2% also not there, need to regenerate")%(i+1)%plate_data->no_light_thumbnail_file;
                     if (!skip_this_plate) {
                         need_regenerate_no_light_thumbnail = true;
@@ -6357,7 +6357,7 @@ int CLI::run(int argc, char **argv)
                     plate_data->pick_file = plate_data_src[i]->pick_file;
                 }
                 if (plate_data->top_file.empty()|| plate_data->pick_file.empty()
-                    || (!boost::filesystem::exists(plate_data->top_file)) || (!boost::filesystem::exists(plate_data->pick_file))) {
+                    || (!stdfs::exists(plate_data->top_file)) || (!stdfs::exists(plate_data->pick_file))) {
                     BOOST_LOG_TRIVIAL(info) << boost::format("thumbnails stage: plate %1%'s top_file %2% also not there, need to regenerate")%(i+1)%plate_data->top_file;
                     if (!skip_this_plate) {
                         need_regenerate_top_thumbnail = true;
@@ -6505,7 +6505,7 @@ int CLI::run(int argc, char **argv)
                                     BOOST_LOG_TRIVIAL(info) << boost::format("plate %1% has a valid thumbnail, width %2%, height %3%， directly using it")%(i+1) %plate_data->plate_thumbnail.width %plate_data->plate_thumbnail.height;
                                 }
                             }
-                            else if (!plate_data->thumbnail_file.empty() && (boost::filesystem::exists(plate_data->thumbnail_file)))
+                            else if (!plate_data->thumbnail_file.empty() && (stdfs::exists(plate_data->thumbnail_file)))
                             {
                                 if ((plate_to_slice != 0) && (plate_to_slice != (i + 1))) {
                                     BOOST_LOG_TRIVIAL(info) << boost::format("Line %1%: regenerate thumbnail, clear plate %2%'s thumbnail file path to empty.")%__LINE__%(i+1);
@@ -6565,7 +6565,7 @@ int CLI::run(int argc, char **argv)
                             }
 
                             //no light thumbnail
-                            if (!plate_data->no_light_thumbnail_file.empty() && (boost::filesystem::exists(plate_data->no_light_thumbnail_file)))
+                            if (!plate_data->no_light_thumbnail_file.empty() && (stdfs::exists(plate_data->no_light_thumbnail_file)))
                             {
                                 if ((plate_to_slice != 0) && (plate_to_slice != (i + 1))) {
                                     BOOST_LOG_TRIVIAL(info) << boost::format("Line %1%: regenerate thumbnail, clear plate %2%'s no_light_thumbnail_file path to empty.")%__LINE__%(i+1);
@@ -6638,8 +6638,8 @@ int CLI::run(int argc, char **argv)
                                 }
                             }
                             else*/
-                            if ((!plate_data->top_file.empty() && (boost::filesystem::exists(plate_data->top_file)))
-                                &&(!plate_data->pick_file.empty() && (boost::filesystem::exists(plate_data->pick_file))))
+                            if ((!plate_data->top_file.empty() && (stdfs::exists(plate_data->top_file)))
+                                &&(!plate_data->pick_file.empty() && (stdfs::exists(plate_data->pick_file))))
                             {
                                 if ((plate_to_slice != 0) && (plate_to_slice != (i + 1))) {
                                     BOOST_LOG_TRIVIAL(info) << boost::format("Line %1%: regenerate thumbnail, clear plate %2%'s top/pick thumbnail file path to empty.")%__LINE__%(i+1);
@@ -6749,7 +6749,7 @@ int CLI::run(int argc, char **argv)
                     plate_data->top_file.clear();
                     plate_data->pick_file.clear();
                 }
-                else if (!plate_data->plate_thumbnail.is_valid() && !plate_data->thumbnail_file.empty() && (boost::filesystem::exists(plate_data->thumbnail_file)))
+                else if (!plate_data->plate_thumbnail.is_valid() && !plate_data->thumbnail_file.empty() && (stdfs::exists(plate_data->thumbnail_file)))
                 {
                     BOOST_LOG_TRIVIAL(info) << boost::format("no need to generate: plate %1% has a valid thumbnail %2% extracted from 3mf, convert to data")%(i+1) %plate_data->thumbnail_file;
                     int dec_ret = decode_png_to_thumbnail(plate_data->thumbnail_file, plate_data->plate_thumbnail);
@@ -7022,32 +7022,32 @@ bool CLI::setup(int argc, char **argv)
 #endif
 
     // See Invoking prusa-slicer from $PATH environment variable crashes #5542
-    // boost::filesystem::path path_to_binary = boost::filesystem::system_complete(argv[0]);
-    boost::filesystem::path path_to_binary = boost::dll::program_location();
+    stdfs::path path_to_binary = boost::dll::program_location().string();
+    stdfs::path path_resources;
 
     // Path from the Slic3r binary to its resources.
 #ifdef __APPLE__
     // The application is packed in the .dmg archive as 'Slic3r.app/Contents/MacOS/Slic3r'
     // The resources are packed to 'Slic3r.app/Contents/Resources'
-    boost::filesystem::path path_resources = boost::filesystem::canonical(path_to_binary).parent_path().parent_path() / "Resources";
+    path_resources = stdfs::canonical(path_to_binary).parent_path().parent_path() / "Resources";
 #elif defined _WIN32
     // The application is packed in the .zip archive in the root,
     // The resources are packed to 'resources'
     // Path from Slic3r binary to resources:
-    boost::filesystem::path path_resources = path_to_binary.parent_path() / "resources";
+    path_resources = path_to_binary.parent_path() / "resources";
 #elif defined SLIC3R_FHS
     // The application is packaged according to the Linux Filesystem Hierarchy Standard
     // Resources are set to the 'Architecture-independent (shared) data', typically /usr/share or /usr/local/share
-    boost::filesystem::path path_resources = SLIC3R_FHS_RESOURCES;
+    path_resources = SLIC3R_FHS_RESOURCES;
 #else
     // The application is packed in the .tar.bz archive (or in AppImage) as 'bin/slic3r',
     // The resources are packed to 'resources'
     // Path from Slic3r binary to resources:
-    boost::filesystem::path path_resources = boost::filesystem::canonical(path_to_binary).parent_path().parent_path() / "resources";
+    path_resources = stdfs::canonical(path_to_binary).parent_path().parent_path() / "resources";
     //Orca: for build systems that support multiple configurations, the binary may be in a subdirectory like "bin/Release" or "bin/Debug".
-    if( !boost::filesystem::exists(path_resources)) {
+    if(!stdfs::exists(path_resources)) {
         // If the resources directory does not exist, try to use the resources directory
-        path_resources = boost::filesystem::canonical(path_to_binary).parent_path().parent_path().parent_path() / "resources";
+        path_resources = stdfs::canonical(path_to_binary).parent_path().parent_path().parent_path() / "resources";
     }
 #endif
 
@@ -7258,23 +7258,27 @@ std::string CLI::output_filepath(const Model &model, IO::ExportFormat format) co
     std::string ext;
     switch (format) {
         case IO::AMF: ext = ".zip.amf"; break;
-        case IO::OBJ: ext = ".obj"; break;
-        case IO::STL: ext = ".stl"; break;
-        case IO::TMF: ext = ".3mf"; break;
-        default: assert(false); break;
+        case IO::OBJ: ext = ".obj";     break;
+        case IO::STL: ext = ".stl";     break;
+        case IO::TMF: ext = ".3mf";     break;
+        default: assert(false);         break;
     };
-    auto proposed_path = boost::filesystem::path(model.propose_export_file_name_and_path(ext));
+    std::string proposed_path = stdfs::path(model.propose_export_file_name_and_path(ext));
+    
     // use --output when available
     std::string cmdline_param = m_config.opt_string("outputdir");
-    if (! cmdline_param.empty()) {
-        // if we were supplied a directory, use it and append our automatically generated filename
-        boost::filesystem::path cmdline_path(cmdline_param);
-        if (boost::filesystem::is_directory(cmdline_path))
-            proposed_path = cmdline_path / proposed_path.filename();
-        else
-            proposed_path = cmdline_param + ext;
+
+    if(cmdline_param.empty()){
+        return proposed_path;
     }
-    return proposed_path.string();
+    
+    stdfs::path cmdline_path(cmdline_param);
+    if (stdfs::is_directory(cmdline_path)) {
+        // if we were supplied a directory, use it and append our automatically generated filename
+        return (cmdline_path / stdfs::path(proposed_path).filename()).string();
+    }
+
+    return cmdline_param + std::string(ext);
 }
 
 std::string CLI::output_filepath(const ModelObject &object, unsigned int index, IO::ExportFormat format, std::string path_dir) const
@@ -7319,9 +7323,9 @@ std::string CLI::output_filepath(const ModelObject &object, unsigned int index, 
 
     output_path = subdir + "/"+file_name;
 
-    boost::filesystem::path subdir_path(subdir);
-    if (!boost::filesystem::exists(subdir_path))
-        boost::filesystem::create_directory(subdir_path);
+    stdfs::path subdir_path(subdir);
+    if (!stdfs::exists(subdir_path))
+        stdfs::create_directory(subdir_path);
     return output_path;
 }
 
