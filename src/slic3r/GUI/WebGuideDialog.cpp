@@ -121,7 +121,7 @@ GuideFrame::GuideFrame(GUI_App *pGUI, long style)
     wxBoxSizer *topsizer = new wxBoxSizer(wxVERTICAL);
 
     wxString TargetUrl = SetStartPage(BBL_WELCOME, false);
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  set start page to welcome ");
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ",  set start page to welcome ";
 
     // Create the webview
     m_browser = WebView::CreateWebView(this, TargetUrl);
@@ -180,7 +180,7 @@ GuideFrame::GuideFrame(GUI_App *pGUI, long style)
     // UI
     SetStartPage(BBL_REGION);
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  finished");
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ",  finished";
     wxGetApp().UpdateDlgDarkUI(this);
 }
 
@@ -248,7 +248,7 @@ wxString GuideFrame::SetStartPage(GuidePage startpage, bool load)
     }
 
     wxString strlang = wxGetApp().current_language_code_safe();
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(", strlang=%1%") % into_u8(strlang);
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< ", strlang=" << into_u8(strlang);
     if (strlang != "")
         TargetUrl = wxString::Format("%s&lang=%s", w2s(TargetUrl), strlang);
 
@@ -1190,7 +1190,7 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
     // wxString strFolder = strFilePath.BeforeLast(stdfs::path::preferred_separator);
     stdfs::path file_path(strFilePath);
     stdfs::path vendor_dir = stdfs::absolute(file_path.parent_path() / strVendor).make_preferred();
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  vendor path %1%.") % vendor_dir.string();
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ",  vendor path" << vendor_dir.string() << ".";
     try {
         // wxLogMessage("GUIDE: json_path1  %s", w2s(strFilePath));
 
@@ -1204,7 +1204,7 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
         json pmodels = jLocal["machine_model_list"];
         int  nsize   = pmodels.size();
 
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  got %1% machine models") % nsize;
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ",  got" << nsize << "machine models";
 
         for (int n = 0; n < nsize; n++) {
             json OneModel = pmodels.at(n);
@@ -1252,7 +1252,7 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
         // BBS:Machine
         json pmachine = jLocal["machine_list"];
         nsize         = pmachine.size();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  got %1% machines") % nsize;
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ",  got " << nsize << " machines";
         for (int n = 0; n < nsize; n++) {
             json OneMachine = pmachine.at(n);
 
@@ -1294,7 +1294,7 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
         int nFalse  = 0;
         int nModel  = 0;
         int nFinish = 0;
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  got %1% filaments") % nsize;
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ",  got " << nsize << " filaments";
         for (int n = 0; n < nsize; n++) {
             json OneFF = pFilament.at(n);
 
@@ -1359,7 +1359,7 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
         // process
         json pProcess = jLocal["process_list"];
         nsize         = pProcess.size();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  got %1% processes") % nsize;
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ",  got " << nsize << " processes";
         for (int n = 0; n < nsize; n++) {
             json OneProcess = pProcess.at(n);
 
@@ -1419,7 +1419,7 @@ bool GuideFrame::LoadFile(std::string jPath, std::string &sContent)
         std::stringstream buffer;
         buffer << t.rdbuf();
         sContent=buffer.str();
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << boost::format(", load %1% into buffer")% jPath;
+        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << ", load " << jPath << " into buffer";
     }
     catch (std::exception &e)
     {
