@@ -105,8 +105,8 @@ private:
     wxString m_SectionName;
 
     bool orca_bundle_rsrc;
-    std::filesystem::path vendor_dir;
-    std::filesystem::path rsrc_vendor_dir;
+    boost::filesystem::path vendor_dir;
+    boost::filesystem::path rsrc_vendor_dir;
 
     //First Load
     bool bFirstComplete{false};
