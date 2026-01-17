@@ -6,15 +6,14 @@
     #define NOMINMAX
     #include <Windows.h>
     #include <wchar.h>
-    #include "dev-utils/BaseException.h"
     #ifdef SLIC3R_GUI
-        extern "C"
-        {
-            // Let the NVIDIA and AMD know we want to use their graphics card
-            // on a dual graphics card system.
-            __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
-            __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
-        }
+    extern "C"
+    {
+        // Let the NVIDIA and AMD know we want to use their graphics card
+        // on a dual graphics card system.
+        __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+        __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+    }
     #endif /* SLIC3R_GUI */
 #endif /* WIN32 */
 
@@ -77,6 +76,9 @@ using namespace nlohmann;
 #include "OrcaSlicer.hpp"
 //BBS: add exception handler for win32
 #include <wx/stdpaths.h>
+#ifdef WIN32
+#include "dev-utils/BaseException.h"
+#endif
 #include "slic3r/GUI/PartPlate.hpp"
 #include "slic3r/GUI/BitmapCache.hpp"
 #include "slic3r/GUI/OpenGLManager.hpp"
@@ -87,7 +89,7 @@ using namespace nlohmann;
 #include <GLFW/glfw3.h>
 
 #ifdef __WXGTK__
-    #include <X11/Xlib.h>
+#include <X11/Xlib.h>
 #endif
 
 #ifdef SLIC3R_GUI
@@ -128,7 +130,7 @@ std::map<int, std::string> cli_errors = {
     {CLI_OBJECT_ARRANGE_FAILED, "An error occurred when auto-arranging object(s)."},
     {CLI_OBJECT_ORIENT_FAILED, "An error occurred when auto-orienting object(s)."},
     {CLI_MODIFIED_PARAMS_TO_PRINTER, "Found modified parameter in printer preset in the 3mf file, which should not be changed."},
-    {CLI_FILE_VERSION_NOT_SUPPORTED, "Unsupported 3MF version. Please make sure the 3MF file was created with the official version of Bambu Studio, not a beta version."},
+        {CLI_FILE_VERSION_NOT_SUPPORTED, "Unsupported 3MF version. Please make sure the 3MF file was created with the official version of Bambu Studio, not a beta version."},
     {CLI_NO_SUITABLE_OBJECTS, "One of the plate is empty or has no object fully inside it. Please check that the 3mf contains no empty plate in Orca Slicer before uploading."},
     {CLI_VALIDATE_ERROR, "There are some incorrect slicing parameters in the 3mf. Please verify the slicing of all plates in Orca Slicer before uploading."},
     {CLI_OBJECTS_PARTLY_INSIDE, "Some objects are located over the boundary of the heated bed."},
@@ -316,7 +318,7 @@ typedef struct _cli_callback_mgr {
                 BOOST_LOG_TRIVIAL(warning) << boost::format("could not open pipe for %1%, errno %2%, reason: %3%, retry_count = %4%")%pipe_name %errno %strerror(errno) %retry_count;
             retry_count ++;
             if (retry_count >= 50) {
-                BOOST_LOG_TRIVIAL(warning) << "reach max retry_count, failed to open pipe";
+                BOOST_LOG_TRIVIAL(warning) << boost::format("reach max retry_count, failed to open pipe");
                 return false;
             }
             boost::this_thread::sleep(boost::posix_time::milliseconds(20));
@@ -388,21 +390,21 @@ static PrinterTechnology get_printer_technology(const DynamicConfig &config)
 //BBS: add flush and exit
 #if defined(__linux__) || defined(__LINUX__)
 #define flush_and_exit(ret)     { boost::nowide::cout << __FUNCTION__ << " found error, return "<<ret<<", exit..." << std::endl;\
-        g_cli_callback_mgr.stop();\
-        boost::nowide::cout.flush();\
-        boost::nowide::cerr.flush();\
-        for (Model &model : m_models) {\
-        model.remove_backup_path_if_exist();\
-        }\
-        return(ret);}
+    g_cli_callback_mgr.stop();\
+    boost::nowide::cout.flush();\
+    boost::nowide::cerr.flush();\
+    for (Model &model : m_models) {\
+       model.remove_backup_path_if_exist();\
+    }\
+    return(ret);}
 #else
-    #define flush_and_exit(ret)     { boost::nowide::cout << __FUNCTION__ << " found error, exit" << std::endl;\
-        boost::nowide::cout.flush();\
-        boost::nowide::cerr.flush();\
-        for (Model &model : m_models) {\
-        model.remove_backup_path_if_exist();\
-        }\
-        return(ret);}
+#define flush_and_exit(ret)     { boost::nowide::cout << __FUNCTION__ << " found error, exit" << std::endl;\
+    boost::nowide::cout.flush();\
+    boost::nowide::cerr.flush();\
+    for (Model &model : m_models) {\
+       model.remove_backup_path_if_exist();\
+    }\
+    return(ret);}
 #endif
 
 void record_exit_reson(std::string outputdir, int code, int plate_id, std::string error_message, sliced_info_t& sliced_info, std::map<std::string, std::string> key_values = std::map<std::string, std::string>())
@@ -463,7 +465,7 @@ static int decode_png_to_thumbnail(std::string png_file, ThumbnailData& thumbnai
     std::string png_buffer(size, '\0');
     png_buffer.reserve(size);
 
-    std::ifstream ifs(png_file, std::ios::binary);
+    stdfs::ifstream ifs(png_file, std::ios::binary);
     ifs.read(png_buffer.data(), png_buffer.size());
     ifs.close();
 
@@ -1347,7 +1349,7 @@ int CLI::run(int argc, char **argv)
 
     if (metadata_name.size() != metadata_value.size())
     {
-        BOOST_LOG_TRIVIAL(error) << "metadata_name should be the same size with metadata_value";
+        BOOST_LOG_TRIVIAL(error) << boost::format("metadata_name should be the same size with metadata_value");
         record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
         flush_and_exit(CLI_INVALID_PARAMS);
     }
@@ -1461,7 +1463,7 @@ int CLI::run(int argc, char **argv)
         }
         else if (load_filaments.size() == 0)
         {
-            BOOST_LOG_TRIVIAL(error) << "clone_objects should be used with load_filaments together";
+            BOOST_LOG_TRIVIAL(error) << boost::format("clone_objects should be used with load_filaments together");
             record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
             flush_and_exit(CLI_INVALID_PARAMS);
         }
@@ -1476,7 +1478,7 @@ int CLI::run(int argc, char **argv)
         }
         else if (load_filaments.size() == 0)
         {
-            BOOST_LOG_TRIVIAL(error) << "loaded_filament_ids should be used with load_filaments together";
+            BOOST_LOG_TRIVIAL(error) << boost::format("loaded_filament_ids should be used with load_filaments together");
             record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
             flush_and_exit(CLI_INVALID_PARAMS);
         }
@@ -1493,7 +1495,7 @@ int CLI::run(int argc, char **argv)
     std::vector<RGBA> input_obj_colours;
     if (!load_assemble_list.empty() && ((m_input_files.size() > 0) || (m_transforms.size() > 0)))
     {
-        BOOST_LOG_TRIVIAL(error) << "load_assemble_list should not be used with input model files to load and should not be sued with transforms";
+        BOOST_LOG_TRIVIAL(error) << boost::format("load_assemble_list should not be used with input model files to load and should not be sued with transforms");
         record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
         flush_and_exit(CLI_INVALID_PARAMS);
     }
@@ -1519,7 +1521,7 @@ int CLI::run(int argc, char **argv)
                 if (boost::algorithm::iends_with(file, ".3mf") && first_file) {
                     if ((clone_objects.size() > 0) || (loaded_filament_ids.size() > 0))
                     {
-                        BOOST_LOG_TRIVIAL(error) << "can not load 3mf when set loaded_filament_ids or clone_objects";
+                        BOOST_LOG_TRIVIAL(error) << boost::format("can not load 3mf when set loaded_filament_ids or clone_objects");
                         record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
                         flush_and_exit(CLI_INVALID_PARAMS);
                     }
@@ -1624,7 +1626,7 @@ int CLI::run(int argc, char **argv)
                         size_t size = current_inherits_group.size();
                         if (current_inherits_group[size-1].empty()) {
                             current_printer_system_name = current_printer_name;
-                            BOOST_LOG_TRIVIAL(info) << "inherits of printer is null, should be system preset";
+                            BOOST_LOG_TRIVIAL(info) << boost::format("inherits of printer is null, should be system preset");
                         }
                         else {
                             current_printer_system_name = current_inherits_group[size-1];
@@ -1633,7 +1635,7 @@ int CLI::run(int argc, char **argv)
 
                         if (current_inherits_group[0].empty()) {
                             current_process_system_name = current_process_name;
-                            BOOST_LOG_TRIVIAL(info) << "inherits of process is null, should be system preset";
+                            BOOST_LOG_TRIVIAL(info) << boost::format("inherits of process is null, should be system preset");
                         }
                         else {
                             current_process_system_name = current_inherits_group[0];
@@ -1654,7 +1656,7 @@ int CLI::run(int argc, char **argv)
                         current_printer_system_name = current_printer_name;
                         current_process_system_name = current_process_name;
                         current_filaments_system_name = current_filaments_name;
-                        BOOST_LOG_TRIVIAL(info) << "no inherits_group: use system name the same as current name";
+                        BOOST_LOG_TRIVIAL(info) << boost::format("no inherits_group: use system name the same as current name");
                     }
                     filament_count = current_filaments_name.size();
                     upward_compatible_printers = config.option<ConfigOptionStrings>("upward_compatible_machine", true)->values;
@@ -2111,7 +2113,7 @@ int CLI::run(int argc, char **argv)
         BOOST_LOG_TRIVIAL(info) << boost::format("%1%:%2%, got input obj colors %3%")%__FUNCTION__ %__LINE__ %input_obj_colours.size();
         int input_color_count = input_obj_colours.size();
         if (load_filament_count == 0) {
-            BOOST_LOG_TRIVIAL(error) << "filament config not loaded when loading colored obj";
+            BOOST_LOG_TRIVIAL(error) << boost::format("filament config not loaded when loading colored obj");
             record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
             flush_and_exit(CLI_INVALID_PARAMS);
         }
@@ -2119,7 +2121,7 @@ int CLI::run(int argc, char **argv)
         //check filament_color from extra config
         ConfigOptionStrings *selected_filament_colors_option = m_extra_config.option<ConfigOptionStrings>("filament_colour");
         if (selected_filament_colors_option) {
-            BOOST_LOG_TRIVIAL(error) << "filament_colour should not be set when loading colored obj";
+            BOOST_LOG_TRIVIAL(error) << boost::format("filament_colour should not be set when loading colored obj");
             record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
             flush_and_exit(CLI_INVALID_PARAMS);
         }
@@ -2505,7 +2507,7 @@ int CLI::run(int argc, char **argv)
         }
         if (!process_compatible && current_print_compatible_printers.empty())
         {
-            BOOST_LOG_TRIVIAL(info) << "old 3mf, no compatible printers, set to compatible";
+            BOOST_LOG_TRIVIAL(info) << boost::format("old 3mf, no compatible printers, set to compatible");
             process_compatible = true;
         }
         BOOST_LOG_TRIVIAL(info) << boost::format("old printer %1%, inherited from %2%, old process %3%, inherited from %4% ,compatible %5%")
@@ -2516,13 +2518,13 @@ int CLI::run(int argc, char **argv)
         if (new_process_name.empty())
             process_compatible = true;
         machine_switch = true;
-        BOOST_LOG_TRIVIAL(info) << "switch to new printers, set to compatible";
+        BOOST_LOG_TRIVIAL(info) << boost::format("switch to new printers, set to compatible");
         if (upward_compatible_printers.size() > 0) {
             for (int index = 0; index < upward_compatible_printers.size(); index++) {
                 if (upward_compatible_printers[index] == new_printer_system_name) {
                     process_compatible = true;
                     machine_upwards = true;
-                    BOOST_LOG_TRIVIAL(info) << "new printer is upward_compatible";
+                    BOOST_LOG_TRIVIAL(info) << boost::format("new printer is upward_compatible");
                     break;
                 }
             }
@@ -2820,7 +2822,7 @@ int CLI::run(int argc, char **argv)
                             }
                         }
                         else {
-                            BOOST_LOG_TRIVIAL(warning) << "can not find key printer in the file";
+                            BOOST_LOG_TRIVIAL(warning) << boost::format("can not find key printer in the file");
                         }
                     }
                     catch (std::exception &err) {
@@ -3232,7 +3234,7 @@ int CLI::run(int argc, char **argv)
     ConfigOptionStrings *project_filament_colors_option = m_print_config.option<ConfigOptionStrings>("filament_colour");
     if ((!project_filament_colors_option || (project_filament_colors_option->values.size() == 0)) && selected_filament_colors_option)
     {
-        BOOST_LOG_TRIVIAL(info) << "initial project_filament_colors is null, create it due to filament_colour set in cli";
+        BOOST_LOG_TRIVIAL(info) << boost::format("initial project_filament_colors is null, create it due to filament_colour set in cli");
         project_filament_colors_option = m_print_config.option<ConfigOptionStrings>("filament_colour", true);
         std::vector<std::string>& project_filament_colors = project_filament_colors_option->values;
         project_filament_colors.resize(filament_count, "#FFFFFF");
@@ -3261,7 +3263,7 @@ int CLI::run(int argc, char **argv)
 
                 if (filament_color_set.size() > 1) {
                     disable_wipe_tower_after_mapping = false;
-                    BOOST_LOG_TRIVIAL(info) << "different filament colours,  switch disable_wipe_tower_after_mapping back to false";
+                    BOOST_LOG_TRIVIAL(info) << boost::format("different filament colours,  switch disable_wipe_tower_after_mapping back to false");
                 }
                 else {
                     BOOST_LOG_TRIVIAL(warning) << boost::format("only %1% filament colour,  finally set disable_wipe_tower_after_mapping to true")%filament_color_set.size();
@@ -3289,7 +3291,7 @@ int CLI::run(int argc, char **argv)
                         Slic3r::GUI::BitmapCache::parse_color4(selected_filament_colors[index], new_rgb_color);
                         if ((ori_rgb_color[0] != new_rgb_color[0]) || (ori_rgb_color[1] != new_rgb_color[1]) || (ori_rgb_color[2] != new_rgb_color[2]) || (ori_rgb_color[3] != new_rgb_color[3]))
                         {
-                            BOOST_LOG_TRIVIAL(info) << "found color changes, need to regenerate thumbnail";
+                            BOOST_LOG_TRIVIAL(info) << boost::format("found color changes, need to regenerate thumbnail");
                             filament_color_changed = true;
                         }
                         project_filament_colors[index] = selected_filament_colors[index];
@@ -3390,12 +3392,12 @@ int CLI::run(int argc, char **argv)
         }
         else
         {
-            BOOST_LOG_TRIVIAL(warning) << "filament colors count is 0 in projects";
+            BOOST_LOG_TRIVIAL(warning) << boost::format("filament colors count is 0 in projects");
         }
     }
     else
     {
-        BOOST_LOG_TRIVIAL(warning) << "no filament colors found in projects";
+        BOOST_LOG_TRIVIAL(warning) << boost::format("no filament colors found in projects");
     }
 
     //BBS: set default to ptFFF
@@ -3770,12 +3772,12 @@ int CLI::run(int argc, char **argv)
         if (curr_plate_seq == PrintSequence::ByDefault) {
             auto seq_print = print_config.option<ConfigOptionEnum<PrintSequence>>("print_sequence");
             if (seq_print && (seq_print->value == PrintSequence::ByObject)) {
-                BOOST_LOG_TRIVIAL(info) << "plate print by object, set from global";
+                BOOST_LOG_TRIVIAL(info) << boost::format("plate print by object, set from global");
                 is_seq_print = true;
             }
         }
         else if (curr_plate_seq == PrintSequence::ByObject) {
-            BOOST_LOG_TRIVIAL(info) << "plate print by object, set from plate self";
+            BOOST_LOG_TRIVIAL(info) << boost::format("plate print by object, set from plate self");
             is_seq_print = true;
         }
     };
@@ -3786,14 +3788,14 @@ int CLI::run(int argc, char **argv)
                     %(plate_index+1) %plate_obj_size_info.obj_bbox.min.x() % plate_obj_size_info.obj_bbox.min.y() % plate_obj_size_info.obj_bbox.min.z() %plate_obj_size_info.obj_bbox.max.x() % plate_obj_size_info.obj_bbox.max.y() % plate_obj_size_info.obj_bbox.max.z();
         if (!print_config.has("wipe_tower_x")) {
             plate_obj_size_info.has_wipe_tower = false;
-            BOOST_LOG_TRIVIAL(info) << "can not found wipe_tower_x in config, set to no wipe tower";
+            BOOST_LOG_TRIVIAL(info) << boost::format("can not found wipe_tower_x in config, set to no wipe tower");
             return;
         }
 
         int valid_count = plate->printable_instance_size();
         if (valid_count <= 0){
             plate_obj_size_info.has_wipe_tower = false;
-            BOOST_LOG_TRIVIAL(info) << "no printable object found, set to no wipe tower";
+            BOOST_LOG_TRIVIAL(info) << boost::format("no printable object found, set to no wipe tower");
             return;
         }
 
@@ -4487,7 +4489,7 @@ int CLI::run(int argc, char **argv)
             {
                 //spiral mode can only be duplicated with by-object
                 if (!is_seq_print_for_curr_plate) {
-                    BOOST_LOG_TRIVIAL(warning) << "Spiral mode can not be duplicated under by-object print, skip duplicate";
+                    BOOST_LOG_TRIVIAL(warning) << boost::format("Spiral mode can not be duplicated under by-object print, skip duplicate");
                     duplicate_count = 0;
                 }
             }
@@ -4988,7 +4990,7 @@ int CLI::run(int argc, char **argv)
                     if ((duplicate_count > 0)&&(selected.size() == (duplicate_count + 1)))
                     {
                         duplicate_single_object = true;
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": found single object mode";
+                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": found single object mode");
                     }
 
                     if (m_print_config.has("wipe_tower_x") && (is_smooth_timelapse || !arrange_cfg.is_seq_print || (selected.size() <= 1))) {
@@ -5022,7 +5024,7 @@ int CLI::run(int argc, char **argv)
 
                         if ((filaments_cnt <= 1) && !is_smooth_timelapse && (!enable_wrapping_detect || current_wrapping_exclude_area.empty()))
                         {
-                            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << "arrange: not a multi-color object anymore, drop the wipe tower before arrange.";
+                            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format("arrange: not a multi-color object anymore, drop the wipe tower before arrange.");
                         }
                         else
                         {
@@ -5247,7 +5249,7 @@ int CLI::run(int argc, char **argv)
 
                                 if (duplicate_count == 1)
                                 {
-                                    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": failed even on duplicate 1 copy, just print one original model";
+                                    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": failed even on duplicate 1 copy, just print one original model");
                                     duplicate_count = 0;
                                 }
                                 else
@@ -5300,7 +5302,7 @@ int CLI::run(int argc, char **argv)
                                 wipe_y_option->set_at(&wt_y_opt, plate_to_slice-1, 0);
                                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": restore wipe_tower position to {%1%, %2%}")%orig_wipe_x %orig_wipe_y;
                             }
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": exit arrange process";
+                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": exit arrange process");
                         }
                         continue;
                     }
@@ -5327,7 +5329,7 @@ int CLI::run(int argc, char **argv)
                                 wipe_y_option->set_at(&wt_y_opt, plate_to_slice-1, 0);
                                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": restore wipe_tower position to {%1%, %2%}")%orig_wipe_x %orig_wipe_y;
                             }
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": exit arrange process";
+                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": exit arrange process");
                             continue;
                         }
                         duplicate_count = real_duplicate_count - 1;
@@ -6488,7 +6490,7 @@ int CLI::run(int argc, char **argv)
                     ThumbnailsParams thumbnail_params;
                     GLShaderProgram* shader = opengl_mgr.get_shader("thumbnail");
                     if (!shader) {
-                        BOOST_LOG_TRIVIAL(error) << "can not get shader for rendering thumbnail";
+                        BOOST_LOG_TRIVIAL(error) << boost::format("can not get shader for rendering thumbnail");
                     }
                     else {
                         for (int i = 0; i < partplate_list.get_plate_count(); i++) {
@@ -6514,10 +6516,10 @@ int CLI::run(int argc, char **argv)
                                     int dec_ret = decode_png_to_thumbnail(plate_data->thumbnail_file, plate_data->plate_thumbnail);
                                     if (!dec_ret)
                                     {
-                                        BOOST_LOG_TRIVIAL(info) << "decode png to mem sucess.";
+                                        BOOST_LOG_TRIVIAL(info) << boost::format("decode png to mem sucess.");
                                     }
                                     else {
-                                        BOOST_LOG_TRIVIAL(warning) << "decode png to mem failed.";
+                                        BOOST_LOG_TRIVIAL(warning) << boost::format("decode png to mem failed.");
                                     }
                                 }
                             }
@@ -6536,7 +6538,7 @@ int CLI::run(int argc, char **argv)
                                     {
                                     case Slic3r::GUI::OpenGLManager::EFramebufferType::Arb:
                                             {
-                                                BOOST_LOG_TRIVIAL(info) << "framebuffer_type: ARB";
+                                                BOOST_LOG_TRIVIAL(info) << boost::format("framebuffer_type: ARB");
                                                 Slic3r::GUI::GLCanvas3D::render_thumbnail_framebuffer(*thumbnail_data,
                                                    thumbnail_width, thumbnail_height, thumbnail_params,
                                                    partplate_list, model.objects, glvolume_collection, colors_out, shader, Slic3r::GUI::Camera::EType::Ortho);
@@ -6544,14 +6546,14 @@ int CLI::run(int argc, char **argv)
                                             }
                                     case Slic3r::GUI::OpenGLManager::EFramebufferType::Ext:
                                             {
-                                                BOOST_LOG_TRIVIAL(info) << "framebuffer_type: EXT";
+                                                BOOST_LOG_TRIVIAL(info) << boost::format("framebuffer_type: EXT");
                                                 Slic3r::GUI::GLCanvas3D::render_thumbnail_framebuffer_ext(*thumbnail_data,
                                                    thumbnail_width, thumbnail_height, thumbnail_params,
                                                    partplate_list, model.objects, glvolume_collection, colors_out, shader, Slic3r::GUI::Camera::EType::Ortho);
                                                 break;
                                             }
                                     default:
-                                            BOOST_LOG_TRIVIAL(info) << "framebuffer_type: unknown";
+                                            BOOST_LOG_TRIVIAL(info) << boost::format("framebuffer_type: unknown");
                                             break;
                                     }
                                     BOOST_LOG_TRIVIAL(info) << boost::format("plate %1%'s thumbnail,finished rendering")%(i+1);
@@ -6588,7 +6590,7 @@ int CLI::run(int argc, char **argv)
                                     {
                                         case Slic3r::GUI::OpenGLManager::EFramebufferType::Arb:
                                             {
-                                                BOOST_LOG_TRIVIAL(info) << "framebuffer_type: ARB";
+                                                BOOST_LOG_TRIVIAL(info) << boost::format("framebuffer_type: ARB");
                                                 Slic3r::GUI::GLCanvas3D::render_thumbnail_framebuffer(*no_light_thumbnail,
                                                    thumbnail_width, thumbnail_height, thumbnail_params,
                                                                                                   partplate_list, model.objects, glvolume_collection, colors_out, shader,
@@ -6598,7 +6600,7 @@ int CLI::run(int argc, char **argv)
                                             }
                                         case Slic3r::GUI::OpenGLManager::EFramebufferType::Ext:
                                             {
-                                                BOOST_LOG_TRIVIAL(info) << "framebuffer_type: EXT";
+                                                BOOST_LOG_TRIVIAL(info) << boost::format("framebuffer_type: EXT");
                                                 Slic3r::GUI::GLCanvas3D::render_thumbnail_framebuffer_ext(*no_light_thumbnail,
                                                    thumbnail_width, thumbnail_height, thumbnail_params,
                                                                                                       partplate_list, model.objects, glvolume_collection, colors_out, shader,
@@ -6607,7 +6609,7 @@ int CLI::run(int argc, char **argv)
                                                 break;
                                             }
                                         default:
-                                            BOOST_LOG_TRIVIAL(info) << "framebuffer_type: unknown";
+                                            BOOST_LOG_TRIVIAL(info) << boost::format("framebuffer_type: unknown");
                                             break;
                                     }
                                     plate_data->no_light_thumbnail_file = "valid_no_light";
@@ -6669,14 +6671,14 @@ int CLI::run(int argc, char **argv)
                                         part_plate->pick_thumbnail_data.reset();
                                         plate_data->top_file.clear();
                                         plate_data->pick_file.clear();
-                                        BOOST_LOG_TRIVIAL(info) << "skip rendering for top&&pick";
+                                        BOOST_LOG_TRIVIAL(info) << boost::format("skip rendering for top&&pick");
                                     }
                                     else {
                                         switch (Slic3r::GUI::OpenGLManager::get_framebuffers_type())
                                         {
                                             case Slic3r::GUI::OpenGLManager::EFramebufferType::Arb:
                                                 {
-                                                    BOOST_LOG_TRIVIAL(info) << "framebuffer_type: ARB";
+                                                    BOOST_LOG_TRIVIAL(info) << boost::format("framebuffer_type: ARB");
                                                     Slic3r::GUI::GLCanvas3D::render_thumbnail_framebuffer(*top_thumbnail,
                                                        thumbnail_width, thumbnail_height, thumbnail_params,
                                                                                                       partplate_list, model.objects, glvolume_collection, colors_out, shader,
@@ -6691,7 +6693,7 @@ int CLI::run(int argc, char **argv)
                                                 }
                                             case Slic3r::GUI::OpenGLManager::EFramebufferType::Ext:
                                                 {
-                                                    BOOST_LOG_TRIVIAL(info) << "framebuffer_type: EXT";
+                                                    BOOST_LOG_TRIVIAL(info) << boost::format("framebuffer_type: EXT");
                                                     Slic3r::GUI::GLCanvas3D::render_thumbnail_framebuffer_ext(*top_thumbnail,
                                                        thumbnail_width, thumbnail_height, thumbnail_params,
                                                                                                           partplate_list, model.objects, glvolume_collection, colors_out, shader,
@@ -6706,7 +6708,7 @@ int CLI::run(int argc, char **argv)
                                                     break;
                                                 }
                                             default:
-                                                BOOST_LOG_TRIVIAL(info) << "framebuffer_type: unknown";
+                                                BOOST_LOG_TRIVIAL(info) << boost::format("framebuffer_type: unknown");
                                                 break;
                                         }
                                         plate_data->top_file = "valid_top";
@@ -6753,11 +6755,11 @@ int CLI::run(int argc, char **argv)
                     int dec_ret = decode_png_to_thumbnail(plate_data->thumbnail_file, plate_data->plate_thumbnail);
                     if (!dec_ret)
                     {
-                        BOOST_LOG_TRIVIAL(info) << "decode png to mem sucess.";
+                        BOOST_LOG_TRIVIAL(info) << boost::format("decode png to mem sucess.");
                         need_create_thumbnail_group = true;
                     }
                     else {
-                        BOOST_LOG_TRIVIAL(warning) << "decode png to mem failed.";
+                        BOOST_LOG_TRIVIAL(warning) << boost::format("decode png to mem failed.");
                     }
                 }
             }
