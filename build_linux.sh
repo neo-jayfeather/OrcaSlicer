@@ -7,7 +7,7 @@ SCRIPT_PATH=$(dirname "$(readlink -f "${0}")")
 pushd "${SCRIPT_PATH}" > /dev/null
 
 function usage() {
-    echo "Usage: ./${SCRIPT_NAME} [-1][-b][-c][-d][-D][-e][-h][-i][-j N][-p][-r][-s][-t][-u][-l][-L][-m]"
+    echo "Usage: ./${SCRIPT_NAME} [-1][-b][-c][-d][-D][-e][-h][-i][-j N][-p][-r][-s][-t][-u][-l][-L]"
     echo "   -1: limit builds to one core (where possible)"
     echo "   -j N: limit builds to N cores (where possible)"
     echo "   -b: build in Debug mode"
@@ -21,11 +21,10 @@ function usage() {
     echo "   -p: boost ccache hit rate by disabling precompiled headers (default: ON)"
     echo "   -r: skip RAM and disk checks (low RAM compiling)"
     echo "   -s: build the Orca Slicer (optional)"
-    echo "   -t: build tests (optional)"
+    echo "   -t: build tests (optional), requires -s flag"
     echo "   -u: install system dependencies (asks for sudo password; build prerequisite)"
     echo "   -l: use Clang instead of GCC (default: GCC)"
     echo "   -L: use ld.lld as linker (if available)"
-    echo "   -m: use mold as linker (if available)"
     echo "For a first use, you want to './${SCRIPT_NAME} -u'"
     echo "   and then './${SCRIPT_NAME} -dsi'"
 }
@@ -35,7 +34,7 @@ SLIC3R_PRECOMPILED_HEADERS="ON"
 unset name
 BUILD_DIR=build
 BUILD_CONFIG=Release
-while getopts ":1j:bcCdDehiprstulLm" opt ; do
+while getopts ":1j:bcCdDehiprstulL" opt ; do
   case ${opt} in
     1 )
         export CMAKE_BUILD_PARALLEL_LEVEL=1
@@ -89,9 +88,6 @@ while getopts ":1j:bcCdDehiprstulLm" opt ; do
         ;;
     L )
         USE_LLD="1"
-        ;;
-    m )
-        USE_MOLD="1"
         ;;
     * )
 	echo "Unknown argument '${opt}', aborting."
@@ -186,12 +182,9 @@ if [[ -z "${SKIP_RAM_CHECK}" ]] ; then
     check_available_memory_and_disk
 fi
 
-export CMAKE_C_CXX_COMPILER=()
+export CMAKE_C_CXX_COMPILER_CLANG=()
 if [[ -n "${USE_CLANG}" ]] ; then
-    export CMAKE_C_CXX_COMPILER=(-DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++)
-else
-
-    export CMAKE_C_CXX_COMPILER=(-DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++)
+    export CMAKE_C_CXX_COMPILER_CLANG=(-DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++)
 fi
 
 # Configure use of ld.lld as the linker when requested
@@ -206,20 +199,6 @@ if [[ -n "${USE_LLD}" ]] ; then
     fi
 fi
 
-# Configure use of mold as the linker when requested
-export CMAKE_MOLD_LINKER_ARGS=()
-if [[ -n "${USE_MOLD}" ]] ; then
-    if command -v mold >/dev/null 2>&1 ; then
-        MOLD_BIN=$(command -v mold)
-        export CMAKE_MOLD_LINKER_ARGS=(-DCMAKE_LINKER="${MOLD_BIN}" -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=mold -DCMAKE_MODULE_LINKER_FLAGS=-fuse-ld=mold)
-    else
-        echo "Error: mold package not found. Please install the 'mold' package (e.g., sudo apt install mold) or omit -m."
-        exit 1
-    fi
-fi
-
-
-
 if [[ -n "${BUILD_DEPS}" ]] ; then
     echo "Configuring dependencies..."
     read -r -a BUILD_ARGS <<< "${DEPS_EXTRA_BUILD_ARGS}"
@@ -232,7 +211,7 @@ if [[ -n "${BUILD_DEPS}" ]] ; then
         BUILD_ARGS+=(-DCMAKE_BUILD_TYPE="${BUILD_CONFIG}")
     fi
 
-    print_and_run cmake -S deps -B deps/$BUILD_DIR "${CMAKE_C_CXX_COMPILER[@]}" "${CMAKE_LLD_LINKER_ARGS[@]}" -G Ninja "${COLORED_OUTPUT}" "${BUILD_ARGS[@]}"
+    print_and_run cmake -S deps -B deps/$BUILD_DIR "${CMAKE_C_CXX_COMPILER_CLANG[@]}" "${CMAKE_LLD_LINKER_ARGS[@]}" -G Ninja "${COLORED_OUTPUT}" "${BUILD_ARGS[@]}"
     print_and_run cmake --build deps/$BUILD_DIR
 fi
 
@@ -252,7 +231,7 @@ if [[ -n "${BUILD_ORCA}" ]] || [[ -n "${BUILD_TESTS}" ]] ; then
         BUILD_ARGS+=(-DORCA_UPDATER_SIG_KEY="${ORCA_UPDATER_SIG_KEY}")
     fi
 
-    print_and_run cmake -S . -B $BUILD_DIR "${CMAKE_C_CXX_COMPILER[@]}" "${CMAKE_LLD_LINKER_ARGS[@]}" -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -G "Ninja Multi-Config" \
+    print_and_run cmake -S . -B $BUILD_DIR "${CMAKE_C_CXX_COMPILER_CLANG[@]}" "${CMAKE_LLD_LINKER_ARGS[@]}" -G "Ninja Multi-Config" \
 -DSLIC3R_PCH=${SLIC3R_PRECOMPILED_HEADERS} \
 -DORCA_TOOLS=ON \
 "${COLORED_OUTPUT}" \
