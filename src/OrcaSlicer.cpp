@@ -1227,7 +1227,8 @@ int CLI::run(int argc, char **argv)
             false;
 #else
             // On Unix systems, the prusa-slicer binary may be symlinked to give the application a different meaning.
-            boost::algorithm::iends_with(stdfs::path(argv[0]).filename().string(), "gcodeviewer");
+            // boost filesystem is no longer an included file: this code will not work --v
+            boost::algorithm::iends_with(boost::filesystem::path(argv[0]).filename().string(), "gcodeviewer");
 #endif // _WIN32*/
 
     bool translate_old = false, regenerate_thumbnails = false, keep_old_params = false, remove_wrapping_detect = false, filament_color_changed = false, downward_check = false;
