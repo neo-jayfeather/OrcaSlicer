@@ -126,7 +126,6 @@ enum class WallSequence {
 // Orca
 enum class WallDirection
 {
-    Auto,
     CounterClockwise,
     Clockwise,
     Count,
@@ -1592,6 +1591,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionString,             thumbnails))
     // BBS: move from PrintObjectConfig
     ((ConfigOptionBool, independent_support_layer_height))
+    ((ConfigOptionBool,               combine_brims))
     // H2C TODO
     ((ConfigOptionFloats,             filament_prime_volume))
     ((ConfigOptionFloats,             filament_prime_volume_nc))
