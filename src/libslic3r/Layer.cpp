@@ -222,12 +222,11 @@ void Layer::make_perimeters()
 	            LayerRegion *layerm_config = layerms.front();
 	            {
 	                // group slices (surfaces) according to number of extra perimeters
+                (*layerm)->fill_no_overlap_expolygons.clear();
 	                std::map<unsigned short, Surfaces> slices;  // extra_perimeters => [ surface, surface... ]
 	                for (LayerRegion *layerm : layerms) {
 	                    for (const Surface &surface : layerm->slices.surfaces)
 	                        slices[surface.extra_perimeters].emplace_back(surface);
-	                    if (layerm->region().config().sparse_infill_density > layerm_config->region().config().sparse_infill_density)
-	                    	layerm_config = layerm;
 	                }
 	                // merge the surfaces assigned to each group
 	                for (std::pair<const unsigned short,Surfaces> &surfaces_with_extra_perimeters : slices)
@@ -425,6 +424,11 @@ coordf_t Layer::get_sparse_infill_max_void_area()
 size_t Layer::get_extruder_id(unsigned int filament_id) const
 {
     return m_object->print()->get_extruder_id(filament_id);
+}
+
+size_t Layer::get_config_idx_for_filament(unsigned int filament_id) const
+{
+    return m_object->print()->get_config_idx_for_filament(filament_id);
 }
 
 BoundingBox get_extents(const LayerRegion &layer_region)
