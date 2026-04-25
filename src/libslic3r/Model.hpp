@@ -719,6 +719,7 @@ enum class ConversionType : int {
 };
 
 enum class En3mfType : int {
+    From_Orca,
     From_BBS,
     From_Prusa,
     From_Other
@@ -1253,6 +1254,7 @@ public:
     ModelInstanceEPrintVolumeState print_volume_state;
     // Whether or not this instance is printable
     bool printable;
+    bool auto_drop;
     bool use_loaded_id_for_label {false};
     int arrange_order = 0; // BBS
     size_t loaded_id = 0; // BBS
@@ -1381,7 +1383,11 @@ private:
     Polygon convex_hull; // BBS
 
     // Constructor, which assigns a new unique ID.
-    explicit ModelInstance(ModelObject* object) : print_volume_state(ModelInstancePVS_Inside), printable(true), object(object), m_assemble_initialized(false) { assert(this->id().valid()); }
+    explicit ModelInstance(ModelObject* object)
+        : print_volume_state(ModelInstancePVS_Inside), printable(true), auto_drop(true), object(object), m_assemble_initialized(false)
+    {
+        assert(this->id().valid());
+    }
     // Constructor, which assigns a new unique ID.
     explicit ModelInstance(ModelObject *object, const ModelInstance &other) :
         m_transformation(other.m_transformation)
@@ -1389,6 +1395,7 @@ private:
         , m_offset_to_assembly(other.m_offset_to_assembly)
         , print_volume_state(ModelInstancePVS_Inside)
         , printable(other.printable)
+        , auto_drop(other.auto_drop)
         , object(object)
         , m_assemble_initialized(false) { assert(this->id().valid() && this->id() != other.id()); }
 
@@ -1402,7 +1409,7 @@ private:
 	ModelInstance() : ObjectBase(-1), object(nullptr) { assert(this->id().invalid()); }
     // BBS. Add added members to archive.
     template<class Archive> void serialize(Archive& ar) {
-        ar(m_transformation, print_volume_state, printable, m_assemble_transformation, m_offset_to_assembly, m_assemble_initialized);
+        ar(m_transformation, print_volume_state, printable, auto_drop, m_assemble_transformation, m_offset_to_assembly, m_assemble_initialized);
     }
 };
 

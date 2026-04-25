@@ -221,6 +221,8 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
         "ironing_fan_speed",
         "single_extruder_multi_material_priming",
         "activate_air_filtration",
+        "activate_air_filtration_during_print",
+        "activate_air_filtration_on_completion",
         "during_print_exhaust_fan_speed",
         "complete_print_exhaust_fan_speed",
         "activate_chamber_temp_control",
@@ -345,6 +347,8 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
             || opt_key == "travel_speed_z"
             || opt_key == "initial_layer_speed"
             || opt_key == "initial_layer_travel_speed"
+            || opt_key == "initial_layer_travel_acceleration"
+            || opt_key == "initial_layer_travel_jerk"
             || opt_key == "slow_down_layers"
             || opt_key == "idle_temperature"
             || opt_key == "wipe_tower_cone_angle"
@@ -4716,7 +4720,7 @@ int Print::export_cached_data(const std::string& directory, int& obj_cnt_exporte
             /*boost::nowide::ofstream c;
             c.open(file_name, std::ios::out | std::ios::trunc);
             if (with_space)
-                c << std::setw(4) << root_json << std::endl;
+                c << root_json.dump(1, '\t') << std::endl;
             else
                 c << root_json.dump(0) << std::endl;
             c.close();*/
@@ -4738,7 +4742,7 @@ int Print::export_cached_data(const std::string& directory, int& obj_cnt_exporte
                     boost::nowide::ofstream c;
                     c.open(filename_vector[object_index], std::ios::out | std::ios::trunc);
                     if (with_space)
-                        c << std::setw(4) << json_vector[object_index] << std::endl;
+                        c << json_vector[object_index].dump(1, '\t') << std::endl;
                     else
                         c << json_vector[object_index].dump(0) << std::endl;
                     c.close();
