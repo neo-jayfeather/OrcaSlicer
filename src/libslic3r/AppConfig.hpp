@@ -58,6 +58,9 @@ struct BBLocalMachine
     bool operator!=(const BBLocalMachine& other) const { return !operator==(other); }
 };
 
+namespace MultiNozzleUtils{
+	struct NozzleGroupInfo;
+}
 class AppConfig
 {
 public:

@@ -866,6 +866,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 		        params.extruder 	 = layerm.region().extruder(extrusion_role);
 		        params.pattern 		 = region_config.sparse_infill_pattern.value;
 		        params.density       = float(region_config.sparse_infill_density);
+                params.multiline	 = int(region_config.fill_multiline);
                 params.lateral_lattice_angle_1 = region_config.lateral_lattice_angle_1;
                 params.lateral_lattice_angle_2 = region_config.lateral_lattice_angle_2;
                 params.infill_overhang_angle = region_config.infill_overhang_angle;
@@ -930,7 +931,8 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                     params.fixed_angle = !region_config.solid_infill_rotate_template.value.empty();
                 }
                 params.bridge_angle = float(surface.bridge_angle);
-                
+                params.multiline    = params.extrusion_role == erInternalInfill ? int(region_config.fill_multiline) : 1;
+
                 if (region_config.align_infill_direction_to_model) {
                     auto m = layer.object()->trafo().matrix();
                     params.angle += atan2((float) m(1, 0), (float) m(0, 0));
@@ -1443,6 +1445,8 @@ Polylines Layer::generate_sparse_infill_polylines_for_anchoring(FillAdaptive::Oc
         // apply half spacing using this flow's own spacing and generate infill
         FillParams params;
         params.density           = float(0.01 * surface_fill.params.density);
+		params.multiline        = surface_fill.params.multiline;
+        params.pattern           = surface_fill.params.pattern;
         params.dont_adjust       = false; //  surface_fill.params.dont_adjust;
         params.anchor_length     = surface_fill.params.anchor_length;
         params.anchor_length_max = surface_fill.params.anchor_length_max;
