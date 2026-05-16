@@ -156,7 +156,7 @@ inline bool operator & (SaveStrategy & lhs, SaveStrategy rhs)
 }
 
 enum {
-    brim_points_format_version = 0
+    brim_points_format_version = 1
 };
 
 enum class LoadStrategy

@@ -1,3 +1,15 @@
+// H2C TODO
+            // context.filament_nozzle_temp,
+            // context.extruder_max_nozzle_count,
+            // context.filament_cooling_before_tower,
+
+            //    float complete_free_time_gap = 0; // time of complete free
+    // if (move_iter_lower == moves.begin())
+    //     complete_free_time_gap = move_iter_upper->time[valid_machine_id];
+    // else
+    //     complete_free_time_gap = move_iter_upper->time[valid_machine_id] - std::prev(move_iter_lower)->time[valid_machine_id];
+
+
 #include "ExtrusionEntity.hpp"
 #include "GCodeWriter.hpp"
 #include "PrintConfig.hpp"
@@ -556,6 +568,7 @@ void GCodeProcessor::TimeProcessor::reset()
     filament_load_times = 0.0f;
     filament_unload_times = 0.0f;
     machine_tool_change_time = 0.0f;
+    hotend_change_times = 0.0f;
 
 
     for (size_t i = 0; i < static_cast<size_t>(PrintEstimatedStatistics::ETimeMode::Count); ++i) {
@@ -1463,48 +1476,56 @@ void GCodeProcessor::UsedFilaments::process_color_change_cache()
 
 void GCodeProcessor::UsedFilaments::process_total_volume_cache(GCodeProcessor* processor)
 {
-    size_t active_filament_id = processor->get_filament_id();
+    int active_filament_id = processor->get_filament_id();
     if (total_volume_cache!= 0.0f) {
+        if(active_filament_id != -1){
         if (total_volumes_per_filament.find(active_filament_id) != total_volumes_per_filament.end())
             total_volumes_per_filament[active_filament_id] += total_volume_cache;
         else
             total_volumes_per_filament[active_filament_id] = total_volume_cache;
+        }
         total_volume_cache = 0.0f;
     }
 }
 
 void GCodeProcessor::UsedFilaments::process_model_cache(GCodeProcessor* processor)
 {
-    size_t active_filament_id = processor->get_filament_id();
+    int active_filament_id = processor->get_filament_id();
     if (model_extrude_cache != 0.0f) {
+        if(active_filament_id != -1){
         if (model_volumes_per_filament.find(active_filament_id) != model_volumes_per_filament.end())
             model_volumes_per_filament[active_filament_id] += model_extrude_cache;
         else
             model_volumes_per_filament[active_filament_id] = model_extrude_cache;
+        }
         model_extrude_cache = 0.0f;
     }
 }
 
 void GCodeProcessor::UsedFilaments::process_wipe_tower_cache(GCodeProcessor* processor)
 {
-    size_t active_filament_id = processor->get_filament_id();
+    int active_filament_id = processor->get_filament_id();
     if (wipe_tower_cache != 0.0f) {
+        if(active_filament_id != -1){
         if (wipe_tower_volumes_per_filament.find(active_filament_id) != wipe_tower_volumes_per_filament.end())
             wipe_tower_volumes_per_filament[active_filament_id] += wipe_tower_cache;
         else
             wipe_tower_volumes_per_filament[active_filament_id] = wipe_tower_cache;
+        }
         wipe_tower_cache = 0.0f;
     }
 }
 
 void GCodeProcessor::UsedFilaments::process_support_cache(GCodeProcessor* processor)
 {
-    size_t active_filament_id = processor->get_filament_id();
+    int active_filament_id = processor->get_filament_id(false);
     if (support_volume_cache != 0.0f){
+        if(active_filament_id != -1){
         if (support_volumes_per_filament.find(active_filament_id) != support_volumes_per_filament.end())
             support_volumes_per_filament[active_filament_id] += support_volume_cache;
         else
             support_volumes_per_filament[active_filament_id] = support_volume_cache;
+        }
         support_volume_cache = 0.0f;
     }
 }
@@ -1586,6 +1607,7 @@ void GCodeProcessorResult::reset() {
     nozzle_change_sequence.clear();
     optimal_assignment.clear();
     filament_change_count_map.clear();
+    filament_change_sequence.clear();
     warnings.clear();
 
     //BBS: add mutex for protection of gcode result
@@ -1948,12 +1970,14 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
         m_preheat_steps = 1;
     m_result.backtrace_enabled = config.ooze_prevention && m_preheat_time > 0 && (m_is_XL_printer || (!m_single_extruder_multi_material && filament_count > 1));
 
-    assert(config.nozzle_volume.size() == config.nozzle_diameter.size());
+    //assert(config.nozzle_volume.size() == config.nozzle_diameter.size());
     m_nozzle_volume.resize(config.nozzle_volume.size());
     for (size_t idx = 0; idx < config.nozzle_volume.size(); ++idx)
         m_nozzle_volume[idx] = config.nozzle_volume.values[idx];
 
     m_physical_extruder_map = config.physical_extruder_map.values;
+    m_extruder_max_nozzle_count = config.extruder_max_nozzle_count.values;
+    m_filament_cooling_before_tower = config.filament_cooling_before_tower.values;
 
     m_extruder_offsets.resize(filament_count);
     m_extruder_colors.resize(filament_count);
@@ -1996,6 +2020,7 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
         if (m_flavor == gcfMarlinLegacy || m_flavor == gcfKlipper) {
             // Legacy Marlin does not have separate travel acceleration, it uses the 'extruding' value instead.
             m_time_processor.machine_limits.machine_max_acceleration_travel = m_time_processor.machine_limits.machine_max_acceleration_extruding;
+    m_time_processor.hotend_change_times = static_cast<float>(config.machine_hotend_change_time.value);
         }
         if (m_flavor == gcfRepRapFirmware) {
             // RRF does not support setting min feedrates. Set them to zero.
@@ -2041,6 +2066,8 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
         m_filament_maps = filament_maps->values;
         std::transform(m_filament_maps.begin(), m_filament_maps.end(), m_filament_maps.begin(), [](int value) {return value - 1; });
     }
+    // H2C TODO
+    // = config.filament_map_2.values;
 
     const ConfigOptionBool* spiral_vase = config.option<ConfigOptionBool>("spiral_mode");
     if (spiral_vase != nullptr) {
@@ -2076,6 +2103,16 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
 
     const ConfigOptionInt *nozzle_HRC = config.option<ConfigOptionInt>("nozzle_hrc");
     if (nozzle_HRC != nullptr) m_result.nozzle_hrc = nozzle_HRC->value;
+
+    const ConfigOptionIntsNullable* extruder_max_nozzle_count = config.option<ConfigOptionIntsNullable>("extruder_max_nozzle_count");
+    if(extruder_max_nozzle_count != nullptr){
+        m_extruder_max_nozzle_count = extruder_max_nozzle_count->values;
+    }
+
+    const ConfigOptionFloatsNullable* filament_cooling_before_tower = config.option<ConfigOptionFloatsNullable>("filament_cooling_before_tower");
+    if (filament_cooling_before_tower != nullptr) {
+        m_filament_cooling_before_tower = filament_cooling_before_tower->values;
+    }
 
     const ConfigOptionInts* physical_extruder_map = config.option<ConfigOptionInts>("physical_extruder_map");
     if (physical_extruder_map != nullptr) {
@@ -2170,6 +2207,12 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
         std::transform(m_filament_maps.begin(), m_filament_maps.end(), m_filament_maps.begin(), [](int value) {return value - 1; });
     }
 
+    auto config_idx_for_filament = config.option<ConfigOptionInts>("filament_map_2");
+    // H2C TODO
+    // if (config_idx_for_filament != nullptr){
+    //     m_config_idx_for_filament = config_idx_for_filament->values;
+    // }
+
     //BBS
     const ConfigOptionFloats* filament_costs = config.option<ConfigOptionFloats>("filament_cost");
     if (filament_costs != nullptr) {
@@ -2262,6 +2305,10 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
     const ConfigOptionFloat* machine_tool_change_time = config.option<ConfigOptionFloat>("machine_tool_change_time");
     if (machine_tool_change_time != nullptr)
         m_time_processor.machine_tool_change_time = static_cast<float>(machine_tool_change_time->value);
+
+    const ConfigOptionFloat* machine_hotend_change_time = config.option<ConfigOptionFloat>("machine_hotend_change_time");
+    if(machine_hotend_change_time != nullptr)
+        m_time_processor.hotend_change_times = static_cast<float>(machine_hotend_change_time->value);
 
     if (m_flavor == gcfMarlinLegacy || m_flavor == gcfMarlinFirmware || m_flavor == gcfKlipper) {
         const ConfigOptionFloats* machine_max_acceleration_x = config.option<ConfigOptionFloats>("machine_max_acceleration_x");
@@ -2579,6 +2626,13 @@ void GCodeProcessor::initialize(const std::string& filename)
     m_result.filename = filename;
     m_result.id = ++s_result_id;
 }
+
+
+void GCodeProcessor::initialize_from_context(const MultiNozzleUtils::MultiNozzleGroupResult& nozzle_group_result)
+{
+    m_nozzle_group_result = nozzle_group_result;
+}
+
 
 void GCodeProcessor::process_buffer(const std::string &buffer)
 {
@@ -2924,10 +2978,22 @@ bool GCodeProcessor::get_last_z_from_gcode(const std::string& gcode_str, double&
 
 bool GCodeProcessor::get_last_position_from_gcode(const std::string &gcode_str, Vec3f &pos)
 {
+    auto parse_G387 = [](const std::string &line_str) {
+        if (line_str.find("G387 ") != 0) return 0;
+        if (line_str.find("J1") != std::string::npos) {
+            return -1;//min
+        } else if (line_str.find("J-1") != std::string::npos) {
+            return 1;//max
+        }
+        return 0;
+    };
+
     int  str_size     = gcode_str.size();
     int  start_index  = 0;
     int  end_index    = 0;
     bool is_z_changed = false;
+    Vec3f pre_pos(0, 0, 0);
+    Vec3i32 pre_pos_valid(0,0,0);
     while (end_index < str_size) {
         // find a full line
         if (gcode_str[end_index] != '\n') {
@@ -2942,7 +3008,9 @@ bool GCodeProcessor::get_last_position_from_gcode(const std::string &gcode_str, 
             line_str.erase(line_str.find_last_not_of(" ") + 1);
 
             // command which may have z movement
-            if (line_str.size() > 5 && (line_str.find("G0 ") == 0 || line_str.find("G1 ") == 0 || line_str.find("G2 ") == 0 || line_str.find("G3 ") == 0)) {
+            if (line_str.size() > 5 &&
+                (line_str.find("G0 ") == 0 || line_str.find("G1 ") == 0 || line_str.find("G2 ") == 0 || line_str.find("G3 ") == 0 || line_str.find("G387 ") == 0)) {
+                    int g387_j = parse_G387(line_str);
                 {
                     float &x      = pos.x();
                     auto   z_pos  = line_str.find(" X");
@@ -2960,6 +3028,11 @@ bool GCodeProcessor::get_last_position_from_gcode(const std::string &gcode_str, 
                             // The axis value has been parsed correctly.
                             x            = temp_z;
                             is_z_changed = true;
+                            if (g387_j != 0 && pre_pos_valid.x() != 0) {
+                                x = g387_j ==-1 ? std::min(pre_pos.x(), x) : std::max(pre_pos.x(), x);
+                            }
+                            pre_pos.x() = x;
+                            pre_pos_valid.x() = 1;
                         }
                     }
                 }
@@ -2981,6 +3054,9 @@ bool GCodeProcessor::get_last_position_from_gcode(const std::string &gcode_str, 
                             // The axis value has been parsed correctly.
                             y            = temp_z;
                             is_z_changed = true;
+                            if (g387_j != 0 && pre_pos_valid.y() != 0) { y = g387_j == -1 ? std::min(pre_pos.y(), y) : std::max(pre_pos.y(), y); }
+                            pre_pos.y() = y;
+                            pre_pos_valid.y() = 1;
                         }
                     }
                 }
@@ -3002,6 +3078,9 @@ bool GCodeProcessor::get_last_position_from_gcode(const std::string &gcode_str, 
                             // The axis value has been parsed correctly.
                             z            = temp_z;
                             is_z_changed = true;
+                            if (g387_j != 0 && pre_pos_valid.z()!=0) { z = g387_j == -1 ? std::min(pre_pos.z(), z) : std::max(pre_pos.z(), z); }
+                            pre_pos.z()       = z;
+                            pre_pos_valid.z() = 1;
                         }
                     }
                 }
@@ -3730,7 +3809,7 @@ void GCodeProcessor::process_G1(const std::array<std::optional<double>, 4>& axes
     G1DiscretizationOrigin origin, const std::optional<unsigned int>& remaining_internal_g1_lines)
 {
     int filament_id = get_filament_id();
-    int last_filament_id = get_last_filament_id();
+    int last_filament_id = get_last_filament_id(false);
     float filament_diameter = (static_cast<size_t>(filament_id) < m_result.filament_diameters.size()) ? m_result.filament_diameters[filament_id] : m_result.filament_diameters.back();
     float filament_radius = 0.5f * filament_diameter;
     float area_filament_cross_section = static_cast<float>(M_PI) * sqr(filament_radius);
@@ -3854,10 +3933,12 @@ void GCodeProcessor::process_G1(const std::array<std::optional<double>, 4>& axes
         float volume_flushed_filament = area_filament_cross_section * delta_pos[E];
         if (m_remaining_volume[extruder_id] > volume_flushed_filament)
         {
+            if (last_filament_id != -1)
             m_used_filaments.update_flush_per_filament(last_filament_id, volume_flushed_filament);
             m_remaining_volume[extruder_id] -= volume_flushed_filament;
         }
         else {
+            if (last_filament_id != -1)
             m_used_filaments.update_flush_per_filament(last_filament_id, m_remaining_volume[extruder_id]);
             m_used_filaments.update_flush_per_filament(filament_id, volume_flushed_filament - m_remaining_volume[extruder_id]);
             m_remaining_volume[extruder_id] = 0.f;
@@ -4140,7 +4221,7 @@ void GCodeProcessor::process_G1(const std::array<std::optional<double>, 4>& axes
 void GCodeProcessor::process_VG1(const GCodeReader::GCodeLine& line)
 {
     int filament_id = get_filament_id();
-    int last_filament_id = get_last_filament_id();
+    int last_filament_id = get_last_filament_id(false);
     float filament_diameter = (static_cast<size_t>(filament_id) < m_result.filament_diameters.size()) ? m_result.filament_diameters[filament_id] : m_result.filament_diameters.back();
     float filament_radius = 0.5f * filament_diameter;
     float area_filament_cross_section = static_cast<float>(M_PI) * sqr(filament_radius);
@@ -4211,10 +4292,12 @@ void GCodeProcessor::process_VG1(const GCodeReader::GCodeLine& line)
         float volume_flushed_filament = area_filament_cross_section * delta_pos[E];
         if (m_remaining_volume[extruder_id] > volume_flushed_filament)
         {
+            if (last_filament_id != -1)
             m_used_filaments.update_flush_per_filament(last_filament_id, volume_flushed_filament);
             m_remaining_volume[extruder_id] -= volume_flushed_filament;
         }
         else {
+            if (last_filament_id != -1)
             m_used_filaments.update_flush_per_filament(last_filament_id, m_remaining_volume[extruder_id]);
             m_used_filaments.update_flush_per_filament(filament_id, volume_flushed_filament - m_remaining_volume[extruder_id]);
             m_remaining_volume[extruder_id] = 0.f;
@@ -5334,7 +5417,7 @@ void GCodeProcessor::process_SYNC(const GCodeReader::GCodeLine& line)
 {
     float time = 0;
     if (line.has_value('T', time) ) {
-        simulate_st_synchronize(time);
+        simulate_st_synchronize(time/* H2C TODO ,erFlush*/);
     }
 }
 
@@ -5427,6 +5510,7 @@ void GCodeProcessor::process_filament_change(int id)
     if (prev_extruder_id != -1)
         m_last_filament_id[prev_extruder_id] = prev_filament_id;
 
+    if(!m_nozzle_group_result.has_value()){
     if (prev_extruder_id == next_extruder_id) {
         // don't need extruder change
         assert(prev_extruder_id != -1);
@@ -5473,6 +5557,63 @@ void GCodeProcessor::process_filament_change(int id)
             m_result.unlock();
             extra_time += get_extruder_change_time(next_extruder_id);
         }
+    }
+    }
+    else {
+        auto old_extruder_opt = m_nozzle_group_result->get_nozzle_for_filament(prev_filament_id);
+        auto new_extruder_opt = m_nozzle_group_result->get_nozzle_for_filament(next_filament_id);
+
+        int old_extruder_id = old_extruder_opt ? old_extruder_opt->extruder_id : -1;
+        int new_extruder_id = new_extruder_opt ? new_extruder_opt->extruder_id : -1;
+
+        int old_filament_in_extruder = m_last_filament_id[next_extruder_id];
+        auto old_nozzle_in_extruder_opt = m_nozzle_group_result->get_nozzle_for_filament(old_filament_in_extruder);
+        auto new_nozzle_in_extruder_opt = m_nozzle_group_result->get_nozzle_for_filament(next_filament_id);
+
+        int old_nozzle_in_extruder = old_nozzle_in_extruder_opt ? old_nozzle_in_extruder_opt->group_id : -1;
+        int new_nozzle_in_extruder = new_nozzle_in_extruder_opt ? new_nozzle_in_extruder_opt->group_id : -1;
+
+        int old_filament_in_nozzle = m_nozzle_status_recorder.get_filament_in_nozzle(new_nozzle_in_extruder);
+
+        bool is_extruder_change = (old_extruder_id != new_extruder_id);
+        bool is_nozzle_change = (old_nozzle_in_extruder != new_nozzle_in_extruder);
+        bool is_filament_change = (old_filament_in_nozzle != next_filament_id);
+
+
+        if (is_extruder_change) {
+            extra_time += get_extruder_change_time(next_extruder_id);
+        }
+        if (is_nozzle_change) {
+            extra_time += get_filament_unload_time(static_cast<size_t>(old_filament_in_nozzle));
+            extra_time += get_hotend_change_time();
+            m_time_processor.extruder_unloaded = false;
+            extra_time += get_filament_load_time(static_cast<size_t>(next_filament_id));
+        }
+        if (is_filament_change) {
+            extra_time += get_filament_unload_time(static_cast<size_t>(old_filament_in_nozzle));
+            m_time_processor.extruder_unloaded = false;
+            extra_time += get_filament_load_time(static_cast<size_t>(next_filament_id));
+        }
+
+        m_result.lock();
+        if (is_extruder_change || is_nozzle_change || is_filament_change) {
+            process_filaments(CustomGCode::ToolChange);
+        }
+
+        if(is_extruder_change){
+            m_result.print_statistics.total_extruder_changes++;
+        }
+        else if(is_nozzle_change){
+            m_result.print_statistics.total_nozzle_changes++;
+        }
+        else if(is_filament_change){
+            m_result.print_statistics.total_filament_changes++;
+        }
+        m_result.unlock();
+
+        m_filament_id[next_extruder_id] = next_filament_id;
+        m_extruder_id = new_extruder_id;
+        m_nozzle_status_recorder.set_nozzle_status(new_nozzle_in_extruder, next_filament_id);
     }
     m_cp_color.current = m_extruder_colors[next_filament_id];
     simulate_st_synchronize(extra_time);
@@ -5751,6 +5892,11 @@ float GCodeProcessor::get_extruder_change_time(size_t extruder_id)
 {
     //TODO: all extruder has the same value ?
     return m_time_processor.machine_tool_change_time;
+}
+
+float GCodeProcessor::get_hotend_change_time()
+{
+    return m_time_processor.hotend_change_times;
 }
 
 //BBS

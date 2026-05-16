@@ -2626,8 +2626,10 @@ std::pair<Preset*, bool> PresetCollection::load_external_preset(
         //we can not reach here
         preset.save(nullptr);
     }
-    if (&this->get_selected_preset() == &preset)
+    if (&this->get_selected_preset() == &preset) {
         this->get_edited_preset().is_external = true;
+        this->get_edited_preset().is_project_embedded = preset.is_project_embedded;
+    }
 
     //BBS: add config related logs
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(", type %1% added a preset, name %2%, path %3%, is_system %4%, is_default %5% is_external %6%")%Preset::get_type_string(m_type) %preset.name %preset.file %preset.is_system %preset.is_default %preset.is_external;
@@ -3704,6 +3706,26 @@ void PresetCollection::set_printer_hold_alias(const std::string &alias, Preset &
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << " preset name : " << preset.name << " remove action: " << remove << " insert success: "
                                 << insert_success << " remove success: " << remove_success << " alias: " << alias;
     }
+}
+
+std::string PresetCollection::get_preset_alias(Preset &preset, bool force)
+{
+    if (!preset.alias.empty())
+        return preset.alias;
+    else
+        set_custom_preset_alias(preset);
+
+    if (!preset.alias.empty() || !force)
+        return preset.alias;
+
+    std::string alias_name;
+    std::string preset_name = preset.name;
+    size_t      end_pos     = preset_name.find_first_of("@");
+    if (end_pos != std::string::npos) {
+        alias_name = preset_name.substr(0, end_pos);
+        boost::trim_right(alias_name);
+    }
+    return alias_name;
 }
 
 std::string PresetCollection::name() const

@@ -55,6 +55,11 @@ struct FilamentInfo
     double      nozzle_diameter{0.0};
     std::string nozzle_volume_type;
 
+    /*for multi nozzle*/
+    int group_id {-1};
+    double nozzle_diameter{0};
+    std::string nozzle_volume_type;
+
     /*for new ams mapping*/
     std::string ams_id;
     std::string slot_id;
