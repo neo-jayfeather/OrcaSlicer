@@ -28,6 +28,10 @@ namespace FillLightning {
     class Generator;
 };
 
+namespace sla {
+    class IndexedMesh;
+};
+
 class LayerRegion
 {
 public:
@@ -193,6 +197,7 @@ public:
                                                                            FillAdaptive::Octree *support_fill_octree,
                                                                            FillLightning::Generator* lightning_generator) const;
     void 					make_ironing();
+    void                    make_contour_z(const sla::IndexedMesh &mesh);
 
     void                    export_region_slices_to_svg(const char *path) const;
     void                    export_region_fill_surfaces_to_svg(const char *path) const;
@@ -321,6 +326,7 @@ protected:
         ExPolygon *area;
         int        type;
         int interface_id = 0;
+        bool interface_as_base = false;
         coordf_t   dist_to_top; // mm dist to top
         bool need_infill = false;
         bool need_extra_wall = false;
