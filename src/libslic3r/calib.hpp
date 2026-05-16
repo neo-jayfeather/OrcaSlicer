@@ -83,6 +83,8 @@ public:
     NozzleVolumeType nozzle_volume_type;
     BedType     bed_type;
     float       nozzle_diameter;
+    int         nozzle_pos_id{-1};
+    std::string nozzle_sn;
     std::string filament_id;
     std::string setting_id;
     std::string name;
@@ -123,6 +125,7 @@ public:
     int         ams_id = 0;
     int         slot_id = 0;
     int         cali_idx = -1;
+    int         nozzle_pos_id = -1; //-1 means no nozzle pos
     float       nozzle_diameter;
     std::string filament_id;
     std::string setting_id;
@@ -140,7 +143,9 @@ struct PACalibIndexInfo
     int         ams_id = 0;
     int         slot_id = 0;
     int         cali_idx = -1; // -1 means default
+    int         nozzle_pos_id = -1; //-1 means no nozzle pos
     float       nozzle_diameter;
+    std::string nozzle_sn;
     std::string filament_id;
 };
 
