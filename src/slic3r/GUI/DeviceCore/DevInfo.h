@@ -3,6 +3,9 @@
 #include "slic3r/Utils/json_diff.hpp"
 #include <wx/string.h>
 
+#include "DevDefs.h"
+#include "slic3r/GUI/DeviceManager.hpp"
+
 namespace Slic3r {
 
 class MachineObject;

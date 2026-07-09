@@ -1006,6 +1006,7 @@ void GLCanvas3D::SequentialPrintClearance::render()
 wxDEFINE_EVENT(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_OBJECT_SELECT, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_PLATE_NAME_CHANGE, SimpleEvent);
+wxDEFINE_EVENT(EVT_GLCANVAS_MOVE_PLATE, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_PLATE_SELECT, SimpleEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_RIGHT_CLICK, RBtnEvent);
 wxDEFINE_EVENT(EVT_GLCANVAS_PLATE_RIGHT_CLICK, RBtnPlateEvent);
@@ -4525,6 +4526,7 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
                                     rotate_target = bbox.center();
                                 }
                             }
+                        }
 
                             if (!rotate_target.isZero())
                                 camera.rotate_on_sphere_with_target(rot.x(), rot.y(), rotate_limit, rotate_target);
@@ -4855,8 +4857,33 @@ void GLCanvas3D::do_move(const std::string& snapshot_type)
 
             // Move instances/volumes
             ModelObject* model_object = m_model->objects[object_idx];
-            if (model_object == nullptr) 
-                continue;
+            // H2C TODO : maybe just continue;
+            if (model_object != nullptr) {
+                if (force_volume_move || selection_mode == Selection::Volume) {
+                    auto cur_mv = model_object->volumes[volume_idx];
+                    if (cur_mv->get_offset() != v->get_volume_offset()) {
+                        cur_mv->set_transformation(v->get_volume_transformation());
+                        // BBS: backup
+                        Slic3r::save_object_mesh(*model_object);
+                    }
+                }
+                else if (selection_mode == Selection::Instance) {
+                    if (m_canvas_type == GLCanvas3D::ECanvasType::CanvasAssembleView) {
+                        if ((model_object->instances[instance_idx]->get_assemble_offset() - v->get_instance_offset()).norm() > 1e-2) {
+                            model_object->instances[instance_idx]->set_assemble_transformation(v->get_instance_transformation());
+                        }
+                    } else {
+                        model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
+                    }
+                }
+                else if (selection_mode == Selection::Volume) {
+                    auto cur_mv = model_object->volumes[volume_idx];
+                    if (cur_mv->get_transformation() != v->get_volume_transformation()) {
+                        cur_mv->set_transformation(v->get_volume_transformation());
+                        // BBS: backup
+                        Slic3r::save_object_mesh(*model_object);
+                    }
+                }
 
             if (selection_mode == Selection::Instance) {
                 if (m_canvas_type == GLCanvas3D::ECanvasType::CanvasAssembleView) {
@@ -9865,7 +9892,7 @@ bool GLCanvas3D::is_flushing_matrix_error() {
     const std::vector<double> &config_multiplier = (project_config.option<ConfigOptionFloats>("flush_multiplier"))->values;
 
     for (auto multiplier : config_multiplier) {
-        if (multiplier == 0) return true;
+        if (multiplier == 0 && config_matrix.size() >= config_multiplier.size() * 4) return true;
     }
 
     int  matrix_len = config_matrix.size() / config_multiplier.size();

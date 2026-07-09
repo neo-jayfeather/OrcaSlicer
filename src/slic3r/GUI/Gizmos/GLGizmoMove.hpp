@@ -30,6 +30,8 @@ class GLGizmoMove3D : public GLGizmoBase
     };
     std::array<GrabberConnection, 3> m_grabber_connections;
 
+    GLModel m_align_plane;
+    
     //BBS: add size adjust related
     GizmoObjectManipulation* m_object_manipulation;
 

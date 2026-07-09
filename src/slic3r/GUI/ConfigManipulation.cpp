@@ -215,12 +215,22 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
     if (max_lh > 0.2 && layer_height > max_lh+ EPSILON)
     {
         const wxString msg_text = wxString::Format(L"Too large layer height.\nReset to %0.3f.", max_lh);
-        MessageDialog dialog(nullptr, msg_text, "", wxICON_WARNING | wxOK);
-        DynamicPrintConfig new_conf = *config;
-        is_msg_dlg_already_exist = true;
-        dialog.ShowModal();
-        new_conf.set_key_value("layer_height", new ConfigOptionFloat(max_lh));
-        apply(config, &new_conf);
+        if (wxGetApp().app_config->get("developer_mode") == "true") {
+            MessageDialog dialog(nullptr, msg_text, "", wxICON_WARNING | wxYES_NO);
+            is_msg_dlg_already_exist = true;
+            if (dialog.ShowModal() == wxID_YES) {
+                DynamicPrintConfig new_conf = *config;
+                new_conf.set_key_value("layer_height", new ConfigOptionFloat(0.2));
+                apply(config, &new_conf);
+            }
+        } else {
+            MessageDialog dialog(nullptr, msg_text, "", wxICON_WARNING | wxOK);
+            DynamicPrintConfig new_conf = *config;
+            is_msg_dlg_already_exist = true;
+            dialog.ShowModal();
+            new_conf.set_key_value("layer_height", new ConfigOptionFloat(max_lh));
+            apply(config, &new_conf);
+        }
         is_msg_dlg_already_exist = false;
     }
 
@@ -402,6 +412,7 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
                 "YES - Keep Prime Tower\n"
                 "NO  - Keep Independent Support Layer Height"));
         }
+    }
 
         MessageDialog dialog(m_msg_dlg_parent, msg_text, "", wxICON_WARNING | wxYES | wxNO);
         is_msg_dlg_already_exist = true;
@@ -541,6 +552,15 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         apply(config, &new_conf);
         is_msg_dlg_already_exist = false;
     }
+
+    if (is_global_config && (config->opt_int("wall_filament") || config->opt_int("sparse_infill_filament")
+        || config->opt_int("solid_infill_filament") )) {
+        DynamicPrintConfig new_conf = *config;
+        new_conf.set_key_value("wall_filament", new ConfigOptionInt(0));
+        new_conf.set_key_value("sparse_infill_filament", new ConfigOptionInt(0));
+        new_conf.set_key_value("solid_infill_filament", new ConfigOptionInt(0));
+        apply(config, &new_conf);
+    }
 }
 
 void ConfigManipulation::apply_null_fff_config(DynamicPrintConfig *config, std::vector<std::string> const &keys, std::map<ObjectBase *, ModelConfig *> const &configs)
@@ -605,6 +625,13 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
     bool          have_multiline_infill_pattern = pattern == ipGyroid || pattern == ipGrid || pattern == ipRectilinear || pattern == ipTpmsD || pattern == ipTpmsFK || pattern == ipCrossHatch || pattern == ipHoneycomb || pattern == ipLateralLattice || pattern == ipLateralHoneycomb || pattern == ipConcentric ||
                                                   pattern == ipCubic || pattern == ipStars || pattern == ipAlignedRectilinear || pattern == ipLightning || pattern == ip3DHoneycomb || pattern == ipAdaptiveCubic || pattern == ipSupportCubic|| pattern == ipTriangles || pattern == ipQuarterCubic|| pattern == ipArchimedeanChords || pattern == ipHilbertCurve || pattern == ipOctagramSpiral;
 
+    toggle_line("fill_multiline", have_infill && have_multiline_infill_pattern);
+    if (have_multiline_infill_pattern == false) {
+        DynamicPrintConfig new_conf = *config;
+        new_conf.set_key_value("fill_multiline", new ConfigOptionInt(1));
+        apply(config, &new_conf);
+    }
+                                                
     // If there is infill, enable/disable fill_multiline according to whether the pattern supports multiline infill.
     if (have_infill) {
         toggle_field("fill_multiline", have_multiline_infill_pattern);
@@ -630,7 +657,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
 
     toggle_line("infill_shift_step", is_cross_zag || is_locked_zig);
     
-    for (auto el : { "skeleton_infill_density", "skin_infill_density", "infill_lock_depth", "skin_infill_depth","skin_infill_line_width", "skeleton_infill_line_width" })
+    for (auto el : {"infill_instead_top_bottom_surfaces","skeleton_infill_density", "skin_infill_density", "infill_lock_depth", "skin_infill_depth", "skin_infill_line_width", "skeleton_infill_line_width", "locked_skin_infill_pattern", "locked_skeleton_infill_pattern"})
         toggle_line(el, is_locked_zig);
 
     bool is_zig_zag = config->option<ConfigOptionEnum<InfillPattern>>("sparse_infill_pattern")->value == InfillPattern::ipZigZag;
@@ -872,6 +899,9 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
     toggle_line("slowdown_for_curled_perimeters", has_overhang_speed);
 
     toggle_line("flush_into_objects", !is_global_config);
+    toggle_line("wall_filament", !is_global_config);
+    toggle_line("solid_infill_filament", !is_global_config);
+    toggle_line("sparse_infill_filament", !is_global_config);
 
     toggle_line("support_interface_not_for_body",config->opt_int("support_interface_filament")&&!config->opt_int("support_filament"));
 

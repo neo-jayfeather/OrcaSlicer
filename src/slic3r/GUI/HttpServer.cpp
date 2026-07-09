@@ -4,8 +4,117 @@
 #include "slic3r/Utils/Http.hpp"
 #include "slic3r/Utils/NetworkAgent.hpp"
 #include "slic3r/Utils/BBLNetworkPlugin.hpp"
+#include <algorithm>
 
 namespace Slic3r {
+
+namespace Scramble {
+static const char B64URL_ALPHABET[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+static inline int b64url_val(char c)
+{
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '-') return 62;
+    if (c == '_') return 63;
+    return -1;
+}
+
+std::string base64url_encode(const std::string &in)
+{
+    const unsigned char *p = (const unsigned char *) in.data();
+    size_t               n = in.size();
+    std::string          out;
+    out.reserve(((n + 2) / 3) * 4);
+
+    size_t i = 0;
+    while (i + 2 < n) {
+        uint32_t tri = (uint32_t(p[i]) << 16) | (uint32_t(p[i + 1]) << 8) | uint32_t(p[i + 2]);
+        out.push_back(B64URL_ALPHABET[(tri >> 18) & 0x3F]);
+        out.push_back(B64URL_ALPHABET[(tri >> 12) & 0x3F]);
+        out.push_back(B64URL_ALPHABET[(tri >> 6) & 0x3F]);
+        out.push_back(B64URL_ALPHABET[tri & 0x3F]);
+        i += 3;
+    }
+
+    if (i < n) {
+        int      remain = int(n - i);
+        uint32_t tri    = (uint32_t(p[i]) << 16);
+        if (remain == 2) tri |= (uint32_t(p[i + 1]) << 8);
+        out.push_back(B64URL_ALPHABET[(tri >> 18) & 0x3F]);
+        out.push_back(B64URL_ALPHABET[(tri >> 12) & 0x3F]);
+        if (remain == 2) out.push_back(B64URL_ALPHABET[(tri >> 6) & 0x3F]);
+    }
+    return out;
+}
+
+std::string base64url_decode(const std::string &in)
+{
+    size_t n = in.size();
+    if (n == 0) return std::string();
+
+    std::string out;
+    out.reserve((n * 3) / 4 + 3);
+    size_t i = 0;
+    while (i < n) {
+        int v0 = -1, v1 = -1, v2 = -1, v3 = -1;
+        v0 = (i < n) ? b64url_val(in[i++]) : -1;
+        v1 = (i < n) ? b64url_val(in[i++]) : -1;
+        if (v0 < 0 || v1 < 0) return std::string();
+        if (i < n) {
+            int t = b64url_val(in[i]);
+            if (t >= 0) {
+                v2 = t;
+                ++i;
+            }
+        }
+        if (i < n) {
+            int t = b64url_val(in[i]);
+            if (t >= 0) {
+                v3 = t;
+                ++i;
+            }
+        }
+
+        if (v2 >= 0 && v3 >= 0) {
+            uint32_t tri = (v0 << 18) | (v1 << 12) | (v2 << 6) | v3;
+            out.push_back(char((tri >> 16) & 0xFF));
+            out.push_back(char((tri >> 8) & 0xFF));
+            out.push_back(char(tri & 0xFF));
+        } else if (v2 >= 0 && v3 < 0) {
+            uint32_t tri = (v0 << 18) | (v1 << 12) | (v2 << 6);
+            out.push_back(char((tri >> 16) & 0xFF));
+            out.push_back(char((tri >> 8) & 0xFF));
+        } else if (v2 < 0 && v3 < 0) {
+            uint32_t tri = (v0 << 18) | (v1 << 12);
+            out.push_back(char((tri >> 16) & 0xFF));
+        } else {
+            return std::string();
+        }
+    }
+    return out;
+}
+
+std::string xor_obfuscate(const std::string &key, const std::string &data)
+{
+    if (key.empty()) return std::string();
+    std::string out;
+    out.resize(data.size());
+    const size_t klen = key.size();
+    for (size_t i = 0; i < data.size(); ++i) {
+        unsigned char d = (unsigned char) data[i];
+        unsigned char k = (unsigned char) key[i % klen];
+        out[i]          = (char) (d ^ k);
+    }
+    return out;
+}
+
+std::string scrambleWithKey(const std::string &plaintext, const std::string &key) { return base64url_encode(xor_obfuscate(key, plaintext)); }
+
+std::string descrambleWithKey(const std::string &token, const std::string &key) { return xor_obfuscate(key, base64url_decode(token)); }
+} // Scramble
+
 namespace GUI {
 
 std::string url_get_param(const std::string& url, const std::string& key)
@@ -191,6 +300,17 @@ void HttpServer::stop()
 void HttpServer::set_request_handler(const std::function<std::shared_ptr<Response>(const std::string&)>& request_handler)
 {
     this->m_request_handler = request_handler;
+}
+
+// H2C TODO
+static HttpReqType parse_request_type(const boost::beast::http::request<boost::beast::http::string_body>& req)
+{
+    std::string target = req.target();
+    if (boost::starts_with(target, "/refresh_token")) {
+        return HttpReqType::RefreshToken;
+    }
+
+    return HttpReqType::Login;
 }
 
 std::shared_ptr<HttpServer::Response> HttpServer::bbl_auth_handle_request(const std::string& url)

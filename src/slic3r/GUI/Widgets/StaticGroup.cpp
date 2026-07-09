@@ -1,10 +1,21 @@
 #include "StaticGroup.hpp"
+#include "Label.hpp"
 
-StaticGroup::StaticGroup(wxWindow *parent, wxWindowID id, const wxString &label)
-    : LabeledStaticBox(parent, label)
+StaticGroup::StaticGroup(wxWindow *parent, wxWindowID id)
+#ifdef __WXOSX__
+    : LabeledStaticBox(parent, id, ".")
+#elses
+    : LabeledStaticBox(parent, id, "")
+#endif
 {
     SetBackgroundColour(*wxWHITE);
     SetForegroundColour("#CECECE");
+}
+
+bool StaticGroup::Show(bool show)
+{
+    bool ret = wxStaticBox::Show(show);
+    return ret;
 }
 
 void StaticGroup::ShowBadge(bool show)

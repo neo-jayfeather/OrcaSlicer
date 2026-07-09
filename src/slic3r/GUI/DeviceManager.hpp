@@ -20,6 +20,8 @@
 #include "DeviceCore/DevDefs.h"
 #include "DeviceCore/DevConfigUtil.h"
 #include "DeviceCore/DevFirmware.h"
+#include "DeviceCore/DevUtil.h"
+
 #include "DeviceErrorDialog.hpp"
 
 #include <wx/object.h>
@@ -48,16 +50,16 @@
 #define GET_VERSION_RETRYS      10
 #define RETRY_INTERNAL          2000
 
-#define START_SEQ_ID            20000
-#define END_SEQ_ID              30000
 #define SUBSCRIBE_RETRY_COUNT   5
 
 using namespace nlohmann;
 namespace Slic3r {
+class Print;
 
 namespace GUI
 {
 class DeviceErrorDialog; // Previous definitions
+class Plater;
 }
 
 class NetworkAgent;
@@ -66,17 +68,12 @@ enum ManualPaCaliMethod {
     PA_PATTERN,
 };
 
-
-#define UpgradeNoError          0
-#define UpgradeDownloadFailed   -1
-#define UpgradeVerfifyFailed    -2
-#define UpgradeFlashFailed      -3
-#define UpgradePrinting         -4
-
 // Previous definitions
 class DevAms;
 class DevAmsTray;
+class DevAxis;
 class DevBed;
+class DevChamber;
 class DevConfig;
 class DevCtrl;
 class DevExtensionTool;
@@ -85,11 +82,15 @@ class DevFan;
 class DevFilaSystem;
 class DevPrintOptions;
 class DevHMS;
+class DevInfo;
 class DevLamp;
 class DevNozzleSystem;
+class DevNozzleRack;
 class DeviceManager;
 class DevStorage;
+class DevUpgrade;
 struct DevPrintTaskRatingInfo;
+struct DevNozzle;
 
 
 class MachineObject
@@ -105,11 +106,17 @@ private:
     std::string dev_ip;
     std::string access_code;
     std::string user_access_code;
+    std::shared_ptr<DevInfo>  m_dev_info;
 
     // type, time stamp, delay
     std::vector<std::tuple<std::string, uint64_t, uint64_t>> message_delay;
 
+    // the latest nozzle mapping
+    DevNozzleMappingResult m_auto_nozzle_mapping;
+
     /*parts*/
+    std::shared_ptr<DevAxis>    m_axis;
+    std::shared_ptr<DevChamber> m_chamber;
     DevLamp*          m_lamp;
     std::shared_ptr<DevExtensionTool> m_extension_tool;
     DevExtderSystem*  m_extder_system;
@@ -124,6 +131,9 @@ private:
 
     /*Print Options/Speed*/
     DevPrintOptions* m_print_options;
+
+    /*Upgrade*/
+    std::shared_ptr<DevUpgrade> m_upgrade;
 
     /*HMS*/
     DevHMS* m_hms_system;
@@ -152,7 +162,7 @@ public:
 public:
 
     /* static members and functions */
-    static inline int m_sequence_id = START_SEQ_ID;
+    static inline int m_sequence_id = STUDIO_START_SEQ_ID;
 
     /* properties */
     std::string get_dev_name() const { return dev_name; }
@@ -223,8 +233,6 @@ public:
     void reload_printer_settings();
     std::string get_printer_thumbnail_img_str() const;
 
-    std::string dev_product_name;       // set by iot service, get /user/print
-
     std::string bind_user_name;
     std::string bind_user_id;
     std::string bind_sec_link;
@@ -232,12 +240,8 @@ public:
     std::string bind_state;     /* free | occupied */
     bool is_avaliable() { return bind_state == "free"; }
 
-    time_t last_alive;
     bool m_is_online;
-    bool m_lan_mode_connection_state{false};
     bool m_set_ctt_dlg{ false };
-    void set_lan_mode_connection_state(bool state) {m_lan_mode_connection_state = state;};
-    bool get_lan_mode_connection_state() {return m_lan_mode_connection_state;};
     void set_ctt_dlg( wxString text);
     int  parse_msg_count = 0;
     int  keep_alive_count = 0;
@@ -269,7 +273,6 @@ public:
     int   ams_status_sub;
     int   ams_version = 0;
 
-    int extrusion_cali_hold_count = 0;
     std::chrono::system_clock::time_point last_extrusion_cali_start_time;
     int extrusion_cali_set_tray_id = -1;
     std::chrono::system_clock::time_point extrusion_cali_set_hold_start;
@@ -277,6 +280,9 @@ public:
 
     bool is_in_extrusion_cali();
     bool is_extrusion_cali_finished();
+
+    /* Networking */
+    NetworkAgent *get_agent() const { return m_agent; }
 
     /* AMS */
     DevAms*     get_curr_Ams();
@@ -300,10 +306,26 @@ public:
     bool is_multi_extruders() const;
     int  get_extruder_id_by_ams_id(const std::string& ams_id);
 
+    /* nozzle */
+    DevNozzle get_nozzle_by_id_code(int id_code) const;
+    DevNozzle get_nozzle_by_sn(const std::string& sn) const;
+
+    // auto nozzle mapping
+    DevNozzleMappingResult get_nozzle_mapping_result() const { return m_auto_nozzle_mapping; }
+    void set_manual_nozzle_mapping(int fila_id, int nozzle_pos_id) { m_auto_nozzle_mapping.SetManualNozzleMapping(this, fila_id, nozzle_pos_id); };// nozzle_pos_id is O\0x10\0x20\0x30...
+    void clear_auto_nozzle_mapping() { m_auto_nozzle_mapping.Clear(); }
+    int ctrl_get_auto_nozzle_mapping(Slic3r::GUI::Plater* plater, const std::vector<FilamentInfo>& ams_mapping, int flow_cali_opt, int pa_value);
+
+    /* ams settings*/
+    std::optional<bool> IsDetectOnInsertEnabled() const;
+    //bool IsDetectOnPowerupEnabled() const { return m_enable_detect_on_powerup; }
+    //bool IsDetectRemainEnabled() const { return m_enable_detect_remain; }
+    //bool IsAutoRefillEnabled() const { return m_enable_auto_refill; }
+
     /* E3D has extra nozzle flow type info */
     bool has_extra_flow_type{false};
 
-    [[nodiscard]] bool is_nozzle_flow_type_supported() const { return is_enable_np | has_extra_flow_type; };
+    [[nodiscard]] bool is_nozzle_flow_type_supported() const { return is_enable_np | has_extra_flow_type; }
     [[nodiscard]] wxString get_nozzle_replace_url() const;
 
     /*online*/
@@ -313,8 +335,6 @@ public:
     int    last_online_version = -1;
 
     /* temperature */
-    float  chamber_temp;
-    float  chamber_temp_target;
     float  frame_temp;
 
     /* signals */
@@ -344,20 +364,10 @@ public:
     DevPrintOptions*      GetPrintOptions() const { return m_print_options; } /* print options */
     DevPrintingSpeedLevel GetPrintingSpeedLevel() const; /* print speed */
 
+    std::weak_ptr<DevUpgrade> GetUpgrade() const { return m_upgrade;}
+
     /* upgrade */
-    bool upgrade_force_upgrade { false };
-    bool upgrade_new_version { false };
-    bool upgrade_consistency_request { false };
-    DevFirmwareUpgradingState upgrade_display_state;
-    int upgrade_display_hold_count = 0;
-    PrinterFirmwareType       firmware_type; // engineer|production
-    PrinterFirmwareType       lifecycle { PrinterFirmwareType::FIRMWARE_TYPE_PRODUCTION };
-    std::string upgrade_progress;
-    std::string upgrade_message;
-    std::string upgrade_status;
-    std::string upgrade_module;
     std::string ams_new_version_number;
-    std::string ota_new_version_number;
     std::string ahb_new_version_number;
     int get_version_retry = 0;
 
@@ -366,19 +376,13 @@ public:
     DevFirmwareVersionInfo cutting_module_version_info;
     DevFirmwareVersionInfo extinguish_version_info;
     std::map<std::string, DevFirmwareVersionInfo> module_vers;
-    std::map<std::string, DevFirmwareVersionInfo> new_ver_list;
-    bool    m_new_ver_list_exist = false;
-    int upgrade_err_code = 0;
     std::vector<FirmwareInfo> firmware_list;
 
     std::string get_firmware_type_str();
     std::string get_lifecycle_type_str();
     bool is_in_upgrading() const;
-    bool is_upgrading_avalable();
-    int get_upgrade_percent() const;
     std::string get_ota_version();
     bool check_version_valid();
-    wxString get_upgrade_result_str(int upgrade_err_code);
     // key: ams_id start as 0,1,2,3
     std::map<int, DevFirmwareVersionInfo> get_ams_version();
 
@@ -533,13 +537,6 @@ public:
         DOOR_OPEN_CHECK_ENABLE_PAUSE_PRINT = 2,/*pause print*/
     };
 
-    enum DeviceMode : unsigned int
-    {
-        DEVICE_MODE_FDM   = 0x00000001,
-        DEVICE_MODE_LASER = 0x00000010,
-        DEVICE_MODE_CUT   = 0x00000100,
-    };
-
     bool        file_model_download{false};
     bool        virtual_camera{false};
 
@@ -577,6 +574,13 @@ public:
     bool is_support_build_plate_marker_detect{false};
     PlateMakerDectect m_plate_maker_detect_type{ POS_CHECK };
 
+    /* plate build type & align detect*/
+    DevDirtyHandler<bool> xcam_build_plate_type_detect{true, HOLD_TIME_3SEC, DirtyMode::TIMER};
+    DevDirtyHandler<bool> xcam_build_plate_align_detect{true, HOLD_TIME_3SEC, DirtyMode::TIMER};
+
+    bool is_support_build_plate_type_detect{false};
+    bool is_support_build_plate_align_detect{false};
+
     /*PA flow calibration is using in sending print*/
     bool is_support_pa_calibration{false};
     bool is_support_flow_calibration{false};
@@ -605,7 +609,6 @@ public:
     bool is_support_upgrade_kit{false};
     bool is_support_filament_setting_inprinting{false};
     bool is_support_internal_timelapse { false };// fun[28], support timelapse without SD card
-    bool m_support_mqtt_homing { false };// fun[32]
     bool is_support_brtc{false};                 // fun[31], support tcp and upload protocol
     bool is_support_ext_change_assist{false};
     bool is_support_partskip{false};
@@ -620,6 +623,7 @@ public:
 
     // fun2
     bool is_support_print_with_emmc{false};
+    bool is_support_pa_mode{false};
 
     bool installed_upgrade_kit{false};
     int  bed_temperature_limit = -1;
@@ -656,10 +660,6 @@ public:
 
     bool is_makeworld_subtask();
 
-    /* device type */
-    DeviceMode  m_device_mode{ DEVICE_MODE_FDM };
-    inline bool is_fdm_type() const { return m_device_mode == DEVICE_MODE_FDM; }
-
     int m_plate_index { -1 };
     std::string m_gcode_file;
     int gcode_file_prepare_percent = 0;
@@ -682,7 +682,6 @@ public:
 
     std::string parse_version();
     void parse_version_func();
-    bool is_studio_cmd(int seq);
 
     /* quick check*/
     bool canEnableTimelapse(wxString& error_message) const;
@@ -698,16 +697,7 @@ public:
     int command_get_access_code();
     int command_ack_proceed(json& proceed);
 
-    /* command upgrade */
-    int command_upgrade_confirm();
-    int command_consistency_upgrade_confirm();
-    int command_upgrade_firmware(FirmwareInfo info);
-    int command_upgrade_module(std::string url, std::string module_type, std::string version);
-
     /* control apis */
-    int command_xyz_abs();
-    int command_auto_leveling();
-    int command_go_home();
 
     int command_task_abort();
     /* cancelled the job_id */
@@ -729,7 +719,6 @@ public:
     int command_set_nozzle(int temp);
     int command_set_nozzle_new(int nozzle_id, int temp);
     int command_refresh_nozzle();
-    int command_set_chamber(int temp);
     int check_resume_condition();
     // ams controls
     //int command_ams_switch(int tray_index, int old_temp = 210, int new_temp = 210);
@@ -762,10 +751,6 @@ public:
     int command_set_printing_option(bool auto_recovery);
 
     int command_nozzle_blob_detect(bool nozzle_blob_detect);
-
-    // axis string is X, Y, Z, E
-    bool m_support_mqtt_axis_control = false;
-    int command_axis_control(std::string axis, double unit = 1.0f, double input_val = 1.0f, int speed = 3000);
 
     int command_extruder_control(int nozzle_id, double val);
     // calibration printer
@@ -802,6 +787,8 @@ public:
     int command_xcam_control_auto_recovery_step_loss(bool on_off);
     int command_xcam_control_allow_prompt_sound(bool on_off);
     int command_xcam_control_filament_tangle_detect(bool on_off);
+    int command_xcam_control_build_plate_type_detector(bool on_off);
+    int command_xcam_control_build_plate_align_detector(bool on_off);
 
     /* common apis */
     inline bool is_local() { return !get_dev_ip().empty(); }
@@ -815,7 +802,6 @@ public:
     bool is_in_printing_pause() const;
     bool is_in_prepare();
     bool is_printing_finished();
-    bool is_core_xy();
     void reset_update_time();
     void reset();
     static bool is_in_printing_status(std::string status);

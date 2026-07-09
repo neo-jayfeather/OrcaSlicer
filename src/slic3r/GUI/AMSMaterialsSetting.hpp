@@ -16,6 +16,7 @@
 #include "Widgets/TextInput.hpp"
 #include "Widgets/HyperLink.hpp"
 #include "slic3r/Utils/CalibUtils.hpp"
+#include "DeviceCore/DevNozzleRack.h"
 
 #define AMS_MATERIALS_SETTING_DEF_COLOUR wxColour(255, 255, 255)
 #define AMS_MATERIALS_SETTING_GREY900 wxColour(38, 46, 48)
@@ -138,8 +139,10 @@ protected:
     void create_panel_normal(wxWindow* parent);
     void create_panel_kn(wxWindow* parent);
     void on_dpi_changed(const wxRect &suggested_rect) override;
+    void on_select_nozzle_id(wxCommandEvent &evt);
     void on_select_filament(wxCommandEvent& evt);
     void on_select_cali_result(wxCommandEvent &evt);
+    void on_select_nozzle_pos_id(wxCommandEvent &evt);
     void on_select_ok(wxCommandEvent &event);
     void on_select_reset(wxCommandEvent &event);
     void on_select_close(wxCommandEvent &event);
@@ -147,7 +150,12 @@ protected:
     bool is_virtual_tray();
     void update_widgets();
 
+    void update_pa_profile_items();
     void update_filament_editing(bool is_printing);
+    void update_nozzle_combo(MachineObject* obj);
+    int  get_nozzle_combo_id_code() const;
+    int  get_nozzle_sel_by_sn(MachineObject* obj, const std::string& sn);
+    int  get_cali_index_by_ams_slot(MachineObject* obj, int ams_id, int slot_id);
 
 protected:
     StateColor          m_btn_bg_green;
@@ -158,6 +166,7 @@ protected:
     wxStaticText *      warning_text;
     //wxPanel *           m_panel_body;
     wxStaticText *      m_title_filament;
+    wxStaticText *      m_title_nozzle_type;
     wxStaticText *      m_title_pa_profile;
     wxStaticText *      m_title_colour;
     wxStaticText *      m_title_temperature;
@@ -188,6 +197,7 @@ protected:
 #else
     ComboBox *m_comboBox_filament;
 #endif
+    ComboBox * m_comboBox_nozzle_type;
     ComboBox * m_comboBox_cali_result;
     TextInput*       m_readonly_filament;
 

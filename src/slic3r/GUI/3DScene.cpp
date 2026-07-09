@@ -575,6 +575,9 @@ void GLVolume::simple_render(GLShaderProgram* shader, ModelObjectPtrs& model_obj
     ModelObject* model_object = nullptr;
     ModelVolume* model_volume = nullptr;
     do {
+        // Skip MMU colors if disabled (e.g., when volume color override is active)
+        if (disable_mmu_colors)
+            break;
         if ((!printable) || object_idx() >= model_objects.size())
             break;
         model_object = model_objects[object_idx()];
@@ -1049,7 +1052,9 @@ void GLVolumeCollection::render(GLVolumeCollection::ERenderType       type,
         shader->start_using();
 
         if (!volume.first->model.is_initialized())
-            shader->set_uniform("uniform_color", volume.first->render_color);
+            // Use volume color override if enabled
+            const std::array<float, 4>& effective_color = get_volume_render_color(volume.second.first, volume.first->render_color);
+            shader->set_uniform("uniform_color", effective_color);
         shader->set_uniform("z_range", m_z_range);
         shader->set_uniform("clipping_plane", m_clipping_plane);
         shader->set_uniform("use_color_clip_plane", m_use_color_clip_plane);
@@ -1227,7 +1232,7 @@ bool GLVolumeCollection::check_outside_state(const BuildVolume &build_volume, Mo
                     //FIXME this test does not evaluate collision of a build volume bounding box with non-convex objects.
                     const BoundingBoxf3& bb = volume_bbox(*volume);
                     state = plate_build_volume.volume_state_bbox(bb);
-                    if ((state == BuildVolume::ObjectState::Inside) && (extruder_count > 1))
+                    if ((state == BuildVolume::ObjectState::Inside) && (extruder_count > 1) && !GUI::wxGetApp().plater()->force_ban_check_volume_bbox_state_with_extruder_area())
                     {
                         state = plate_build_volume.check_volume_bbox_state_with_extruder_areas(bb, inside_extruders);
                     }

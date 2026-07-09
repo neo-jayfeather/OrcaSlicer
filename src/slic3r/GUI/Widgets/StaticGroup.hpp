@@ -8,9 +8,9 @@
 class StaticGroup : public LabeledStaticBox
 {
 public:
-    StaticGroup(wxWindow *parent, wxWindowID id, const wxString &label);
+    StaticGroup(wxWindow *parent, wxWindowID id);
     void ShowBadge(bool show);
-
+    bool Show(bool show=true) override;
 private:
     void DrawBorderAndLabel(wxDC& dc) override;
     ScalableBitmap badge;

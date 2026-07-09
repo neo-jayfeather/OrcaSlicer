@@ -1931,6 +1931,24 @@ void GUI_App::init_networking_callbacks()
 
                         if (!dev->subscribe_list_cache.empty()) {
                             dev->subscribe_device_list(dev->subscribe_list_cache);
+                        auto evt = new wxCommandEvent(EVT_UPDATE_MACHINE_LIST);
+                        wxQueueEvent(this, evt);
+                    }
+                    //subscribe device
+                    if (m_agent->is_user_login()) {
+
+                        /*disconnect lan*/
+                        DeviceManager* dev = this->getDeviceManager();
+                        if (!dev) return;
+
+                        m_load_last_machine.TryLoadFromMqttCB(m_agent, dev);
+
+                        /* resubscribe the cache dev list */
+                        if (this->is_enable_multi_machine()) {
+
+                            if (!dev->subscribe_list_cache.empty()) {
+                                dev->subscribe_device_list(dev->subscribe_list_cache);
+                            }
                         }
                     }
                 }
@@ -2017,8 +2035,6 @@ void GUI_App::init_networking_callbacks()
                                 event.SetInt(-1);
                                 BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = " << state;
                             }
-
-                            obj->set_lan_mode_connection_state(false);
                         }
                         else {
                             if (state == ConnectStatus::ConnectStatusOk) {
@@ -4411,6 +4427,26 @@ void GUI_App::post_logout_to_webview(const std::string& provider)
     if (!logout_cmd.empty()) {
         wxString strJS = wxString::Format("window.postMessage(%s)", logout_cmd);
         GUI::wxGetApp().run_script(strJS);
+    // H2C TODO : may be extra code
+    if (m_agent && m_agent->is_user_login()) {
+        m_load_last_machine.is_list_ok = false;
+        m_load_last_machine.is_mqtt_ok = false;
+        // Update data first before showing dialogs
+        m_agent->user_logout(true);
+        m_agent->set_user_selected_machine("");
+        /* delete old user settings */
+        bool     transfer_preset_changes = false;
+        wxString header = _L("Some presets are modified.") + "\n" +
+            _L("You can keep the modified presets to the new project, discard or save changes as new presets.");
+        wxGetApp().check_and_keep_current_preset_changes(_L("User logged out"), header, ActionButtons::KEEP | ActionButtons::SAVE, &transfer_preset_changes);
+
+        m_device_manager->clean_user_info();
+        remove_user_presets();
+        enable_user_preset_folder(false);
+        preset_bundle->load_user_presets(DEFAULT_USER_FOLDER_NAME, ForwardCompatibilitySubstitutionRule::Enable);
+        mainframe->update_side_preset_ui();
+
+        GUI::wxGetApp().stop_sync_user_preset();
     }
 }
 
@@ -4636,6 +4672,15 @@ std::string GUI_App::handle_web_request(std::string cmd)
                     e.m_keyCode = keyCode;
                     e.SetEventObject(mainframe);
                     wxPostEvent(mainframe, e);
+                }
+            }
+            else if (command_str.compare("get_academy_list") == 0){
+                if (mainframe && root.get_child_optional("data") != boost::none) {
+                    pt::ptree data_node = root.get_child("data");
+                    boost::optional<std::string> region = data_node.get_optional<std::string>("region");
+                    if (mainframe->m_webview) {
+                        mainframe->m_webview->get_academy_list(region.value()=="oversea" ? true : false);
+                    }
                 }
             }
             else if (command_str.compare("userguide_wiki_open") == 0) {
@@ -8928,6 +8973,13 @@ bool is_support_filament(int extruder_id, bool strict_check)
     if (support_option == nullptr) return false;
     return support_option->get_at(0);
 };
+
+void TryLoadLastMachine::InnerLoad(NetworkAgent *agent, DeviceManager *dev)
+{
+    if (is_mqtt_ok && is_list_ok) {
+        if ((dev->get_selected_machine() == nullptr) && (dev->get_user_machinelist().size() > 0)) dev->set_selected_machine(agent->get_user_selected_machine());
+    }
+}
 
 } // GUI
 } //Slic3r

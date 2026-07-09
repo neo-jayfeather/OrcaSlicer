@@ -70,6 +70,34 @@ class GLGizmosManager : public Slic3r::ObjectBase
 {
 public:
     static const float Default_Icons_Size;
+    // H2C TODO
+    // enum MENU_ICON_NAME
+    /*
+        +        IC_ALIGN_X_MIN,
+        +        IC_ALIGN_X_CENTER,
+        +        IC_ALIGN_X_MAX,
+        +        IC_ALIGN_Y_MIN,
+        +        IC_ALIGN_Y_CENTER,
+        +        IC_ALIGN_Y_MAX,
+        +        IC_ALIGN_Z_MIN,
+        +        IC_ALIGN_Z_CENTER,
+        +        IC_ALIGN_Z_MAX,
+        +        IC_DISTRIBUTE_X,
+        +        IC_DISTRIBUTE_Y,
+        +        IC_DISTRIBUTE_Z,
+        +        IC_ALIGN_X_MIN_DARK,
+        +        IC_ALIGN_X_CENTER_DARK,
+        +        IC_ALIGN_X_MAX_DARK,
+        +        IC_ALIGN_Y_MIN_DARK,
+        +        IC_ALIGN_Y_CENTER_DARK,
+        +        IC_ALIGN_Y_MAX_DARK,
+        +        IC_ALIGN_Z_MIN_DARK,
+        +        IC_ALIGN_Z_CENTER_DARK,
+        +        IC_ALIGN_Z_MAX_DARK,
+        +        IC_DISTRIBUTE_X_DARK,
+        +        IC_DISTRIBUTE_Y_DARK,
+        +        IC_DISTRIBUTE_Z_DARK,
+    */
 
     enum EType : unsigned char
     {
@@ -260,20 +288,21 @@ public:
 
     //BBS
     void* get_icon_texture_id(MENU_ICON_NAME icon) {
-        if (icon_list.find((int)icon) != icon_list.end())
-            return icon_list[icon];
-        else
-            return nullptr;
+        auto it = icon_list.find((int)icon);
+        if (it != icon_list.end())
+            return it->second;
+        return ensure_icon_loaded(icon);
     }
     void* get_icon_texture_id(MENU_ICON_NAME icon) const{
-        if (icon_list.find((int)icon) != icon_list.end())
-            return icon_list.at(icon);
-        else
-            return nullptr;
+        auto it = icon_list.find((int)icon);
+        if (it != icon_list.end())
+            return it->second;
+        return ensure_icon_loaded(icon);
     }
 
     bool is_paint_gizmo();
     bool is_allow_select_all();
+    bool is_allow_multi_select_parts_or_objects() const;
     ClippingPlane get_clipping_plane() const;
     ClippingPlane get_assemble_view_clipping_plane() const;
     bool wants_reslice_supports_on_undo() const;
@@ -326,6 +355,7 @@ private:
 
     void update_hover_state(const EType &type);
     bool grabber_contains_mouse() const;
+    static void* ensure_icon_loaded(MENU_ICON_NAME icon);
 };
 
 std::string get_name_from_gizmo_etype(GLGizmosManager::EType type);

@@ -17,6 +17,7 @@ static std::map<wxColour, wxColour> gDarkColors{
     {"#26A69A", "#008172"}, // rgb(0, 150, 136)    Button Confirm Color hover | ORCA Color Hover
     {"#6B6B6A", "#B3B3B5"}, // rgb(107, 107, 106)  Input box side text
     {"#2C2C2E", "#B3B3B4"}, // rgb(44, 44, 46)     ???
+    {"#E5E7EB", "#374151"}, // H2C TODO - something - please figure out!
     {"#6B6B6B", "#818183"}, // rgb(107, 107, 107)  Disabled Text
     {"#ACACAC", "#65656A"}, // rgb(172, 172, 172)  Disabled Text on boxes | Dimmed Elements
     {"#EEEEEE", "#4C4C55"}, // rgb(238, 238, 238)  Separator Line | Title Line Color
@@ -323,3 +324,11 @@ bool StateColor::setColorForStates(wxColour const &color, int states)
 }
 
 void StateColor::setTakeFocusedAsHovered(bool set) { takeFocusedAsHovered_ = set; }
+
+StateColor StateColor::createButtonStyleGray()
+{
+    return StateColor(std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Pressed),
+        std::pair<wxColour, int>(*wxWHITE, StateColor::Focused),
+        std::pair<wxColour, int>(wxColour(238, 238, 238), StateColor::Hovered),
+        std::pair<wxColour, int>(*wxWHITE, StateColor::Normal));
+}

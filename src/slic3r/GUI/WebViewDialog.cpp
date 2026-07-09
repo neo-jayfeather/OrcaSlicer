@@ -17,6 +17,8 @@
 
 #include <slic3r/GUI/Widgets/WebView.hpp>
 
+#include <utility>
+
 namespace pt = boost::property_tree;
 
 namespace Slic3r {
@@ -765,6 +767,44 @@ void WebViewPanel::OnToolsClicked(wxCommandEvent& WXUNUSED(evt))
     wxPoint position = ScreenToClient(wxGetMousePosition());
     PopupMenu(m_tools_menu, position.x, position.y);
 }
+
+void WebViewPanel::get_academy_list(bool is_oversea)
+{
+    std::string url = "https://bambulab.cn/api/v1/hub-service/academy/client/course/printerList";
+    if(is_oversea) {
+        url = "https://bambulab.com/api/v1/hub-service/academy/client/course/printerList";
+    }
+    Http http = Http::get(url);
+    http.header("accept", "application/json")
+        .header("Content-Type", "application/json")
+        .on_complete([this](std::string body, unsigned status) {
+            if (status != 200) {
+                BOOST_LOG_TRIVIAL(error) << "get academy list failed, status: " << status;
+                return;
+            }
+            CallAfter([this, body = std::move(body)] {
+                if (!m_browserWiki) return;
+                try {
+                    json resp = json::parse(body);
+                    if (!resp.contains("data")) {
+                        BOOST_LOG_TRIVIAL(warning) << "academy list response missing data";
+                        return;
+                    }
+                    resp["command"] = "academy_list_get";
+                    auto payload = from_u8(resp.dump(-1, ' ', true));
+                    WebView::RunScript(m_browserWiki, wxString::Format("HandleStudio(%s)", payload));
+                } catch (const std::exception &e) {
+                    BOOST_LOG_TRIVIAL(error) << "parse academy list failed: " << e.what();
+                }
+            });
+        })
+        .on_error([](std::string body, std::string error, unsigned status) {
+            BOOST_LOG_TRIVIAL(error) << "get academy list error, status: " << status
+                                     << ", err: " << error << ", body: " << body;
+        })
+        .perform();
+}
+
 
 void WebViewPanel::RunScript(const wxString& javascript)
 {

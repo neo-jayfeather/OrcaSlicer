@@ -56,6 +56,7 @@ namespace GUI {
 
 class TabPresetComboBox;
 class OG_CustomCtrl;
+//extern std::set<std::string> filament_options_with_variant;
 
 std::vector<InputShaperType> input_shaper_types_for_flavor(GCodeFlavor flavor);
 
@@ -251,6 +252,7 @@ protected:
     std::vector<Preset::Type>	m_dependent_tabs;
 	enum OptStatus { osSystemValue = 1, osInitValue = 2 };
 	std::map<std::string, int>	m_options_list;
+    std::map<std::string, int> m_all_extruder_options_status;
 	int							m_opt_status_value = 0;
 
 	bool				m_is_modified_values{ false };
@@ -363,6 +365,9 @@ public:
 	void		get_sys_and_mod_flags(const std::string& opt_key, bool& sys_page, bool& modified_page);
 	void		update_changed_tree_ui();
 	void		update_undo_buttons();
+    void        update_extruder_switch_colors();
+    void        update_all_extruder_options_status();
+    void        check_extruder_options_status(int index, bool &sys_extruder, bool &modified_extruder, const std::vector<PageShp>& pages_to_check);
 
 	void		on_roll_back_value(const bool to_sys = false);
 
@@ -621,6 +626,7 @@ public:
 	size_t		m_cache_extruder_count = 0;
 	std::vector<std::string> m_extruder_variant_list;
 	std::string m_base_preset_name;
+	std::string m_base_preset_model;
 
     PrinterTechnology               m_printer_technology = ptFFF;
 

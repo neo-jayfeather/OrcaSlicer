@@ -6184,7 +6184,7 @@ int CLI::run(int argc, char **argv)
                                     BOOST_LOG_TRIVIAL(info) << "plate "<< index+1<< ":will export Slicing data to " << export_slice_data_dir;
                                     std::string plate_dir = export_slice_data_dir+"/"+std::to_string(index+1);
                                     bool with_space = (get_logging_level() >= 4)?true:false;
-                                    int ret = print->export_cached_data(plate_dir, with_space);
+                                    int ret = print->export_cached_data(plate_dir, 0, with_space);
                                     if (ret) {
                                         BOOST_LOG_TRIVIAL(error) << "plate "<< index+1<< ": export Slicing data error, ret=" << ret;
                                         export_slicedata_error = true;

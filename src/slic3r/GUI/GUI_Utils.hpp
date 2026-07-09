@@ -25,6 +25,7 @@
 #include "Event.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Color.hpp"
+#include "wxExtensions.hpp"
 
 
 class wxCheckBox;
@@ -444,6 +445,42 @@ public:
     bool is_first() const { return m_count == 0; }
 };
 
+
+class WikiPanel : public wxPanel
+{
+public:
+    WikiPanel(wxWindow *parent, const wxString &wiki_text = wxString("Wiki"), const wxString &tooltip = wxEmptyString, const std::string &wiki_url = "https://wiki.bambulab.com");
+    ~WikiPanel() = default;
+
+    bool Show(bool show = true) override;
+    void SetWikiText(const wxString &text);
+    void SetWikiUrl(const std::string &url);
+    void SetTooltip(const wxString &tooltip);
+
+    wxStaticBitmap *GetWikiBitmap() const { return m_wiki_bmp; }
+    wxStaticText   *GetWikiLabel() const { return m_wiki_label; }
+
+    void msw_rescale();
+
+private:
+    void init_components();
+    void setup_layout();
+    void bind_events();
+    void set_hover_state(bool hover);
+    void open_wiki_url();
+
+private:
+    wxStaticBitmap *m_wiki_bmp   = nullptr;
+    wxStaticText   *m_wiki_label = nullptr;
+    wxBoxSizer     *m_main_sizer = nullptr;
+
+    ScalableBitmap *m_wiki_icon       = nullptr;
+    ScalableBitmap *m_wiki_icon_hover = nullptr;
+
+    std::string m_wiki_url;
+    wxString    m_wiki_text;
+    wxString    m_tooltip;
+};
 
 /* Image Generator */
 #define _3MF_COVER_SIZE                  wxSize(240, 240)

@@ -23,16 +23,22 @@
 #include <wx/sstream.h>
 #include <wx/zstream.h>
 
+#include "DeviceCore/DevAxis.h"
 #include "DeviceCore/DevBed.h"
+#include "DeviceCore/DevChamber.h"
 #include "DeviceCore/DevCtrl.h"
 #include "DeviceCore/DevFan.h"
 #include "DeviceCore/DevFilaSystem.h"
 #include "DeviceCore/DevLamp.h"
+#include "DeviceCore/DevNozzleSystem.h"
 #include "DeviceCore/DevStorage.h"
 
 #include "DeviceCore/DevConfig.h"
+#include "DeviceCore/DevInfo.h"
 #include "DeviceCore/DevManager.h"
 #include "DeviceCore/DevPrintTaskInfo.h"
+
+#include "DeviceTab/wgtDeviceNozzleRack.h"
 
 
 
@@ -216,10 +222,7 @@ void ExtruderImage::setExtruderCount(int nozzle_num)
 void ExtruderImage::setExtruderUsed(std::string loc)
 {
     //current_nozzle_idx = nozzle_id;
-    if (current_nozzle_loc == loc)
-    {
-        return;
-    }
+    if (current_nozzle_loc == loc) return;
 
     current_nozzle_loc = loc;
     Refresh();
@@ -230,7 +233,8 @@ void ExtruderImage::update(ExtruderState single_state)
     m_single_ext_state = single_state;
 }
 
-void ExtruderImage::update(ExtruderState right_state, ExtruderState left_state) {
+void ExtruderImage::update(ExtruderState right_state, ExtruderState left_state) 
+{
     m_left_ext_state = left_state;
     m_right_ext_state = right_state;
 }
@@ -275,8 +279,7 @@ void ExtruderImage::doRender(wxDC& dc)
         ScalableBitmap* left_pipe_bmp;
         ScalableBitmap* right_pipe_bmp;
 
-        switch (m_right_ext_state)
-        {
+        switch (m_right_ext_state) {
         case Slic3r::GUI::FILLED_LOAD:
             right_pipe_bmp   = current_nozzle_loc == "right" ? m_pipe_filled_load : m_pipe_filled_load_unselected;
             right_nozzle_bmp = current_nozzle_loc == "right" ? m_right_extruder_active_filled : m_right_extruder_unactive_filled;
@@ -293,12 +296,10 @@ void ExtruderImage::doRender(wxDC& dc)
             right_pipe_bmp   = current_nozzle_loc == "right" ? m_pipe_empty_unload : m_pipe_empty_unload_unselected;
             right_nozzle_bmp = current_nozzle_loc == "right" ? m_right_extruder_active_empty : m_right_extruder_unactive_empty;
             break;
-        default:
-            break;
+        default: break;
         }
 
-        switch (m_left_ext_state)
-        {
+        switch (m_left_ext_state) {
         case Slic3r::GUI::FILLED_LOAD:
             left_pipe_bmp   = current_nozzle_loc == "left" ? m_pipe_filled_load : m_pipe_filled_load_unselected;
             left_nozzle_bmp = current_nozzle_loc == "left" ? m_left_extruder_active_filled : m_left_extruder_unactive_filled;
@@ -315,8 +316,7 @@ void ExtruderImage::doRender(wxDC& dc)
             left_pipe_bmp   = current_nozzle_loc == "left" ? m_pipe_empty_unload : m_pipe_empty_unload_unselected;
             left_nozzle_bmp = current_nozzle_loc == "left" ? m_left_extruder_active_empty : m_left_extruder_unactive_empty;
             break;
-        default:
-            break;
+        default: break;
         }
 
         left_pipe_bmp = m_pipe_filled_load;
@@ -326,8 +326,7 @@ void ExtruderImage::doRender(wxDC& dc)
         dc.DrawBitmap(left_nozzle_bmp->bmp(), pot.x - left_nozzle_bmp->GetBmpWidth(), pot.y + left_pipe_bmp->GetBmpSize().y);
         dc.DrawBitmap(right_pipe_bmp->bmp(), pot.x + right_nozzle_bmp->GetBmpWidth() / 2 - right_pipe_bmp->GetBmpWidth() / 2 - right_pipe_bmp->GetBmpWidth() / 5, pot.y);
         dc.DrawBitmap(right_nozzle_bmp->bmp(), pot.x, pot.y + right_pipe_bmp->GetBmpSize().y);
-    }
-    else{
+    } else {
 
         ScalableBitmap* nozzle_bmp = nullptr;
         switch (m_single_ext_state)
@@ -339,22 +338,16 @@ void ExtruderImage::doRender(wxDC& dc)
             default: break;
         }
 
-        if (nozzle_bmp)
-        {
-            dc.DrawBitmap(nozzle_bmp->bmp(), pot.x - nozzle_bmp->GetBmpWidth() / 2, (size.y - nozzle_bmp->GetBmpHeight()) / 2);
-        }
+        if (nozzle_bmp) { dc.DrawBitmap(nozzle_bmp->bmp(), pot.x - nozzle_bmp->GetBmpWidth() / 2, (size.y - nozzle_bmp->GetBmpHeight()) / 2); }
     }
 }
 
 #define SWITCHING_STATUS_BTN_SIZE wxSize(FromDIP(25), FromDIP(26))
-ExtruderSwithingStatus::ExtruderSwithingStatus(wxWindow *parent)
-    : wxPanel(parent)
+ExtruderSwithingStatus::ExtruderSwithingStatus(wxWindow *parent) : wxPanel(parent)
 {
     m_switching_status_label = new Label(this);
     m_switching_status_label->SetFont(::Label::Body_13);
-    if (parent)
-    { m_switching_status_label->SetBackgroundColour(parent->GetBackgroundColour());
-    }
+    if (parent) { m_switching_status_label->SetBackgroundColour(parent->GetBackgroundColour()); }
 
     m_button_quit = new Button(this, _CTX(L_CONTEXT("Quit", "Quit_Switching"), "Quit_Switching"), "", 0, FromDIP(22));
     m_button_quit->SetStyle(ButtonStyle::Regular, ButtonType::Window);
@@ -379,17 +372,11 @@ ExtruderSwithingStatus::ExtruderSwithingStatus(wxWindow *parent)
 void ExtruderSwithingStatus::updateBy(MachineObject *obj)
 {
     m_obj = obj;
-    if (!m_obj)
-    {
+    if (!m_obj) {
         Show(false);
-    }
-    else
-    {
+    } else {
         /*do not display while command sended in a mean while*/
-        if ((time(nullptr) - m_last_ctrl_time) > HOLD_TIME_6SEC)
-        {
-            updateBy(obj->GetExtderSystem());
-        }
+        if ((time(nullptr) - m_last_ctrl_time) > HOLD_TIME_6SEC) { updateBy(obj->GetExtderSystem()); }
     }
 }
 
@@ -400,44 +387,34 @@ void ExtruderSwithingStatus::updateBy(const DevExtderSystem* ext_system)
 
     auto state = ext_system->GetSwitchState();
     {
-        if (state == DevExtderSwitchState::ES_SWITCHING)
-        {
+        if (state == DevExtderSwitchState::ES_SWITCHING) {
             m_switching_status_label->SetLabel(_L("Switching..."));
             m_switching_status_label->SetForegroundColour(StateColor::darkModeColorFor("#262E30"));
             m_switching_status_label->Show(true);
-        }
-        else if (state == DevExtderSwitchState::ES_SWITCHING_FAILED)
-        {
+        } else if (state == DevExtderSwitchState::ES_SWITCHING_FAILED) {
             m_switching_status_label->SetLabel(_L("Switching failed"));
             m_switching_status_label->SetForegroundColour(StateColor::darkModeColorFor(*wxRED));
             m_switching_status_label->Show(true);
-        }
-        else
-        {
+        } else {
             m_switching_status_label->Show(false);
         }
     }
 
-    if (state != DevExtderSwitchState::ES_SWITCHING_FAILED)
-    {
+    if (state != DevExtderSwitchState::ES_SWITCHING_FAILED) {
         showQuitBtn(false);
         showRetryBtn(false);
         return;
     }
 
     /*can not quit if it's printing*/
-    if (m_obj && !m_obj->is_in_printing() && !m_obj->is_in_printing_pause())
-    {
-        showQuitBtn(true);
-    }
+    if (m_obj && !m_obj->is_in_printing() && !m_obj->is_in_printing_pause()) { showQuitBtn(true); }
 
     showRetryBtn(true);
 }
 
 void ExtruderSwithingStatus::showQuitBtn(bool show)
 {
-    if (m_button_quit->IsShown() != show)
-    {
+    if (m_button_quit->IsShown() != show) {
         m_button_quit->Show(show);
         Layout();
     }
@@ -470,8 +447,7 @@ void ExtruderSwithingStatus::on_quit(wxCommandEvent &event)
 {
     Show(false);
 
-    if (m_obj)
-    {
+    if (m_obj) {
         m_obj->command_ams_control("abort");
         m_last_ctrl_time = time(nullptr);
     }
@@ -481,15 +457,13 @@ void ExtruderSwithingStatus::on_retry(wxCommandEvent &event)
 {
     Show(false);
 
-    if (m_obj)
-    {
+    if (m_obj) {
         m_obj->command_ams_control("resume");
         m_last_ctrl_time = time(nullptr);
     }
 }
 
-PrintingTaskPanel::PrintingTaskPanel(wxWindow* parent, PrintingTaskType type)
-    : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
+PrintingTaskPanel::PrintingTaskPanel(wxWindow *parent, PrintingTaskType type) : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
 {
     m_type = type;
     m_question_button = nullptr;
@@ -616,8 +590,7 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     m_button_partskip->Bind(wxEVT_ENTER_WINDOW, [this](auto &e) { m_button_partskip->SetIcon("print_control_partskip_hover"); });
     m_button_partskip->Bind(wxEVT_LEAVE_WINDOW, [this](auto &e) { m_button_partskip->SetIcon("print_control_partskip"); });
 
-    m_button_pause_resume = new ScalableButton(progress_lr_panel, wxID_ANY, "print_control_pause", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER,true);
-
+    m_button_pause_resume = new ScalableButton(progress_lr_panel, wxID_ANY, "print_control_pause", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, true);
     m_button_pause_resume->Bind(wxEVT_ENTER_WINDOW, [this](auto &e) {
         if (m_button_pause_resume->GetToolTipText() == _L("Pause")) {
             m_button_pause_resume->SetBitmap_("print_control_pause_hover");
@@ -688,11 +661,11 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     m_staticText_progress_left = new wxStaticText(penel_text, wxID_ANY, L("N/A"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText_progress_left->Wrap(-1);
     m_staticText_progress_left->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("HarmonyOS Sans SC")));
-    m_staticText_progress_left->SetForegroundColour(wxColour(146, 146, 146));
+    m_staticText_progress_left->SetForegroundColour(wxColour(107, 107, 107));
 
     m_staticText_layers = new wxStaticText(penel_text, wxID_ANY, _L("Layer: N/A"));
     m_staticText_layers->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("HarmonyOS Sans SC")));
-    m_staticText_layers->SetForegroundColour(wxColour(146, 146, 146));
+    m_staticText_layers->SetForegroundColour(wxColour(107, 107, 107));
     m_staticText_layers->Hide();
 
     bSizer_text->Add(sizer_percent, 0, wxEXPAND, 0);
@@ -754,9 +727,9 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     penel_text->SetSizer(bSizer_text);
     penel_text->Layout();
 
-
     // Create question button
-    m_question_button = new ScalableButton(m_printing_stage_panel, wxID_ANY, "thermal_question", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, true);
+    m_question_button = new ScalableButton(m_printing_stage_panel, wxID_ANY, "thermal_question", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER,
+                                           true);
     m_question_button->SetToolTip(_L("Click to view thermal preconditioning explanation"));
     m_question_button->SetBackgroundColour(wxColour(255, 255, 255));
     m_question_button->Hide(); // Hide by default
@@ -878,7 +851,9 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     m_request_failed_panel    = new wxPanel(parent, wxID_ANY);
     m_request_failed_panel->SetBackgroundColour(*wxWHITE);
     wxBoxSizer *static_request_failed_panel_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_request_failed_info = new wxStaticText(m_request_failed_panel, wxID_ANY, _L("You have completed printing the mall model, \nbut the synchronization of rating information has failed."), wxDefaultPosition, wxDefaultSize, 0);
+    m_request_failed_info                         = new wxStaticText(m_request_failed_panel, wxID_ANY,
+                                                                     _L("You have completed printing the mall model, \nbut the synchronization of rating information has failed."), wxDefaultPosition,
+                                                                     wxDefaultSize, 0);
     m_request_failed_info->Wrap(-1);
     m_request_failed_info->SetForegroundColour(*wxRED);
     m_request_failed_info->SetFont(::Label::Body_10);
@@ -901,7 +876,8 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     wxStaticText *static_score_text  = new wxStaticText(m_score_subtask_info, wxID_ANY, _L("How do you like this printing file?"), wxDefaultPosition, wxDefaultSize, 0);
     static_score_text->Wrap(-1);
     static_score_sizer->Add(static_score_text, 1, wxEXPAND | wxALL, FromDIP(10));
-    m_has_rated_prompt = new wxStaticText(m_score_subtask_info, wxID_ANY, _L("(The model has already been rated. Your rating will overwrite the previous rating.)"), wxDefaultPosition, wxDefaultSize, 0);
+    m_has_rated_prompt = new wxStaticText(m_score_subtask_info, wxID_ANY, _L("(The model has already been rated. Your rating will overwrite the previous rating.)"),
+                                          wxDefaultPosition, wxDefaultSize, 0);
     m_has_rated_prompt->Wrap(-1);
     m_has_rated_prompt->SetForegroundColour(*wxBLACK);
     m_has_rated_prompt->SetFont(::Label::Body_10);
@@ -969,15 +945,11 @@ void PrintingTaskPanel::paint(wxPaintEvent&)
         if (m_brightness_value > 0 && m_brightness_value < SHOW_BACKGROUND_BITMAP_PIXEL_THRESHOLD) {
             dc.DrawBitmap(m_bitmap_background.bmp(), 0, 0);
             dc.SetTextForeground(*wxBLACK);
-        }
-        else
+        } else
             dc.SetTextForeground(*wxWHITE);
-    }
-    else
+    } else
         dc.SetTextForeground(*wxBLACK);
-    if (m_thumbnail_bmp_display.IsOk()) {
-        dc.DrawBitmap(m_thumbnail_bmp_display, wxPoint(0, 0));
-    }
+    if (m_thumbnail_bmp_display.IsOk()) { dc.DrawBitmap(m_thumbnail_bmp_display, wxPoint(0, 0)); }
     dc.SetFont(Label::Body_12);
     
     if (m_plate_index >= 0) {
@@ -994,7 +966,6 @@ void PrintingTaskPanel::set_has_reted_text(bool has_rated)
         m_has_rated_prompt->Hide();
     }
     Layout();
-    Fit();
 }
 
 void PrintingTaskPanel::msw_rescale()
@@ -1049,9 +1020,7 @@ void PrintingTaskPanel::enable_partskip_button(MachineObject* obj, bool enable)
 {
     int stage = 0;
     bool in_calibration_mode = false;
-    if( obj && (obj->print_type == "system" || CalibUtils::get_calib_mode_by_name(obj->subtask_name, stage) != CalibMode::Calib_None)){
-        in_calibration_mode = true;
-    }
+    if (obj && (obj->print_type == "system" || CalibUtils::get_calib_mode_by_name(obj->subtask_name, stage) != CalibMode::Calib_None)) { in_calibration_mode = true; }
 
     if (!enable || in_calibration_mode) {
         m_button_partskip->Enable(false);
@@ -1093,8 +1062,7 @@ void PrintingTaskPanel::enable_abort_button(bool enable)
     if (!enable) {
         m_button_abort->Enable(false);
         m_button_abort->SetBitmap_("print_control_stop_disable");
-    }
-    else {
+    } else {
         m_button_abort->Enable(true);
         m_button_abort->SetBitmap_("print_control_stop");
     }
@@ -1102,10 +1070,7 @@ void PrintingTaskPanel::enable_abort_button(bool enable)
 
 void PrintingTaskPanel::update_subtask_name(wxString name)
 {
-    if (m_staticText_subtask_value->GetLabelText() != name)
-    {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": " << name;
-    }
+    if (m_staticText_subtask_value->GetLabelText() != name) { BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": " << name; }
     m_staticText_subtask_value->SetLabelText(name);
 }
 
@@ -1190,16 +1155,12 @@ void PrintingTaskPanel::update_left_time(int mc_left_time)
 
 void PrintingTaskPanel::update_layers_num(bool show, wxString num)
 {
-    if ((show == m_staticText_layers->IsShown()) && (num == m_staticText_layers->GetLabelText()))
-    {
-        return;
-    }
+    if ((show == m_staticText_layers->IsShown()) && (num == m_staticText_layers->GetLabelText())) { return; }
 
     if (show) {
         m_staticText_layers->Show(true);
         m_staticText_layers->SetLabelText(num);
-    }
-    else {
+    } else {
         m_staticText_layers->Show(false);
         m_staticText_layers->SetLabelText(num);
     }
@@ -1220,8 +1181,7 @@ void PrintingTaskPanel::show_priting_use_info(bool show, wxString time /*= wxEmp
 
         m_staticText_consumption_of_time->SetLabelText(time);
         m_staticText_consumption_of_weight->SetLabelText(weight);
-    }
-    else {
+    } else {
         m_staticText_consumption_of_time->SetLabelText("0m");
         m_staticText_consumption_of_weight->SetLabelText("0g");
         if (m_staticText_consumption_of_time->IsShown()) {
@@ -1278,6 +1238,11 @@ void PrintingTaskPanel::market_scoring_hide()
     m_score_staticline->Hide();
     m_score_subtask_info->Hide();
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " hide market scoring page";
+}
+
+bool PrintingTaskPanel::is_market_scoring_show()
+{
+    return m_score_subtask_info->IsShown();
 }
 
 void PrintingTaskPanel::set_star_count(int star_count)
@@ -1611,13 +1576,26 @@ wxBoxSizer *StatusBasePanel::create_machine_control_page(wxWindow *parent)
     wxBoxSizer *bSizer_control = new wxBoxSizer(wxVERTICAL);
 
     auto temp_axis_ctrl_sizer = create_temp_axis_group(parent);
-    auto m_ams_ctrl_sizer = create_ams_group(parent);
     auto m_filament_load_sizer = create_filament_group(parent);
+
+    /* ams or rack*/
+    wxSizer *ams_rack_sizer = new wxBoxSizer(wxHORIZONTAL);
+    ams_rack_sizer->Add(create_ams_group(parent), 0, wxEXPAND | wxLEFT);
+
+    m_panel_nozzle_rack = new wgtDeviceNozzleRack(parent);
+    m_panel_nozzle_rack->Show(false);
+    ams_rack_sizer->Add(m_panel_nozzle_rack, 0, wxEXPAND | wxLEFT);
+
+    m_ams_rack_switch = new SwitchBoard(parent, _L("Filament"), _L("Hotends"), wxSize(FromDIP(126), FromDIP(26)));
+    m_ams_rack_switch->updateState("left");
+    m_ams_rack_switch->Hide();
+    m_ams_rack_switch->Bind(wxCUSTOMEVT_SWITCH_POS, &StatusBasePanel::on_ams_rack_switch, this);
 
     bSizer_control->Add(0, 0, 0, wxTOP, FromDIP(8));
     bSizer_control->Add(temp_axis_ctrl_sizer,   0, wxALIGN_CENTER|wxLEFT|wxRIGHT, FromDIP(8));
+    bSizer_control->Add(m_ams_rack_switch, 0, wxALIGN_CENTRE | wxTOP, FromDIP(6));
     bSizer_control->Add(0, 0, 0, wxTOP, FromDIP(6));
-    bSizer_control->Add(m_ams_ctrl_sizer,       0, wxALIGN_CENTER|wxLEFT|wxRIGHT, FromDIP(8));
+    bSizer_control->Add(ams_rack_sizer, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, FromDIP(8));
     bSizer_control->Add(0, 0, 0, wxTOP, FromDIP(6));
     bSizer_control->Add(m_filament_load_sizer,  0, wxALIGN_CENTER|wxLEFT|wxRIGHT, FromDIP(8));
     bSizer_control->Add(0, 0, 0, wxTOP, FromDIP(4));
@@ -1662,13 +1640,7 @@ wxBoxSizer *StatusBasePanel::create_temp_axis_group(wxWindow *parent)
 
     content_sizer->Add(m_temp_ctrl, 0, wxEXPAND | wxALL, FromDIP(5));
     content_sizer->Add(m_temp_temp_line, 0, wxEXPAND, 1);
-    //content_sizer->Add(FromDIP(9), 0, 0, wxEXPAND, 1);
-    /*content_sizer->Add(0, 0, 0, wxLEFT, FromDIP(18));
-    content_sizer->Add(m_axis_sizer, 0, wxALIGN_CENTER_VERTICAL | wxALL, 0);
-    content_sizer->Add(0, 0, 0, wxLEFT, FromDIP(18));
-    content_sizer->Add(bed_sizer, 0, wxEXPAND | wxLEFT | wxTOP | wxBOTTOM, FromDIP(12));*/
     content_sizer->Add(axis_and_bed_control_sizer, 1, wxALIGN_CENTER, 0);
-    //content_sizer->Add(0, 0, 0, wxLEFT, FromDIP(18));
 
     m_temp_extruder_line = new wxPanel(box);
     m_temp_extruder_line->SetMaxSize(wxSize(FromDIP(1), -1));
@@ -1704,8 +1676,8 @@ wxBoxSizer *StatusBasePanel::create_temp_control(wxWindow *parent)
     m_tempCtrl_nozzle->SetTextColor(tempinput_text_colour);
     m_tempCtrl_nozzle->SetBorderColor(tempinput_border_colour);
 
-    m_tempCtrl_nozzle_deputy = new TempInput(parent, nozzle_id, TEMP_BLANK_STR, TempInputType::TEMP_OF_NORMAL_TYPE, TEMP_BLANK_STR, wxString("monitor_nozzle_temp"), wxString("monitor_nozzle_temp_active"),
-        wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_tempCtrl_nozzle_deputy = new TempInput(parent, nozzle_id, TEMP_BLANK_STR, TempInputType::TEMP_OF_NORMAL_TYPE, TEMP_BLANK_STR, wxString("monitor_nozzle_temp"),
+                                             wxString("monitor_nozzle_temp_active"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_tempCtrl_nozzle_deputy->SetMinSize(TEMP_CTRL_MIN_SIZE_ALIGN_TWO_ICON);
     m_tempCtrl_nozzle_deputy->AddTemp(0); // zero is default temp
     m_tempCtrl_nozzle_deputy->SetMinTemp(20);
@@ -2019,39 +1991,30 @@ wxBoxSizer *StatusBasePanel::create_extruder_control(wxWindow *parent)
     return sizer;
 }
 
-wxBoxSizer *StatusBasePanel::create_ams_group(wxWindow *parent)
+StaticBox *StatusBasePanel::create_ams_group(wxWindow *parent)
 {
-    auto sizer     = new wxBoxSizer(wxVERTICAL);
-    auto sizer_box = new wxBoxSizer(wxVERTICAL);
-
-    m_ams_control_box = new StaticBox(parent);
-
     StateColor box_colour(std::pair<wxColour, int>(*wxWHITE, StateColor::Normal));
     StateColor box_border_colour(std::pair<wxColour, int>(STATUS_PANEL_BG, StateColor::Normal));
 
+    m_ams_control_box = new StaticBox(parent);
     m_ams_control_box->SetBackgroundColor(box_colour);
     m_ams_control_box->SetBorderColor(box_border_colour);
     m_ams_control_box->SetCornerRadius(5);
 
     m_ams_control_box->SetMinSize(wxSize(FromDIP(586), -1));
     m_ams_control_box->SetBackgroundColour(*wxWHITE);
-#if !BBL_RELEASE_TO_PUBLIC
-    m_ams_debug = new wxStaticText(m_ams_control_box, wxID_ANY, _L("Debug Info"), wxDefaultPosition, wxDefaultSize, 0);
-    sizer_box->Add(m_ams_debug, 0, wxALIGN_CENTER_HORIZONTAL, 0);
-    m_ams_debug->Hide();
-#endif
 
     m_ams_control = new AMSControl(m_ams_control_box, wxID_ANY);
-    //m_ams_control->SetMinSize(wxSize(FromDIP(510), FromDIP(286)));
     m_ams_control->SetDoubleBuffered(true);
+
+    auto sizer_box = new wxBoxSizer(wxVERTICAL);
     sizer_box->Add(m_ams_control, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, FromDIP(10));
 
     m_ams_control_box->SetBackgroundColour(*wxWHITE);
     m_ams_control_box->SetSizer(sizer_box);
     m_ams_control_box->Layout();
     m_ams_control_box->Fit();
-    sizer->Add(m_ams_control_box, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, FromDIP(0));
-    return sizer;
+    return m_ams_control_box;
 }
 
 wxBoxSizer* StatusBasePanel::create_filament_group(wxWindow* parent)
@@ -2069,7 +2032,8 @@ wxBoxSizer* StatusBasePanel::create_filament_group(wxWindow* parent)
     m_title_filament_loading->SetForegroundColour(wxColour(0, 137, 123));
     m_title_filament_loading->SetFont(::Label::Body_14);
 
-    m_img_filament_loading = new wxStaticBitmap(m_scale_panel, wxID_ANY, create_scaled_bitmap("filament_load_fold", this, 24), wxDefaultPosition, wxSize(FromDIP(24), FromDIP(24)), 0);
+    m_img_filament_loading = new wxStaticBitmap(m_scale_panel, wxID_ANY, create_scaled_bitmap("filament_load_fold", this, 24), wxDefaultPosition,
+                                                wxSize(FromDIP(24), FromDIP(24)), 0);
 
     sizer_scale_panel->Add(0, 0, 0, wxLEFT, FromDIP(20));
     sizer_scale_panel->Add(m_title_filament_loading, 0, wxALIGN_CENTER, 0);
@@ -2168,11 +2132,17 @@ void StatusBasePanel::expand_filament_loading(wxMouseEvent& e)
                 int cur_extder_id = ext_system->GetCurrentExtderId();
                 if (cur_extder_id == MAIN_EXTRUDER_ID)
                 {
-                    m_filament_load_img->SetBitmap(create_scaled_bitmap("filament_load_o_series_right", this, load_img_size));
+                    if (obj->GetNozzleSystem()->GetNozzleRack()->IsSupported())
+                        m_filament_load_img->SetBitmap(create_scaled_bitmap("filament_load_o1c_series_right", this, load_img_size));
+                    else
+                        m_filament_load_img->SetBitmap(create_scaled_bitmap("filament_load_o_series_right", this, load_img_size));
                 }
                 else if (cur_extder_id == DEPUTY_EXTRUDER_ID)
                 {
-                    m_filament_load_img->SetBitmap(create_scaled_bitmap("filament_load_o_series_left", this, load_img_size));
+                    if (obj->GetNozzleSystem()->GetNozzleRack()->IsSupported())
+                      m_filament_load_img->SetBitmap(create_scaled_bitmap("filament_load_o1c_series_left", this, load_img_size));
+                    else
+                        m_filament_load_img->SetBitmap(create_scaled_bitmap("filament_load_o_series_left", this, load_img_size));
                 }
             }
             else
@@ -2202,6 +2172,8 @@ void StatusBasePanel::show_ams_group(bool show)
         wxGetApp().mainframe->m_monitor->Layout();
     }
 
+    if (show && m_ams_rack_switch->IsShown() && (m_ams_rack_switch->switch_left != true)) { return; }
+
     if (m_ams_control_box->IsShown() != show) {
         m_ams_control_box->Show(show);
         m_ams_control->Layout();
@@ -2222,9 +2194,7 @@ void StatusBasePanel::show_filament_load_group(bool show)
         }
 
         // m_scale_panel control the display of m_filament_load_box
-        if (!show && m_filament_load_box->IsShown()) {
-            m_filament_load_box->Show(false);
-        }
+        if (!show && m_filament_load_box->IsShown()) { m_filament_load_box->Show(false); }
 
         auto cur_ext = obj->GetExtderSystem()->GetCurrentExtder();
         m_filament_step->SetupSteps(cur_ext ? cur_ext->HasFilamentInExt() : false);
@@ -2235,6 +2205,31 @@ void StatusBasePanel::show_filament_load_group(bool show)
         wxGetApp().mainframe->m_monitor->get_status_panel()->Layout();
         wxGetApp().mainframe->m_monitor->Layout();
     }
+}
+
+void StatusBasePanel::jump_to_Rack()
+{
+    if (obj && obj->GetNozzleRack()->IsSupported()) {
+        m_ams_rack_switch->updateState("right");
+        m_ams_control_box->Show(false);
+        m_panel_nozzle_rack->Show(true);
+        Layout();
+    }
+}
+
+void StatusBasePanel::on_ams_rack_switch(wxCommandEvent &e)
+{
+    if (!m_ams_control_box->IsShown() && e.GetInt() == 1) {
+        m_ams_control_box->Show(e.GetInt() == 1);
+        m_panel_nozzle_rack->Show(e.GetInt() == 0);
+        Layout();
+    } else if (!m_panel_nozzle_rack->IsShown() && e.GetInt() == 0) {
+        m_ams_control_box->Show(e.GetInt() == 1);
+        m_panel_nozzle_rack->Show(e.GetInt() == 0);
+        Layout();
+    }
+
+    e.Skip();
 }
 
 void StatusPanel::update_camera_state(MachineObject* obj)
@@ -2265,8 +2260,7 @@ void StatusPanel::update_camera_state(MachineObject* obj)
     if (m_last_recording != (obj->is_recording() ? 1 : 0)) {
         if (obj->is_recording()) {
             m_bitmap_recording_img->SetBitmap(m_bitmap_recording_on.bmp());
-        }
-        else {
+        } else {
             m_bitmap_recording_img->SetBitmap(m_bitmap_recording_off.bmp());
         }
         m_last_recording = obj->is_recording() ? 1 : 0;
@@ -2433,7 +2427,9 @@ StatusPanel::StatusPanel(wxWindow *parent, wxWindowID id, const wxPoint &pos, co
     Bind(EVT_AMS_RETRY, &StatusPanel::on_ams_retry, this);
     Bind(EVT_FAN_CHANGED, &StatusPanel::on_fan_changed, this);
     Bind(EVT_SECONDARY_CHECK_RESUME, &StatusPanel::on_subtask_pause_resume, this);
-    Bind(EVT_SECONDARY_CHECK_RETRY, [this](auto &e) { if (m_ams_control) { m_ams_control->on_retry(); }});
+    Bind(EVT_SECONDARY_CHECK_RETRY, [this](auto &e) {
+        if (m_ams_control) { m_ams_control->on_retry(); }
+    });
 
     m_switch_speed->Connect(wxEVT_LEFT_DOWN, wxCommandEventHandler(StatusPanel::on_switch_speed), NULL, this);
     m_calibration_btn->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_start_calibration), NULL, this);
@@ -2584,7 +2580,8 @@ void StatusPanel::on_market_retry(wxCommandEvent &event)
     }
 }
 
-void StatusPanel::update_partskip_button(MachineObject *obj) {
+void StatusPanel::update_partskip_button(MachineObject *obj)
+{
     if (!obj) return;
 
     auto partskip_button = m_project_task_panel->get_partskip_button();
@@ -2645,10 +2642,7 @@ void StatusPanel::on_subtask_abort(wxCommandEvent &event)
     abort_dlg->Raise();
 }
 
-void StatusPanel::error_info_reset()
-{
-    m_project_task_panel->error_info_reset();
-}
+void StatusPanel::error_info_reset() { m_project_task_panel->error_info_reset(); }
 
 void StatusPanel::on_print_error_clean(wxCommandEvent &event)
 {
@@ -2668,7 +2662,8 @@ void StatusPanel::on_webrequest_state(wxWebRequestEvent &evt)
         if (m_current_print_mode != PrintingTaskType::CALIBRATION ||(m_calib_mode == CalibMode::Calib_Flow_Rate && m_calib_method == CalibrationMethod::CALI_METHOD_MANUAL)) {
             wxImage img(*evt.GetResponse().GetStream());
             img_list.insert(std::make_pair(m_request_url, img));
-            wxImage resize_img = img.Scale(m_project_task_panel->get_bitmap_thumbnail()->GetSize().x, m_project_task_panel->get_bitmap_thumbnail()->GetSize().y, wxIMAGE_QUALITY_HIGH);
+            wxImage resize_img = img.Scale(m_project_task_panel->get_bitmap_thumbnail()->GetSize().x, m_project_task_panel->get_bitmap_thumbnail()->GetSize().y,
+                                           wxIMAGE_QUALITY_HIGH);
             m_project_task_panel->set_thumbnail_img(resize_img, "");
             m_project_task_panel->set_brightness_value(get_brightness_value(resize_img));
         }
@@ -2733,8 +2728,7 @@ bool StatusPanel::is_task_changed(MachineObject* obj)
 
 void StatusPanel::update(MachineObject *obj)
 {
-    if (!obj || !obj->is_info_ready())
-    {
+    if (!obj || !obj->is_info_ready()) {
         m_nozzle_btn_panel->Disable();
         return;
     }
@@ -2768,15 +2762,15 @@ void StatusPanel::update(MachineObject *obj)
     }
 
     /*STUDIO-12573*/
-    if (!obj->is_fdm_type()) {
-        m_switch_lamp->Enable(false);
-    }
+    if (!obj->GetInfo()->IsFdmMode()) { m_switch_lamp->Enable(false); }
 
     update_temp_ctrl(obj);
     update_misc_ctrl(obj);
 
     update_ams(obj);
     update_cali(obj);
+
+    update_rack(obj);
 
     if (obj) {
         //nozzle ui
@@ -2826,26 +2820,18 @@ void StatusPanel::update(MachineObject *obj)
 
         m_parts_btn->Show();
 
+        if (m_panel_control_title) { m_panel_control_title->Layout(); }
 
-        if (m_panel_control_title) {
-            m_panel_control_title->Layout();
-        }
-
-        if (!obj->dev_connection_type.empty()) {
+        if (!obj->connection_type().empty()) {
             auto iter_connect_type = m_print_connect_types.find(obj->get_dev_id());
             if (iter_connect_type != m_print_connect_types.end()) {
-                if (iter_connect_type->second != obj->dev_connection_type) {
+                if (iter_connect_type->second != obj->connection_type()) {
+                    if (iter_connect_type->second == "lan" && obj->connection_type() == "cloud") { m_print_connect_types[obj->get_dev_id()] = obj->connection_type(); }
 
-                    if (iter_connect_type->second == "lan" && obj->dev_connection_type == "cloud") {
-                        m_print_connect_types[obj->get_dev_id()] = obj->dev_connection_type;
-                    }
-
-                    if (iter_connect_type->second == "cloud" && obj->dev_connection_type == "lan") {
-                        m_print_connect_types[obj->get_dev_id()] = obj->dev_connection_type;
-                    }
+                    if (iter_connect_type->second == "cloud" && obj->connection_type() == "lan") { m_print_connect_types[obj->get_dev_id()] = obj->connection_type(); }
                 }
             }
-            m_print_connect_types[obj->get_dev_id()] = obj->dev_connection_type;
+            m_print_connect_types[obj->get_dev_id()] = obj->connection_type();
         }
 
         update_error_message();
@@ -2856,12 +2842,13 @@ void StatusPanel::update(MachineObject *obj)
     //m_machine_ctrl_panel->Thaw();
 }
 
-void StatusPanel::show_recenter_dialog() {
+void StatusPanel::show_recenter_dialog()
+{
     RecenterDialog dlg(this);
-    if (dlg.ShowModal() == wxID_OK)
-        obj->command_go_home();
+    if (dlg.ShowModal() == wxID_OK) {
+        if (obj) { obj->GetAxis()->Ctrl_GoHome(); }
+    }
 }
-
 
 void StatusPanel::update_error_message()
 {
@@ -2964,9 +2951,7 @@ void StatusPanel::update_temp_ctrl(MachineObject *obj)
     m_tempCtrl_bed->SetCurrTemp((int) bed_cur_temp);
 
     auto limit = obj->get_bed_temperature_limit();
-    if (obj->bed_temp_range.size() > 1) {
-        limit = obj->bed_temp_range[1];
-    }
+    if (obj->bed_temp_range.size() > 1) { limit = obj->bed_temp_range[1]; }
     m_tempCtrl_bed->SetMaxTemp(limit);
 
     if (obj->nozzle_temp_range.size() >= 2) {
@@ -3001,14 +2986,11 @@ void StatusPanel::update_temp_ctrl(MachineObject *obj)
         m_tempCtrl_nozzle_deputy->SetLabel(TEMP_BLANK_STR);
         m_tempCtrl_nozzle_deputy->Hide();
 
-        if (m_tempCtrl_nozzle->GetMinSize() != TEMP_CTRL_MIN_SIZE_ALIGN_ONE_ICON)
-        {
+        if (m_tempCtrl_nozzle->GetMinSize() != TEMP_CTRL_MIN_SIZE_ALIGN_ONE_ICON) {
             to_update_layout = true;
             m_tempCtrl_nozzle->SetMinSize(TEMP_CTRL_MIN_SIZE_ALIGN_ONE_ICON);
         }
-    }
-    else if (nozzle_num == 2)
-    {
+    } else if (nozzle_num == 2) {
         m_tempCtrl_nozzle->SetCurrType(TEMP_OF_MAIN_NOZZLE_TYPE);
         m_tempCtrl_nozzle->SetCurrTemp(obj->GetExtderSystem()->GetNozzleTempCurrent(MAIN_EXTRUDER_ID));
         m_tempCtrl_nozzle->Show();
@@ -3017,8 +2999,7 @@ void StatusPanel::update_temp_ctrl(MachineObject *obj)
         m_tempCtrl_nozzle_deputy->SetCurrTemp(obj->GetExtderSystem()->GetNozzleTempCurrent(DEPUTY_EXTRUDER_ID));
         m_tempCtrl_nozzle_deputy->Show();
 
-        if (m_tempCtrl_nozzle->GetMinSize() != TEMP_CTRL_MIN_SIZE_ALIGN_TWO_ICON)
-        {
+        if (m_tempCtrl_nozzle->GetMinSize() != TEMP_CTRL_MIN_SIZE_ALIGN_TWO_ICON) {
             to_update_layout = true;
             m_tempCtrl_nozzle->SetMinSize(TEMP_CTRL_MIN_SIZE_ALIGN_TWO_ICON);
         }
@@ -3068,39 +3049,30 @@ void StatusPanel::update_temp_ctrl(MachineObject *obj)
     }
 
     // support current temp for chamber
-    if (obj->get_printer_series() == PrinterSeries::SERIES_X1)
-    {
-        m_tempCtrl_chamber->SetCurrTemp(obj->chamber_temp);
-    }
-    else
-    {
+    const auto &chamber = obj->GetChamber();
+    if (chamber->SupportChamberTempDisplay()) {
+        m_tempCtrl_chamber->SetCurrTemp(chamber->GetChamberTemp());
+    } else {
         m_tempCtrl_chamber->SetCurrTemp(TEMP_BLANK_STR);
     }
 
     // support edit chamber temp
-    DevConfig* config = obj->GetConfig();
-    if (config->SupportChamberEdit())
-    {
+    if (chamber->SupportChamberEdit()) {
         m_tempCtrl_chamber->SetReadOnly(false);
         m_tempCtrl_chamber->Enable();
-        m_tempCtrl_chamber->SetMinTemp(config->GetChamberTempEditMin());
-        m_tempCtrl_chamber->SetMaxTemp(config->GetChamberTempEditMax());
+        m_tempCtrl_chamber->SetMinTemp(chamber->GetChamberTempEditMin());
+        m_tempCtrl_chamber->SetMaxTemp(chamber->GetChamberTempEditMax());
         m_tempCtrl_chamber->AddTemp(0); // zero is default temp
         wxCursor cursor(wxCURSOR_IBEAM);
         m_tempCtrl_chamber->GetTextCtrl()->SetCursor(cursor);
 
-        if (m_temp_chamber_timeout > 0)
-        {
+        if (m_temp_chamber_timeout > 0) {
             m_temp_chamber_timeout--;
-        }
-        else
-        {
+        } else {
             /*update temprature if not input temp target*/
-            if (!cham_temp_input) { m_tempCtrl_chamber->SetTagTemp(obj->chamber_temp_target); }
+            if (!cham_temp_input) { m_tempCtrl_chamber->SetTagTemp(chamber->GetChamberTempTarget()); }
         }
-    }
-    else
-    {
+    } else {
         m_tempCtrl_chamber->SetReadOnly(true);
         m_tempCtrl_chamber->SetTagTemp(TEMP_BLANK_STR);
 
@@ -3108,23 +3080,18 @@ void StatusPanel::update_temp_ctrl(MachineObject *obj)
         m_tempCtrl_chamber->GetTextCtrl()->SetCursor(cursor);
     }
 
-    if ((obj->chamber_temp_target - obj->chamber_temp) >= TEMP_THRESHOLD_VAL) {
+    if ((chamber->GetChamberTempTarget() - chamber->GetChamberTemp()) >= TEMP_THRESHOLD_VAL) {
         m_tempCtrl_chamber->SetIconActive();
-    }
-    else {
+    } else {
         m_tempCtrl_chamber->SetIconNormal();
     }
 
-    if (to_update_layout)
-    {
-        this->Layout();
-    }
+    if (to_update_layout) { this->Layout(); }
 }
 
 void StatusPanel::update_misc_ctrl(MachineObject *obj)
 {
-    auto get_extder_shown_state = [](bool ext_has_filament) -> ExtruderState
-    {
+    auto get_extder_shown_state = [](bool ext_has_filament) -> ExtruderState {
         // no data to distinguish ExtruderState::UNLOAD or LOAD, use LOAD png as default
         return ext_has_filament ? ExtruderState::FILLED_LOAD : ExtruderState::EMPTY_LOAD;
     };
@@ -3143,26 +3110,20 @@ void StatusPanel::update_misc_ctrl(MachineObject *obj)
         m_nozzle_btn_panel->Show();
         m_extruderImage[select_index]->setExtruderCount(m_nozzle_num);
 
-        if (obj->GetExtderSystem()->GetTotalExtderSize() > 1)
-        {
+        if (obj->GetExtderSystem()->GetTotalExtderSize() > 1) {
             m_extruderImage[select_index]->update(get_extder_shown_state(obj->GetExtderSystem()->HasFilamentInExt(0)),
                                                   get_extder_shown_state(obj->GetExtderSystem()->HasFilamentInExt(1)));
         }
 
         /*current*/
         /*update when extder position changed or the machine changed*/
-        if (obj->GetExtderSystem()->GetCurrentExtderId() == 0xf)
-        {
+        if (obj->GetExtderSystem()->GetCurrentExtderId() == 0xf) {
             m_extruderImage[select_index]->setExtruderUsed("");
             m_nozzle_btn_panel->updateState("");
-        }
-        else if (obj->GetExtderSystem()->GetCurrentExtderId() == MAIN_EXTRUDER_ID)
-        {
+        } else if (obj->GetExtderSystem()->GetCurrentExtderId() == MAIN_EXTRUDER_ID) {
             m_extruderImage[select_index]->setExtruderUsed("right");
             m_nozzle_btn_panel->updateState("right");
-        }
-        else if (obj->GetExtderSystem()->GetCurrentExtderId() == DEPUTY_EXTRUDER_ID)
-        {
+        } else if (obj->GetExtderSystem()->GetCurrentExtderId() == DEPUTY_EXTRUDER_ID) {
             m_extruderImage[select_index]->setExtruderUsed("left");
             m_nozzle_btn_panel->updateState("left");
         }
@@ -3171,14 +3132,10 @@ void StatusPanel::update_misc_ctrl(MachineObject *obj)
 
         /*enable status*/
         /* Can do switch while printing pause STUDIO-9789*/
-        if ((obj->is_in_printing() && !obj->is_in_printing_pause()) ||
-            obj->ams_status_main == AMS_STATUS_MAIN_FILAMENT_CHANGE ||
-            obj->targ_nozzle_id_from_pc != INVALID_EXTRUDER_ID)
-        {
+        if ((obj->is_in_printing() && !obj->is_in_printing_pause()) || obj->ams_status_main == AMS_STATUS_MAIN_FILAMENT_CHANGE ||
+            obj->targ_nozzle_id_from_pc != INVALID_EXTRUDER_ID) {
             m_nozzle_btn_panel->Disable();
-        }
-        else
-        {
+        } else {
             m_nozzle_btn_panel->Enable();
         }
     } else {
@@ -3186,8 +3143,7 @@ void StatusPanel::update_misc_ctrl(MachineObject *obj)
         m_extruder_book->SetSelection(m_nozzle_num);
         m_extruderImage[select_index]->setExtruderCount(m_nozzle_num);
 
-        if (extder_system->GetTotalExtderSize() > 0)
-        {
+        if (extder_system->GetTotalExtderSize() > 0) {
             ExtruderState shown_state = get_extder_shown_state(extder_system->HasFilamentInExt(0));
             m_extruderImage[select_index]->update(shown_state);
         }
@@ -3198,7 +3154,7 @@ void StatusPanel::update_misc_ctrl(MachineObject *obj)
     m_extruder_label->Show(!m_extruder_switching_status->has_content_shown());/*hide the label if there are shown infos from m_extruder_switching_status*/
 
     /*other*/
-    if (obj->is_core_xy()) {
+    if (obj->GetAxis()->IsArchCoreXY()) {
         m_staticText_z_tip->SetLabel(_L("Bed"));
     } else {
         m_staticText_z_tip->SetLabel("Z");
@@ -3207,19 +3163,15 @@ void StatusPanel::update_misc_ctrl(MachineObject *obj)
     // update extruder icon
     update_extruder_status(obj);
 
-    if (obj->is_fdm_type()) {
-        if (!m_fan_panel->IsShown())
-            m_fan_panel->Show();
+    if (obj->GetInfo()->IsFdmMode()) {
+        if (!m_fan_panel->IsShown()) m_fan_panel->Show();
         bool is_suppt_part_fun = true;
         bool is_suppt_aux_fun  = obj->GetFan()->GetSupportAuxFanData();
         bool is_suppt_cham_fun = obj->GetFan()->GetSupportChamberFan();
         if (m_fan_control_popup) { m_fan_control_popup->update_fan_data(obj); }
     } else {
-        if (m_fan_panel->IsShown()) {
-            m_fan_panel->Hide();
-        }
-        if (m_fan_control_popup && m_fan_control_popup->IsShown())
-            m_fan_control_popup->Hide();
+        if (m_fan_panel->IsShown()) { m_fan_panel->Hide(); }
+        if (m_fan_control_popup && m_fan_control_popup->IsShown()) m_fan_control_popup->Hide();
     }
 
     obj->is_series_o() ? m_switch_fan->UseTextAirCondition() : m_switch_fan->UseTextFan();
@@ -3255,9 +3207,7 @@ void StatusPanel::update_extruder_status(MachineObject* obj)
 void StatusPanel::update_ams(MachineObject *obj)
 {
     // update obj in sub dlg
-    if (m_ams_setting_dlg && m_ams_setting_dlg->IsShown()) {
-        m_ams_setting_dlg->UpdateByObj(obj);
-    }
+    if (m_ams_setting_dlg && m_ams_setting_dlg->IsShown()) { m_ams_setting_dlg->UpdateByObj(obj); }
     if (m_filament_setting_dlg) { m_filament_setting_dlg->obj = obj; }
 
     if (obj && (obj->last_cali_version != obj->cali_version) && (obj->is_lan_mode_printer() || obj->is_security_control_ready())) {
@@ -3350,7 +3300,8 @@ void StatusPanel::update_ams(MachineObject *obj)
     // set segment 1, 2
     //if (!obj->is_enable_np) {
     //    if (obj->m_tray_now == std::to_string(255) || obj->m_tray_now == std::to_string(254)) {
-    //        m_ams_control->SetAmsStep(obj->m_extder_data.extders[MAIN_NOZZLE_ID].snow.ams_id, obj->m_extder_data.extders[MAIN_NOZZLE_ID].snow.slot_id, AMSPassRoadType::AMS_ROAD_TYPE_UNLOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_NONE);
+    //        m_ams_control->SetAmsStep(obj->m_extder_data.extders[MAIN_NOZZLE_ID].snow.ams_id, obj->m_extder_data.extders[MAIN_NOZZLE_ID].snow.slot_id,
+    //        AMSPassRoadType::AMS_ROAD_TYPE_UNLOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_NONE);
     //    } else {
     //        /*if (obj->m_tray_now != "255" && obj->is_filament_at_extruder() && !obj->m_tray_id.empty()) {
     //            m_ams_control->SetAmsStep(obj->m_extder_data.extders[MAIN_NOZZLE_ID].snow.ams_id, obj->m_extder_data.extders[MAIN_NOZZLE_ID].snow.slot_id,
@@ -3376,7 +3327,8 @@ void StatusPanel::update_ams(MachineObject *obj)
             if (ext->GetSlotNow().ams_id == std::to_string(VIRTUAL_TRAY_MAIN_ID) || ext->GetSlotNow().ams_id == std::to_string(VIRTUAL_TRAY_DEPUTY_ID)) {
                 m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, "0", AMSPassRoadType::AMS_ROAD_TYPE_LOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP3);
             } else {
-                m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, ext->GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_LOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP2);
+                m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, ext->GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_LOAD,
+                                          AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP2);
             }
         } else {
             m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, ext->GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_UNLOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_NONE);
@@ -3391,7 +3343,8 @@ void StatusPanel::update_ams(MachineObject *obj)
             if (ext->GetSlotNow().ams_id == std::to_string(VIRTUAL_TRAY_MAIN_ID) || ext->GetSlotNow().ams_id == std::to_string(VIRTUAL_TRAY_DEPUTY_ID)) {
                 m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, "0", AMSPassRoadType::AMS_ROAD_TYPE_LOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP3);
             } else {
-                m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, ext->GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_LOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP2);
+                m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, ext->GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_LOAD,
+                                          AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP2);
             }
         } else {
             m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, ext->GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_UNLOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_NONE);
@@ -3506,7 +3459,7 @@ void StatusPanel::update_cali(MachineObject *obj)
     if (!obj) return;
 
     // disable calibration button in 2D
-    if (!obj->is_fdm_type()) {
+    if (!obj->GetInfo()->IsFdmMode()) {
         m_calibration_btn->SetToolTip(_L("Printer 2D mode does not support 3D calibration"));
         m_calibration_btn->SetLabel(_L("Calibration"));
         m_calibration_btn->Disable();
@@ -3552,8 +3505,7 @@ void StatusPanel::update_basic_print_data(bool def)
         wxString weight = wxString::Format("%.2fg", obj->slice_info->weight);
 
         m_project_task_panel->show_priting_use_info(true, prediction, weight);
-    }
-    else {
+    } else {
         m_project_task_panel->show_priting_use_info(false, "0m", "0g");
     }
 }
@@ -3591,8 +3543,7 @@ void StatusPanel::update_subtask(MachineObject *obj)
     if (m_current_print_mode != PRINGINT) {
         if (calib_bitmap == nullptr) {
             m_calib_mode = get_obj_calibration_mode(obj, m_calib_method, cali_stage);
-            if (m_calib_mode == CalibMode::Calib_None)
-                m_current_print_mode = PRINGINT;
+            if (m_calib_mode == CalibMode::Calib_None) m_current_print_mode = PRINGINT;
             // the printing task is calibrattion, not normal printing.
             else if (m_calib_mode != CalibMode::Calib_None) {
                 m_current_print_mode = CALIBRATION;
@@ -3640,8 +3591,7 @@ void StatusPanel::update_subtask(MachineObject *obj)
                 }
             }
         }
-        if (calib_bitmap != nullptr)
-            m_project_task_panel->set_thumbnail_img(*calib_bitmap, "");
+        if (calib_bitmap != nullptr) m_project_task_panel->set_thumbnail_img(*calib_bitmap, "");
     }
 
     m_project_task_panel->show_layers_num(obj->is_support_layer_num);
@@ -3666,8 +3616,7 @@ void StatusPanel::update_subtask(MachineObject *obj)
 
             if (obj->is_in_prepare()) {
                 prepare_text = wxString::Format(_L("Downloading..."));
-            }
-            else if (obj->print_status == "SLICING") {
+            } else if (obj->print_status == "SLICING") {
                 if (obj->queue_number <= 0) {
                     prepare_text = wxString::Format(_L("Cloud Slicing..."));
                 } else {
@@ -3686,11 +3635,9 @@ void StatusPanel::update_subtask(MachineObject *obj)
             m_project_task_panel->update_layers_num(true, wxString::Format(_L("Layer: %s"), NA_STR));
             m_project_task_panel->update_subtask_name(wxString::Format("%s", GUI::from_u8(obj->subtask_name)));
 
-
             if (obj->get_modeltask() && obj->get_modeltask()->design_id > 0) {
                 m_project_task_panel->show_profile_info(true, wxString::FromUTF8(obj->get_modeltask()->profile_name));
-            }
-            else {
+            } else {
                 m_project_task_panel->show_profile_info(false);
             }
             update_basic_print_data(false);
@@ -3756,7 +3703,7 @@ void StatusPanel::update_subtask(MachineObject *obj)
                 }
             } else { // model printing is not finished, hide scoring page
                 m_project_task_panel->enable_abort_button(true);
-                m_project_task_panel->market_scoring_hide();
+                m_project_task_panel->market_scoring_hide()
                 m_project_task_panel->get_request_failed_panel()->Hide();
             }
         }
@@ -3783,7 +3730,8 @@ void StatusPanel::update_subtask(MachineObject *obj)
     }
 }
 
-void StatusPanel::update_partskip_subtask(MachineObject *obj){
+void StatusPanel::update_partskip_subtask(MachineObject *obj)
+{
     if (!obj) return;
     if (!obj->subtask_) return;
 
@@ -3804,9 +3752,7 @@ void StatusPanel::update_partskip_subtask(MachineObject *obj){
             partskip_button->SetLabel("");
     }
 
-    if(m_partskip_dlg && m_partskip_dlg->IsShown()) {
-        m_partskip_dlg->UpdatePartsStateFromPrinter(obj);
-    }
+    if (m_partskip_dlg && m_partskip_dlg->IsShown()) { m_partskip_dlg->UpdatePartsStateFromPrinter(obj); }
 }
 
 void StatusPanel::update_cloud_subtask(MachineObject *obj)
@@ -3936,7 +3882,7 @@ void StatusPanel::on_axis_ctrl_xy(wxCommandEvent &event)
 bool StatusPanel::check_axis_z_at_home(MachineObject* obj)
 {
     if (obj) {
-        if (!obj->is_axis_at_home("Z")) {
+        if (!obj->GetAxis()->IsAxisAtHomeZ()) {
             BOOST_LOG_TRIVIAL(info) << "axis z is not at home";
             show_recenter_dialog();
             return false;
@@ -3949,36 +3895,32 @@ bool StatusPanel::check_axis_z_at_home(MachineObject* obj)
 void StatusPanel::on_axis_ctrl_z_up_10(wxCommandEvent &event)
 {    
     if (obj) {
-        obj->command_axis_control("Z", 1.0, -10.0f, 900);
-        if (!check_axis_z_at_home(obj))
-            return;
+        obj->GetAxis()->Ctrl_Axis("Z", 1.0, -10.0f, 900);
+        if (!check_axis_z_at_home(obj)) return;
     }
 }
 
 void StatusPanel::on_axis_ctrl_z_up_1(wxCommandEvent &event)
 {
     if (obj) {
-        obj->command_axis_control("Z", 1.0, -1.0f, 900);
-        if (!check_axis_z_at_home(obj))
-            return;
+        obj->GetAxis()->Ctrl_Axis("Z", 1.0, -1.0f, 900);
+        if (!check_axis_z_at_home(obj)) return;
     }
 }
 
 void StatusPanel::on_axis_ctrl_z_down_1(wxCommandEvent &event)
 {
     if (obj) {
-        obj->command_axis_control("Z", 1.0, 1.0f, 900);
-        if (!check_axis_z_at_home(obj))
-            return;
+        obj->GetAxis()->Ctrl_Axis("Z", 1.0, 1.0f, 900);
+        if (!check_axis_z_at_home(obj)) return;
     }
 }
 
 void StatusPanel::on_axis_ctrl_z_down_10(wxCommandEvent &event)
 {
     if (obj) {
-        obj->command_axis_control("Z", 1.0, 10.0f, 900);
-        if (!check_axis_z_at_home(obj))
-            return;
+        obj->GetAxis()->Ctrl_Axis("Z", 1.0, 10.0f, 900);
+        if (!check_axis_z_at_home(obj)) return;
     }
 }
 
@@ -4040,9 +3982,7 @@ void StatusPanel::on_set_bed_temp()
             set_hold_count(m_temp_bed_timeout);
 
             int limit = obj->get_bed_temperature_limit();
-            if (obj->bed_temp_range.size() > 1) {
-                limit = obj->bed_temp_range[1];
-            }
+            if (obj->bed_temp_range.size() > 1) { limit = obj->bed_temp_range[1]; }
 
             if (bed_temp >= limit) {
                 BOOST_LOG_TRIVIAL(info) << "can not set over limit = " << limit << ", set temp = " << bed_temp;
@@ -4063,6 +4003,18 @@ void StatusPanel::on_set_nozzle_temp(int nozzle_id)
 
     try {
         long nozzle_temp;
+
+        const auto& extder = obj->GetExtderSystem()->GetExtderById(nozzle_id);
+        if (!extder) {
+            return;
+        }
+
+        if (!extder->HasNozzleInstalled()) {
+            // en: The extruder hotend not detected. Cannot set nozzle temperature.
+            MessageDialog msg_dlg(this, _L("Right extruder hotend not detected. Cannot set nozzle temperature."), _L("Warning"), wxICON_WARNING | wxOK);
+            msg_dlg.ShowModal();
+            return;
+        }
 
         if (nozzle_id == MAIN_EXTRUDER_ID) {
             wxString str = m_tempCtrl_nozzle->GetTextCtrl()->GetValue();
@@ -4113,8 +4065,7 @@ void StatusPanel::on_set_chamber_temp()
                 m_tempCtrl_chamber->Warning(false);
             }
 
-            if(obj->is_in_printing() && obj->GetFan()->GetSupportAirduct() && obj->GetFan()->is_at_cooling_mode())
-            {
+            if (obj->is_in_printing() && obj->GetFan()->GetSupportAirduct() && obj->GetFan()->is_at_cooling_mode()) {
 #ifndef __APPLE__
                 MessageDialog champer_switch_head_dlg(this, _L("Chamber temperature cannot be changed in cooling mode while printing."), wxEmptyString, wxICON_WARNING | wxOK);
 #else
@@ -4122,24 +4073,25 @@ void StatusPanel::on_set_chamber_temp()
 #endif
                 champer_switch_head_dlg.ShowModal();
                 return;
-            }
-            else if (!obj->GetFan()->is_at_heating_mode() && chamber_temp >= obj->GetConfig()->GetChamberTempSwitchHeat())
-            {
+            } else if (!obj->GetFan()->is_at_heating_mode() && chamber_temp >= obj->GetConfig()->GetChamberTempSwitchHeat()) {
 #ifndef __APPLE__
-                MessageDialog champer_switch_head_dlg(this, _L("If the chamber temperature exceeds 40\u2103, the system will automatically switch to heating mode. "
-                                                                "Please confirm whether to switch."), wxEmptyString, wxICON_WARNING | wxOK | wxCANCEL);
+                MessageDialog champer_switch_head_dlg(this,
+                                                      _L("If the chamber temperature exceeds 40\u2103, the system will automatically switch to heating mode. "
+                                                         "Please confirm whether to switch."),
+                                                      wxEmptyString, wxICON_WARNING | wxOK | wxCANCEL);
 #else
                 /*STUDIO-10386 MessageDialog here may cause block in macOS, use wxMessageDialog*/
-                wxMessageDialog champer_switch_head_dlg(this, _L("If the chamber temperature exceeds 40\u2103, the system will automatically switch to heating mode. "
-                                                                   "Please confirm whether to switch."), wxEmptyString, wxICON_WARNING | wxOK | wxCANCEL);
+                wxMessageDialog champer_switch_head_dlg(this,
+                                                        _L("If the chamber temperature exceeds 40\u2103, the system will automatically switch to heating mode. "
+                                                           "Please confirm whether to switch."),
+                                                        wxEmptyString, wxICON_WARNING | wxOK | wxCANCEL);
 #endif
                 if (champer_switch_head_dlg.ShowModal() != wxID_OK) { return; }
             }
 
-            obj->command_set_chamber(chamber_temp);
+            obj->GetChamber()->CtrlSetChamberTemp(chamber_temp);
         }
-    }
-    catch (...) {
+    } catch (...) {
         ;
     }
 }
@@ -4154,8 +4106,7 @@ void StatusPanel::update_load_with_temp()
 {
     if (!obj->is_filament_at_extruder()) {
         m_is_load_with_temp = true;
-    }
-    else {
+    } else {
         m_is_load_with_temp = false;
     }
 }
@@ -4189,16 +4140,13 @@ void StatusPanel::on_ams_load_curr()
                     old_temp = (atoi(curr_tray->nozzle_temp_min.c_str()) + atoi(curr_tray->nozzle_temp_max.c_str())) / 2;
                 if (!curr_tray->nozzle_temp_max.empty() && !curr_tray->nozzle_temp_min.empty())
                     new_temp = (atoi(curr_tray->nozzle_temp_min.c_str()) + atoi(curr_tray->nozzle_temp_max.c_str())) / 2;
-            }
-            catch (...) {
+            } catch (...) {
                 ;
             }
 
             if (obj->is_enable_np || obj->is_enable_ams_np) {
                 try {
-                    if (!curr_ams_id.empty() && !curr_can_id.empty()) {
-                        obj->command_ams_change_filament(true, curr_ams_id, "0", old_temp, new_temp);
-                    }
+                    if (!curr_ams_id.empty() && !curr_can_id.empty()) { obj->command_ams_change_filament(true, curr_ams_id, "0", old_temp, new_temp); }
                 } catch (...) {}
             } else {
                 obj->command_ams_change_filament(true, "254", "0", old_temp, new_temp);
@@ -4236,18 +4184,16 @@ void StatusPanel::on_ams_load_curr()
 
         if (obj->is_enable_np) {
             try {
-                if (!curr_ams_id.empty() && !curr_can_id.empty()) {
-                    obj->command_ams_change_filament(true, curr_ams_id, curr_can_id, old_temp, new_temp);
-                }
-            }
-            catch (...){}
+                if (!curr_ams_id.empty() && !curr_can_id.empty()) { obj->command_ams_change_filament(true, curr_ams_id, curr_can_id, old_temp, new_temp); }
+            } catch (...) {}
         } else {
             obj->command_ams_change_filament(true, curr_ams_id, curr_can_id, old_temp, new_temp);
         }
     }
 }
 
-void StatusPanel::on_ams_load_vams(wxCommandEvent& event) {
+void StatusPanel::on_ams_load_vams(wxCommandEvent &event)
+{
     BOOST_LOG_TRIVIAL(info) << "on_ams_load_vams_tray";
 
     m_ams_control->SwitchAms(std::to_string(VIRTUAL_TRAY_MAIN_ID));
@@ -4265,7 +4211,8 @@ void StatusPanel::on_ams_switch(SimpleEvent &event)
                 if (ext->GetSlotNow().ams_id == std::to_string(VIRTUAL_TRAY_MAIN_ID) || ext->GetSlotNow().ams_id == std::to_string(VIRTUAL_TRAY_DEPUTY_ID)) {
                     m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, "0", AMSPassRoadType::AMS_ROAD_TYPE_LOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP3);
                 } else {
-                    m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, ext->GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_LOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP2);
+                    m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, ext->GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_LOAD,
+                                              AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP2);
                 }
             } else {
                 m_ams_control->SetAmsStep(ext->GetSlotNow().ams_id, ext->GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_UNLOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_NONE);
@@ -4280,7 +4227,8 @@ void StatusPanel::on_ams_switch(SimpleEvent &event)
                 if (ext.GetSlotNow().ams_id == std::to_string(VIRTUAL_TRAY_MAIN_ID) || ext.GetSlotNow().ams_id == std::to_string(VIRTUAL_TRAY_DEPUTY_ID)) {
                     m_ams_control->SetAmsStep(ext.GetSlotNow().ams_id, "0", AMSPassRoadType::AMS_ROAD_TYPE_LOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP3);
                 } else {
-                    m_ams_control->SetAmsStep(ext.GetSlotNow().ams_id, ext.GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_LOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP2);
+                    m_ams_control->SetAmsStep(ext.GetSlotNow().ams_id, ext.GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_LOAD,
+                                              AMSPassRoadSTEP::AMS_ROAD_STEP_COMBO_LOAD_STEP2);
                 }
             } else {
                 m_ams_control->SetAmsStep(ext.GetSlotNow().ams_id, ext.GetSlotNow().slot_id, AMSPassRoadType::AMS_ROAD_TYPE_UNLOAD, AMSPassRoadSTEP::AMS_ROAD_STEP_NONE);
@@ -4320,9 +4268,7 @@ void StatusPanel::on_ams_filament_backup(SimpleEvent& event)
 void StatusPanel::on_ams_setting_click(SimpleEvent &event)
 {
     if (obj) {
-        if (!m_ams_setting_dlg) {
-            m_ams_setting_dlg = new AMSSetting((wxWindow*)this, wxID_ANY);
-        }
+        if (!m_ams_setting_dlg) { m_ams_setting_dlg = new AMSSetting((wxWindow *) this, wxID_ANY); }
 
         m_ams_setting_dlg->UpdateByObj(obj);
         m_ams_setting_dlg->Show();
@@ -4331,8 +4277,7 @@ void StatusPanel::on_ams_setting_click(SimpleEvent &event)
 
 void StatusPanel::on_filament_extrusion_cali(wxCommandEvent &event)
 {
-    if (!m_extrusion_cali_dlg)
-        m_extrusion_cali_dlg = new ExtrusionCalibration((wxWindow*)this, wxID_ANY);
+    if (!m_extrusion_cali_dlg) m_extrusion_cali_dlg = new ExtrusionCalibration((wxWindow *) this, wxID_ANY);
 
     if (obj) {
         m_extrusion_cali_dlg->obj = obj;
@@ -4418,19 +4363,15 @@ void StatusPanel::on_filament_edit(wxCommandEvent &event)
                 m_filament_setting_dlg->set_ctype(tray->ctype);
                 m_filament_setting_dlg->ams_filament_id = tray->setting_id;
 
-                if (m_filament_setting_dlg->ams_filament_id.empty())
-                {
+                if (m_filament_setting_dlg->ams_filament_id.empty()) {
                     m_filament_setting_dlg->set_empty_color(color);
-                }
-                else
-                {
+                } else {
                     m_filament_setting_dlg->set_color(color);
                     m_filament_setting_dlg->set_colors(cols);
                 }
 
                 m_filament_setting_dlg->m_is_third = !DevFilaSystem::IsBBL_Filament(tray->tag_uid);
-                if (!m_filament_setting_dlg->m_is_third)
-                {
+                if (!m_filament_setting_dlg->m_is_third) {
                     sn_number = tray->uuid;
                     filament = tray->sub_brands;
                     temp_max = tray->nozzle_temp_max;
@@ -4502,8 +4443,7 @@ void StatusPanel::on_ext_spool_edit(wxCommandEvent &event)
 
             m_filament_setting_dlg->Move(wxPoint(current_position_x,current_position_y));
             m_filament_setting_dlg->Popup(filament, sn_number, temp_min, temp_max, k_val, n_val);
-        }
-        catch (...) {
+        } catch (...) {
             ;
         }
     }
@@ -4561,9 +4501,7 @@ void StatusPanel::on_ams_refresh_rfid(wxCommandEvent &event)
                 obj->command_ams_refresh_rfid(std::to_string(tray_index));
             }
 
-            if (use_new_command) {
-                obj->command_ams_refresh_rfid2(stoi(curr_ams_id), stoi(curr_can_id));
-            }
+            if (use_new_command) { obj->command_ams_refresh_rfid2(stoi(curr_ams_id), stoi(curr_can_id)); }
 
         } catch (...) {
             ;
@@ -4606,11 +4544,9 @@ void StatusPanel::on_ams_guide(wxCommandEvent& event)
     wxString ams_wiki_url;
     if (m_ams_control && m_ams_control->m_is_none_ams_mode == AMSModel::GENERIC_AMS) {
         ams_wiki_url = "https://wiki.bambulab.com/en/software/bambu-studio/use-ams-on-bambu-studio";
-    }
-    else if (m_ams_control && m_ams_control->m_is_none_ams_mode == AMSModel::AMS_LITE) {
+    } else if (m_ams_control && m_ams_control->m_is_none_ams_mode == AMSModel::AMS_LITE) {
         ams_wiki_url = "https://wiki.bambulab.com/en/ams-lite";
-    }
-    else {
+    } else {
         ams_wiki_url = "https://wiki.bambulab.com/en/software/bambu-studio/use-ams-on-bambu-studio";
     }
 
@@ -4702,15 +4638,12 @@ void StatusPanel::on_switch_speed(wxCommandEvent &event)
     int selected_item = 1;
     if (obj) {
         int speed_lvl_idx = obj->GetPrintingSpeedLevel() - 1;
-        if (speed_lvl_idx >= 0 && speed_lvl_idx < 4) {
-            selected_item = speed_lvl_idx;
-        }
+        if (speed_lvl_idx >= 0 && speed_lvl_idx < 4) { selected_item = speed_lvl_idx; }
     }
     step->SelectItem(selected_item);
 
     if (!obj->is_in_printing()) {
-        step->Bind(wxEVT_LEFT_DOWN, [](auto& e) {
-            return; });
+        step->Bind(wxEVT_LEFT_DOWN, [](auto &e) { return; });
     }
 
     step->Bind(EVT_STEP_CHANGED, [this](auto &e) {
@@ -4757,10 +4690,7 @@ void StatusPanel::on_nozzle_fan_switch(wxCommandEvent &event)
     }
 
     if (!obj) { return; }
-    if (obj->GetFan()->GetAirDuctData().modes.empty())
-    {
-        obj->GetFan()->converse_to_duct(true, obj->GetFan()->GetSupportAuxFanData(), obj->GetFan()->GetSupportChamberFan());
-    }
+    if (obj->GetFan()->GetAirDuctData().modes.empty()) { obj->GetFan()->converse_to_duct(true, obj->GetFan()->GetSupportAuxFanData(), obj->GetFan()->GetSupportChamberFan()); }
 
     m_fan_control_popup = new FanControlPopupNew(this, obj, obj->GetFan()->GetAirDuctData());
 
@@ -4776,9 +4706,7 @@ void StatusPanel::on_nozzle_fan_switch(wxCommandEvent &event)
 
     pos.x -= FromDIP(150);
     pos.y -= FromDIP(20);
-    if (screenSize.y - fan_popup_size.y < FromDIP(300)) {
-        pos.y = (screenSize.y - fan_popup_size.y) / 2;
-    }
+    if (screenSize.y - fan_popup_size.y < FromDIP(300)) { pos.y = (screenSize.y - fan_popup_size.y) / 2; }
 
     m_fan_control_popup->SetPosition(pos);
     m_fan_control_popup->ShowModal();
@@ -4920,17 +4848,6 @@ void StatusPanel::on_camera_leave(wxMouseEvent& event)
     }
 }
 
-void StatusPanel::on_auto_leveling(wxCommandEvent &event)
-{
-    if (obj) obj->command_auto_leveling();
-}
-
-void StatusPanel::on_xyz_abs(wxCommandEvent &event)
-{
-    if (obj) obj->command_xyz_abs();
-}
-
-
 void StatusPanel::on_nozzle_selected(wxCommandEvent &event)
 {
     if (obj) {
@@ -4943,10 +4860,7 @@ void StatusPanel::on_nozzle_selected(wxCommandEvent &event)
         }
 
         auto nozzle_id = event.GetInt();
-        if (obj->GetCtrl()->command_select_extruder(nozzle_id) == 0)
-        {
-            return;
-        }
+        if (obj->GetCtrl()->command_select_extruder(nozzle_id) == 0) { return; }
     }
 
     m_nozzle_btn_panel->Enable();
@@ -4961,8 +4875,7 @@ void StatusPanel::on_show_print_options(wxCommandEvent& event)
             print_options_dlg->update_machine_obj(obj);
             print_options_dlg->update_options(obj);
             print_options_dlg->ShowModal();
-        }
-        else {
+        } else {
             print_options_dlg->update_machine_obj(obj);
             print_options_dlg->update_options(obj);
             print_options_dlg->ShowModal();
@@ -4981,8 +4894,7 @@ void StatusPanel::on_show_safety_options(wxCommandEvent& event)
                 safety_options_dlg->update_machine_obj(obj);
                 safety_options_dlg->update_options(obj);
                 safety_options_dlg->ShowModal();
-            }
-            else {
+            } else {
                 safety_options_dlg->update_machine_obj(obj);
                 safety_options_dlg->update_options(obj);
                 safety_options_dlg->ShowModal();
@@ -4998,8 +4910,7 @@ void StatusPanel::on_show_parts_options(wxCommandEvent &event)
             print_parts_dlg = new PrinterPartsDialog(this);
             print_parts_dlg->update_machine_obj(obj);
             print_parts_dlg->ShowModal();
-        }
-        else {
+        } else {
             print_parts_dlg->update_machine_obj(obj);
             print_parts_dlg->ShowModal();
         }
@@ -5061,8 +4972,6 @@ void StatusPanel::set_default()
     m_switch_nozzle_fan_timeout = 0;
     m_switch_printing_fan_timeout = 0;
     m_switch_cham_fan_timeout = 0;
-    m_show_ams_group = false;
-    m_show_filament_group = false;
     reset_printing_values();
 
     m_bitmap_timelapse_img->Hide();
@@ -5085,6 +4994,9 @@ void StatusPanel::set_default()
     m_ams_control->Hide();
     m_ams_control_box->Hide();
     m_ams_control->Reset();
+    m_ams_rack_switch->updateState("left");
+    m_ams_rack_switch->Hide();
+    m_panel_nozzle_rack->Hide();
     m_scale_panel->Hide();
     m_filament_load_box->Hide();
     m_filament_step->Hide();
@@ -5099,11 +5011,8 @@ void StatusPanel::show_status(int status)
     if (last_status == status) return;
     last_status = status;
 
-    if (((status & (int) MonitorStatus::MONITOR_DISCONNECTED) != 0)
-     || ((status & (int) MonitorStatus::MONITOR_DISCONNECTED_SERVER) != 0)
-     || ((status & (int)MonitorStatus::MONITOR_CONNECTING) != 0)
-     || ((status & (int)MonitorStatus::MONITOR_NO_PRINTER) != 0)
-        ) {
+    if (((status & (int) MonitorStatus::MONITOR_DISCONNECTED) != 0) || ((status & (int) MonitorStatus::MONITOR_DISCONNECTED_SERVER) != 0) ||
+        ((status & (int) MonitorStatus::MONITOR_CONNECTING) != 0) || ((status & (int) MonitorStatus::MONITOR_NO_PRINTER) != 0)) {
         show_printing_status(false, false);
         m_calibration_btn->Disable();
         m_options_btn->Disable();
@@ -5120,10 +5029,7 @@ void StatusPanel::show_status(int status)
     }
 }
 
-void StatusPanel::set_hold_count(int& count)
-{
-    count = COMMAND_TIMEOUT;
-}
+void StatusPanel::set_hold_count(int &count) { count = COMMAND_TIMEOUT; }
 
 void StatusPanel::rescale_camera_icons()
 {
@@ -5145,8 +5051,7 @@ void StatusPanel::rescale_camera_icons()
 
     if (m_media_play_ctrl->IsStreaming()) {
         m_bitmap_vcamera_img->SetBitmap(m_bitmap_vcamera_on.bmp());
-    }
-    else {
+    } else {
         m_bitmap_vcamera_img->SetBitmap(m_bitmap_vcamera_off.bmp());
     }
 
@@ -5247,10 +5152,7 @@ void StatusPanel::msw_rescale()
 
     m_switch_fan->SetImages(m_bitmap_fan_on, m_bitmap_fan_off);
     m_switch_fan->Rescale();
-    if (m_fan_control_popup)
-    {
-        m_fan_control_popup->msw_rescale();
-    }
+    if (m_fan_control_popup) { m_fan_control_popup->msw_rescale(); }
 
     //m_switch_fan->SetImages(m_bitmap_fan_on, m_bitmap_fan_off);
     //m_switch_fan->Rescale();
@@ -5262,8 +5164,8 @@ void StatusPanel::msw_rescale()
     m_extruder_switching_status->msw_rescale();
 
     m_ams_control->msw_rescale();
+    m_panel_nozzle_rack->Rescale();
     // m_filament_step->Rescale();
-
 
     m_calibration_btn->SetMinSize(wxSize(-1, FromDIP(26)));
     m_calibration_btn->Rescale();
@@ -5281,6 +5183,17 @@ void StatusPanel::msw_rescale()
 
     Layout();
     Refresh();
+}
+
+void StatusPanel::update_rack(MachineObject *obj)
+{
+    if (obj && obj->GetNozzleSystem()->GetNozzleRack()->IsSupported()) {
+        m_ams_rack_switch->Show();
+        m_panel_nozzle_rack->UpdateRackInfo(obj->GetNozzleSystem()->GetNozzleRack());
+    } else {
+        m_ams_rack_switch->Show(false);
+        m_panel_nozzle_rack->Show(false);
+    }
 }
 
 void StatusPanel::update_filament_loading_panel(MachineObject* obj)
@@ -5547,7 +5460,8 @@ std::pair<wxStaticBitmap *, ScoreDialog::ImageMsg> ScoreDialog::create_oss_thumb
         .on_error([this, imageCtrl, &oss_path](std::string body, std::string error, unsigned status) {
             BOOST_LOG_TRIVIAL(info) << "load oss picture failed, oss path: " << oss_path << " status:" << status << " error:" << error;
             CallAfter([this, imageCtrl]() { update_static_bitmap(imageCtrl, fail_image); });
-        }).perform();
+        })
+        .perform();
 
     m_image_sizer->Add(create_broad_sizer(imageCtrl, cur_image_msg), 0, wxALL, 5);
 
@@ -5603,7 +5517,8 @@ wxBoxSizer *ScoreDialog::create_broad_sizer(wxStaticBitmap *bitmap, ImageMsg& cu
     return m_image_tb_broad;
 }
 
-void ScoreDialog::init() {
+void ScoreDialog::init()
+{
     SetBackgroundColour(*wxWHITE);
     SetMinSize(wxSize(FromDIP(540), FromDIP(380)));
 
@@ -5679,13 +5594,12 @@ wxBoxSizer* ScoreDialog::get_comment_text_sizer() {
     return m_comment_sizer;
 }
 
-void ScoreDialog::create_comment_text(const wxString& comment) {
+void ScoreDialog::create_comment_text(const wxString &comment)
+{
     m_comment_text = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(FromDIP(492), FromDIP(104)), wxTE_MULTILINE);
     m_comment_text->SetBackgroundColour(wxColor(*wxWHITE));
 
-    if (!comment.empty()) {
-        m_comment_text->SetValue(comment);
-    }
+    if (!comment.empty()) { m_comment_text->SetValue(comment); }
     m_comment_text->SetHint(_L("Rate this print"));
     m_comment_text->SetBackgroundColour(*wxWHITE);
     //m_comment_text->SetForegroundColour(wxColor("#BBBBBB"));
@@ -5817,7 +5731,10 @@ wxBoxSizer *ScoreDialog::get_button_sizer()
                 int             need_upload_nums   = need_upload_images.size();
                 int             upload_nums        = 0;
                 int             upload_failed_nums = 0;
-                ProgressDialog *progress_dialog    = new ProgressDialog(_L("Upload Pictures"), _L("Number of images successfully uploaded") + ": " + std::to_string(upload_nums) + "/" + std::to_string(need_upload_nums), need_upload_nums, this);
+                ProgressDialog *progress_dialog    = new ProgressDialog(_L("Upload Pictures"),
+                                                                        _L("Number of images successfully uploaded") + ": " + std::to_string(upload_nums) + "/" +
+                                                                            std::to_string(need_upload_nums),
+                                                                        need_upload_nums, this);
                 for (std::set<std::pair<wxStaticBitmap *, wxString>>::iterator it = need_upload_images.begin(); it != need_upload_images.end();) {
                     std::pair<wxStaticBitmap *, wxString> need_upload     = *it;
                     std::string need_upload_uf8 = into_u8(need_upload.second);
@@ -5834,13 +5751,15 @@ wxBoxSizer *ScoreDialog::get_button_sizer()
                             m_image_url_paths.push_back(need_upload_uf8);
                         }
                         it++;
-                        progress_dialog->Update(upload_nums, _L("Number of images successfully uploaded") + ": " + std::to_string(upload_nums) + "/" + std::to_string(need_upload_nums));
+                        progress_dialog->Update(upload_nums,
+                                                _L("Number of images successfully uploaded") + ": " + std::to_string(upload_nums) + "/" + std::to_string(need_upload_nums));
                         progress_dialog->Fit();
                         BOOST_LOG_TRIVIAL(info) << "put_rating_picture_oss: model_id [" << m_model_id << "] profile_id [" << m_profile_id << "] http_code [" << http_code
                                                 << "] http_error [" << http_error << "] config [" << config << "]  image_path [" << need_upload.second << "]";
                         break;
                     case -1:
-                        error_info += need_upload.second + _L(" upload failed").ToUTF8().data() + "\n\thttp code:" + std::to_string(http_code) + "\n\thttp_error:" + http_error + "\n";
+                        error_info += need_upload.second + _L(" upload failed").ToUTF8().data() + "\n\thttp code:" + std::to_string(http_code) + "\n\thttp_error:" + http_error +
+                                      "\n";
                         m_upload_status_code = StatusCode::UPLOAD_IMG_FAILED;
                         ++it;
                         break;
@@ -5870,9 +5789,7 @@ wxBoxSizer *ScoreDialog::get_button_sizer()
                 if (m_upload_status_code == StatusCode::UPLOAD_IMG_FAILED) {
                     std::string   upload_failed_images = into_u8(_L("The following issues occurred during the process of uploading images. Do you want to ignore them?\n\n"));
                     MessageDialog dlg_info(this, upload_failed_images + error_info, wxString(_L("info")), wxOK | wxNO | wxCENTER);
-                    if (dlg_info.ShowModal() == wxID_OK) {
-                        m_upload_status_code = StatusCode::UPLOAD_PROGRESS;
-                    }
+                    if (dlg_info.ShowModal() == wxID_OK) { m_upload_status_code = StatusCode::UPLOAD_PROGRESS; }
                 }
             }
         }
@@ -5943,9 +5860,7 @@ void ScoreDialog::load_photo(const std::vector<std::pair<wxString, std::string>>
                 std::string oss_url_path = local_to_url_path.second;
                 //to do: load oss image, create wxStaticBitmap
 
-                if (!oss_url_path.empty()) {
-                    m_image.insert(create_oss_thumbnail(oss_url_path));
-                }
+                if (!oss_url_path.empty()) { m_image.insert(create_oss_thumbnail(oss_url_path)); }
                 continue;
             } else {
                 m_image.insert(create_local_thumbnail(filePath));
@@ -6042,5 +5957,4 @@ void ScoreDialog::set_cloud_bitmap(std::vector<std::string> cloud_bitmaps)
     Fit();
 }
 
-} // namespace GUI
-} // namespace Slic3r
+}} // namespace Slic3r::GUI

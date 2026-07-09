@@ -68,6 +68,7 @@ private:
     wxString   m_project_home_url;
     wxString   m_root_dir;
     static inline int m_sequence_id = 8000;
+    json       m_last_payload = json::object();
 
     void show_info_editor(bool show);
     
@@ -90,10 +91,12 @@ public:
     bool Show(bool show);
     void OnScriptMessage(wxWebViewEvent& evt);
     void RunScript(std::string content);
+    bool is_editing_page() const;
 
     std::map<std::string, std::vector<json>> Reload(wxString aux_path);
     std::string formatBytes(unsigned long bytes);
     wxString to_base64(std::string path);
+    void save_project();
 };
 
 wxDECLARE_EVENT(EVT_PROJECT_RELOAD, wxCommandEvent);

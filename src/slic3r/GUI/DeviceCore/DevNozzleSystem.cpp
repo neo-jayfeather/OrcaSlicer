@@ -57,6 +57,11 @@ static void s_parse_nozzle_type(const std::string& nozzle_type_str, DevNozzle& n
             nozzle.m_nozzle_type = _str2_nozzle_type[type_str];
         }
     }
+    else if (nozzle_type_str == "N/A")
+    {
+        nozzle.m_nozzle_type = NozzleType::ntUndefine;
+        nozzle.m_nozzle_flow = NozzleFlowType::NONE_FLOWTYPE;
+    }
 }
 
 
@@ -68,6 +73,7 @@ void DevNozzleSystemParser::ParseV1_0(const nlohmann::json& nozzletype_json,
     //Since both the old and new protocols push data.
    // assert(system->m_nozzles.size() < 2);
     DevNozzle nozzle;
+    nozzle.SetRack(system->GetNozzleRack());
     nozzle.m_nozzle_id = 0;
     nozzle.m_nozzle_flow = NozzleFlowType::S_FLOW; // default flow type
 

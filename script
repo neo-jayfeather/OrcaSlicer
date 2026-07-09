@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+for f in $(git diff --name-only | grep -E '\.(cpp|hpp)$'); do
+    open=$(grep -c "namespace Slic3r" "$f")
+    if [ "$open" -gt 0 ]; then
+        # Count explicit closing brackets for the namespace if they have comments, 
+        # or just inspect files where you modified the structural ends.
+        echo "Checking structural balance of: $f"
+    fi
+done

@@ -1446,7 +1446,7 @@ void UnsavedChangesDialog::update(Preset::Type type, PresetCollection* dependent
     update_list();
 }
 
-void UnsavedChangesDialog::update_list()
+void UnsavedChangesDialog::update_list(SyncExtruderParams *params)
 {
     std::map<wxString, std::vector<PresetItem>> class_g_list;
     std::map<wxString, std::vector<wxString>>   class_c_list;
@@ -1575,7 +1575,7 @@ void UnsavedChangesDialog::update_list()
                 auto text_oldv = new wxStaticText(panel_oldv, wxID_ANY, data.old_value, wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
                 text_oldv->SetFont(::Label::Body_13);
                 text_oldv->Wrap(-1);
-                text_oldv->SetForegroundColour(GREY700);
+                text_oldv->SetForegroundColour(params && params->left_to_right ? wxGetApp().get_label_clr_modified() : GREY700);
                 sizer_old_v->Add(text_oldv, 0, wxALIGN_CENTER|wxLEFT|wxRIGHT, 5);
 
                 panel_oldv->SetSizer(sizer_old_v);
@@ -1589,7 +1589,7 @@ void UnsavedChangesDialog::update_list()
                 auto text_newv = new wxStaticText(panel_newv, wxID_ANY, data.new_value, wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
                 text_newv->SetFont(::Label::Body_13);
                 text_newv->Wrap(-1);
-                text_newv->SetForegroundColour(GREY700);
+                text_newv->SetForegroundColour(params && !params->left_to_right ? wxGetApp().get_label_clr_modified() : GREY700);
 
                 sizer_new_v->Add(text_newv, 0, wxALIGN_CENTER|wxLEFT|wxRIGHT, 5);
 

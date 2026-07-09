@@ -254,6 +254,7 @@ public:
 
     std::vector<int> get_real_filament_maps(const DynamicConfig& g_config, bool* use_global_param = nullptr)const;
     FilamentMapMode  get_real_filament_map_mode(const DynamicConfig& g_config,bool * use_global_param = nullptr) const;
+    std::vector<int> get_real_filament_volume_maps(const DynamicConfig &g_config, bool *use_global_param = nullptr) const;
 
     FilamentMapMode get_filament_map_mode() const;
     void set_filament_map_mode(const FilamentMapMode& mode);
@@ -262,8 +263,16 @@ public:
     std::vector<int> get_filament_maps() const;
     void set_filament_maps(const std::vector<int>& f_maps);
 
+    std::vector<int> get_filament_nozzle_maps() const;
+    void set_filament_nozzle_maps(const std::vector<int>& f_maps);
+
+    std::vector<int> get_filament_volume_maps() const;
+    void set_filament_volume_maps(const std::vector<int>& f_maps);
+
     void clear_filament_map();
     void clear_filament_map_mode();
+    void clear_filament_nozzle_map();
+    void clear_filament_volume_map();
 
     bool has_spiral_mode_config() const;
     bool get_spiral_vase_mode() const;
@@ -338,7 +347,9 @@ public:
     std::vector<int> get_extruders_without_support(bool conside_custom_gcode = false) const;
     // get used filaments from gcode result, 1 based idx
     std::vector<int> get_used_filaments();
+    int  get_logical_extruder_by_filament_id(const DynamicConfig& g_config, int idx) const;
     int  get_physical_extruder_by_filament_id(const DynamicConfig& g_config, int idx) const;
+    int  get_physical_extruder_by_logical_extruder(const DynamicConfig& g_config, int logical_extruder) const;
     bool check_filament_printable(const DynamicPrintConfig & config, wxString& error_message);
     bool check_tpu_printable_status(const DynamicPrintConfig & config, const std::vector<int> &tpu_filaments);
     bool check_mixture_of_pla_and_petg(const DynamicPrintConfig & config);

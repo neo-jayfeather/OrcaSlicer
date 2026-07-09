@@ -106,7 +106,6 @@ void uiDeviceUpdateVersion::CreateWidgets()
    
     // Updating
     wxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
-    main_sizer->AddSpacer(FromDIP(40));
     main_sizer->Add(grid_sizer, 0, wxALIGN_LEFT, FromDIP(5));
 
     SetSizer(main_sizer);

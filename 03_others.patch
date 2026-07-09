@@ -1,0 +1,1263 @@
+diff --git src/BambuStudio.cpp src/BambuStudio.cpp
+index 5b1a72d17..af3710fb6 100644
+--- src/BambuStudio.cpp
++++ src/BambuStudio.cpp
+@@ -188,6 +188,7 @@ typedef struct  _sliced_plate_info{
+     float main_predication{0.f};
+     int filament_change_times {0};
+     int layer_filament_change {0};
++    int obj_cached_cnt {0};
+ 
+     std::vector<object_info_t> objects;
+     std::vector<filament_info_t> filaments;
+@@ -486,6 +487,7 @@ void record_exit_reson(std::string outputdir, int code, int plate_id, std::strin
+             plate_json["main_predication"] = sliced_plate_info.main_predication;
+             plate_json["filament_change_times"] = sliced_plate_info.filament_change_times;
+             plate_json["layer_filament_change"] = sliced_plate_info.layer_filament_change;
++            plate_json["obj_cached_cnt"] = sliced_plate_info.obj_cached_cnt;
+ 
+             //object info
+             if (!sliced_plate_info.objects.empty())
+@@ -894,7 +896,13 @@ void merge_or_add_object(assemble_plate_info_t& assemble_plate_info, Model &mode
+     }
+ }
+ 
+-bool convert_obj_cluster_colors(std::vector<Slic3r::RGBA>& input_colors, std::vector<RGBA>& all_colours, int max_filament_count, std::vector<unsigned char>& output_filament_ids, int& first_filament_id)
++bool convert_obj_cluster_colors(std::vector<Slic3r::RGBA> & input_colors,
++                                std::vector<RGBA> &         all_colours,
++                                int                         max_filament_count,
++                                std::vector<unsigned char> &output_filament_ids,
++                                int &                       first_filament_id,
++                                bool                        first_time_using_makerlab = false,
++                                std::vector<Slic3r::RGBA>   mtl_colors                = {})
+ {
+     using namespace Slic3r::GUI;
+ 
+@@ -903,8 +911,27 @@ bool convert_obj_cluster_colors(std::vector<Slic3r::RGBA>& input_colors, std::ve
+         std::vector<Slic3r::RGBA> cluster_colors;
+         std::vector<int>          cluster_labels;
+         char                      cluster_number = -1;
+-
++        if (first_time_using_makerlab && mtl_colors.size() < (int) EnforcerBlockerType::ExtruderMax) {
++            first_time_using_makerlab = false;
++            cluster_colors            = mtl_colors;
++            cluster_labels.clear();
++            cluster_labels.reserve(input_colors.size());
++            for (int i = 0; i < input_colors.size(); i++) {
++                bool can_find = false;
++                for (int j = 0; j < cluster_colors.size(); j++) {
++                    if (Slic3r::color_is_equal(input_colors[i],cluster_colors[j])) {
++                        cluster_labels.emplace_back(j);
++                        can_find = true;
++                    }
++                }
++                if (!can_find) {
++                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " error,not matched: " << i;
++                    cluster_labels.emplace_back(0);
++                }
++            }
++        } else {
+             obj_color_deal_algo(input_colors, cluster_colors, cluster_labels, cluster_number, (int) EnforcerBlockerType::ExtruderMax);
++        }
+         std::vector<int> cluster_color_maps;
+ 
+         BOOST_LOG_TRIVIAL(info) << boost::format("%1%:%2%, after obj_color_deal_algo, cluster_colors size %3%, all_colours size %4%, max_filament_count=%5%")%__FUNCTION__ %__LINE__%cluster_colors.size() %all_colours.size() %max_filament_count;
+@@ -1084,7 +1111,8 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
+                     }
+                     skip_filament = true;
+                 } else if (obj_info.face_colors.size() > 0 && obj_info.has_uv_png == false) { // mtl file
+-                    convert_obj_cluster_colors(obj_info.face_colors, all_colours, max_filament_count, output_filament_ids, first_filament_id);
++                    convert_obj_cluster_colors(obj_info.face_colors, all_colours, max_filament_count, output_filament_ids, first_filament_id, obj_info.first_time_using_makerlab,
++                                               obj_info.mtl_colors);
+                     if (output_filament_ids.size() > 0) {
+                         unsigned char first_eid = (unsigned char)first_filament_id;
+                         result = Model::obj_import_face_color_deal(output_filament_ids, first_eid, & obj_temp_model);
+@@ -1355,22 +1383,35 @@ int CLI::run(int argc, char **argv)
+         return CLI_ENVIRONMENT_ERROR;
+     }
+ 
+-     /* BOOST_LOG_TRIVIAL(info) << "begin to setup params, argc=" << argc << std::endl;
++#if 0
++     BOOST_LOG_TRIVIAL(info) << "begin to setup params, argc=" << argc << std::endl;
+      for (int index = 0; index < argc; index++)
+          BOOST_LOG_TRIVIAL(info) << "index=" << index << ", arg is " << argv[index] << std::endl;
+-     int debug_argc = 8;
+      char* debug_argv[] = {
+          "F:\work\projects\bambu_debug\bamboo_slicer\build_debug\src\Debug\bambu-studio.exe",
+          "--debug=3",
+-         "--export-3mf=output.3mf",
+-         "--uptodate",
+-         "--downward-check",
++         "--nozzle-volume-type",
++         "Standard,High Flow",
++         "--filament-map-mode",
++         "Nozzle Manual",
++         "--extruder-nozzle-count",
++         "1,6",
++         "--extruder-nozzle-volume-type",
++         "Standard,High Flow,High Flow,High Flow,High Flow,High Flow,High Flow",
++         "--filament-map",
++         "1,1,2,2,2,2,2,2",
++         "--filament-nozzle-map",
++         "0,0,3,4,1,5,2,6",
++         "--filament-volume-map",
++         "0,0,1,1,1,1,1,1",
+          "--slice=1",
+-         "--min-save",
+-         "cube_a1_switch.3mf"
++         "F:/cube_h2d.3mf"
+     };
+-     if (!this->setup(debug_argc, debug_argv))*/
++    int debug_argc = sizeof(debug_argv) / sizeof(debug_argv[0]);
++    if (!this->setup(debug_argc, debug_argv))
++#else
+     if (!this->setup(argc, argv))
++#endif
+     {
+         boost::nowide::cerr << "setup params error" << std::endl;
+         return CLI_INVALID_PARAMS;
+@@ -1503,7 +1544,7 @@ int CLI::run(int argc, char **argv)
+     std::vector<NozzleVolumeType> current_nozzle_volume_type, new_nozzle_volume_type;
+     std::string new_printer_name, current_printer_name, new_process_name, current_process_name, current_printer_system_name, current_process_system_name, new_process_system_name, new_printer_system_name, printer_model_id, current_printer_model, printer_model, new_default_process_name;
+     std::vector<std::string> upward_compatible_printers, new_print_compatible_printers, current_print_compatible_printers, current_different_settings;
+-    std::vector<std::string> current_filaments_name, current_filaments_system_name, current_inherits_group, current_extruder_variants, new_extruder_variants, current_print_extruder_variants, new_printer_extruder_variants;
++    std::vector<std::string> current_filaments_name, current_filaments_system_name, converted_filaments_system_name, current_inherits_group, current_extruder_variants, new_extruder_variants, current_print_extruder_variants, new_printer_extruder_variants;
+     DynamicPrintConfig load_process_config, load_machine_config;
+     bool new_process_config_is_system = true, new_printer_config_is_system = true;
+     std::string pipe_name, makerlab_name, makerlab_version, different_process_setting;
+@@ -1842,6 +1883,9 @@ int CLI::run(int argc, char **argv)
+                         BOOST_LOG_TRIVIAL(info) << boost::format("no inherits_group: use system name the same as current name");
+                     }
+                     filament_count = current_filaments_name.size();
++                    converted_filaments_system_name = current_filaments_system_name;
++                    for (int f_index = 0; f_index < filament_count; f_index++)
++                        convert_filament_preset_name(current_printer_system_name, converted_filaments_system_name[f_index]);
+                     upward_compatible_printers = config.option<ConfigOptionStrings>("upward_compatible_machine", true)->values;
+                     current_print_compatible_printers  = config.option<ConfigOptionStrings>("print_compatible_printers", true)->values;
+                     current_different_settings = config.option<ConfigOptionStrings>("different_settings_to_system", true)->values;
+@@ -2283,6 +2327,27 @@ int CLI::run(int argc, char **argv)
+             std::string inherits;
+             if ((config_from == "User")||(config_from == "user")) {
+                 inherits = config.option<ConfigOptionString>("inherits", true)->value;
++                if (!inherits.empty()) {
++                    //process the default values for old configs
++                    std::string parent_filament_path = resources_dir() + "/profiles/BBL/filament_full/"+inherits+".json";
++                    if (boost::filesystem::exists(parent_filament_path)) {
++                        DynamicPrintConfig  parent_config;
++                        std::string config_type, config_name, filament_id, config_from;
++                        int ret = load_config_file(parent_filament_path, parent_config, config_type, config_name, filament_id, config_from);
++                        if (!ret && (config_type == "filament")) {
++                            for (auto& opt_key: filament_options_with_variant)
++                            {
++                                ConfigOption *opt = config.option(opt_key);
++                                ConfigOption *parent_opt = parent_config.option(opt_key);
++                                ConfigOptionVectorBase* opt_vec = static_cast<ConfigOptionVectorBase*>(opt);
++                                const ConfigOptionVectorBase* opt_vec_parent = static_cast<const ConfigOptionVectorBase*>(parent_opt);
++                                //set with default
++                                if (opt && parent_opt)
++                                    opt_vec->set_with_default(opt_vec_parent);
++                            }
++                        }
++                    }
++                }
+             }
+             load_filaments_inherit.push_back(inherits);
+             load_filaments_id.push_back(filament_id);
+@@ -2554,7 +2619,7 @@ int CLI::run(int argc, char **argv)
+                         flush_and_exit(CLI_CONFIG_FILE_ERROR);
+                     }
+ 
+-                    if (config_name != current_filaments_system_name[index]) {
++                    if ((config_name != current_filaments_system_name[index]) && (config_name != converted_filaments_system_name[index])) {
+                         BOOST_LOG_TRIVIAL(error) << boost::format("wrong filament config file %1% loaded, current filament config name %2%, index %3%")%config_name %current_filaments_system_name[index] %index;
+                         record_exit_reson(outfile_dir, CLI_CONFIG_FILE_ERROR, 0, cli_errors[CLI_CONFIG_FILE_ERROR], sliced_info);
+                         flush_and_exit(CLI_CONFIG_FILE_ERROR);
+@@ -2571,9 +2636,9 @@ int CLI::run(int argc, char **argv)
+             else
+             {
+                 current_index = 0;
+-                for (int index = 0; index < current_filaments_system_name.size(); index++)
++                for (int index = 0; index < converted_filaments_system_name.size(); index++)
+                 {
+-                    std::string system_filament_path = resources_dir() + "/profiles/BBL/filament_full/"+current_filaments_system_name[index]+".json";
++                    std::string system_filament_path = resources_dir() + "/profiles/BBL/filament_full/"+converted_filaments_system_name[index]+".json";
+                     current_index++;
+                     if (! boost::filesystem::exists(system_filament_path)) {
+                         BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_filament_path;
+@@ -3038,12 +3103,6 @@ int CLI::run(int argc, char **argv)
+             flush_and_exit(ret);
+         }
+     }
+-    if (m_print_config.option<ConfigOptionFloatsNullable>("nozzle_diameter")) {
+-        new_extruder_count = m_print_config.option<ConfigOptionFloatsNullable>("nozzle_diameter")->values.size();
+-        new_is_multi_extruder = new_extruder_count > 1;
+-        new_printer_extruder_variants = m_print_config.option<ConfigOptionStrings>("printer_extruder_variant", true)->values;
+-        new_printer_variant_count = new_printer_extruder_variants.size();
+-    }
+ 
+     //set the process settings into print config
+     std::vector<std::string>& print_compatible_printers = m_print_config.option<ConfigOptionStrings>("print_compatible_printers", true)->values;
+@@ -3114,6 +3173,14 @@ int CLI::run(int argc, char **argv)
+     }
+ 
+     //get nozzle_volume_type
++    bool different_extruder = m_print_config.support_different_extruders(new_extruder_count);
++    //new_extruder_count = m_print_config.option<ConfigOptionFloatsNullable>("nozzle_diameter")->values.size();
++    new_is_multi_extruder = new_extruder_count > 1;
++    new_printer_extruder_variants = m_print_config.option<ConfigOptionStrings>("printer_extruder_variant", true)->values;
++    new_printer_variant_count = new_printer_extruder_variants.size();
++    auto extruder_max_nozzle_count = m_print_config.option<ConfigOptionIntsNullable>("extruder_max_nozzle_count", true)->values;
++    bool support_multi_nozzle = std::any_of(extruder_max_nozzle_count.begin(),extruder_max_nozzle_count.end(),[](int val){return val>1;});
++
+     if(m_extra_config.has("nozzle_volume_type")) {
+         auto opt_nozzle_volume_type = dynamic_cast<const ConfigOptionEnumsGeneric*>(m_extra_config.option("nozzle_volume_type"));
+         if (opt_nozzle_volume_type) {
+@@ -3127,6 +3194,13 @@ int CLI::run(int argc, char **argv)
+     }
+     else {
+         new_nozzle_volume_type.resize(new_extruder_count, nvtStandard);
++        if ((new_extruder_count > 1) || different_extruder) {
++            BOOST_LOG_TRIVIAL(error) << boost::format("%1%: nozzle_volume_type not found, when different_extruder or multiple extruder, new_printer_name %2%, extruder_count %3%")%__LINE__ %new_printer_name %new_extruder_count;
++            //record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
++            //flush_and_exit(CLI_INVALID_PARAMS);
++        }
++        else
++            BOOST_LOG_TRIVIAL(info) << boost::format("%1%: nozzle_volume_type not found, use standard by default, new_printer_name %2% extruder_count %3%")%__LINE__ %new_printer_name %new_extruder_count;
+     }
+     new_extruder_variants.resize(new_extruder_count, "");
+     const ConfigOptionEnumsGeneric *opt_extruder_type = dynamic_cast<const ConfigOptionEnumsGeneric *>(m_print_config.option("extruder_type"));
+@@ -4292,9 +4366,9 @@ int CLI::run(int argc, char **argv)
+                     if (temp_extruder_height > temp_extruder_print_heights[temp_index])
+                         temp_extruder_height = temp_extruder_print_heights[temp_index];
+                 }
+-                printer_plate.printable_width  = current_bbox.size().x();
+-                printer_plate.printable_depth  = current_bbox.size().y();
+-                printer_plate.printable_height = temp_extruder_height;
++                printer_plate.shared_width  = current_bbox.size().x();
++                printer_plate.shared_depth  = current_bbox.size().y();
++                printer_plate.shared_height = temp_extruder_height;
+ 
+                 BOOST_LOG_TRIVIAL(info) << boost::format("downward_check: for multi-extruder printer, change printable size to bbox {%1%, %2%, 0} - {%3%, %4%, %5%}")
+                             %current_bbox.min.x() %current_bbox.min.y() %current_bbox.max.x() %current_bbox.max.y() %temp_extruder_height;
+@@ -4379,6 +4453,16 @@ int CLI::run(int argc, char **argv)
+                     failed_count ++;
+                     continue;
+                 }
++                //single to multiple check
++                if ((shared_printable_width == 0) && (plate_info.shared_width > 0)&&(plate_info.shared_depth > 0)&&(plate_info.shared_height > 0)
++                    &&((size.z() > plate_info.shared_height) || (size.y() > plate_info.shared_depth) || (size.x() > plate_info.shared_width))) {
++                    BOOST_LOG_TRIVIAL(info) << boost::format("plate %1%, downward_check index %2%, name %3%, bbox {%4%, %5%, %6%} exceeds printer shared size {%7%, %8%, %9%}")
++                        %(index+1) %(index2+1) %plate_info.printer_name
++                        %size.x() % size.y() % size.z() %plate_info.shared_width %plate_info.shared_depth %plate_info.shared_height;
++                    downward_check_status[index2] = true;
++                    failed_count ++;
++                    continue;
++                }
+                 if (plate_info.exclude_width > 0) {
+                     int real_width = plate_info.printable_width - plate_info.exclude_width;
+                     int real_depth = plate_info.printable_depth - plate_info.exclude_depth;
+@@ -5321,6 +5405,10 @@ int CLI::run(int argc, char **argv)
+                         float w = dynamic_cast<const ConfigOptionFloat *>(m_print_config.option("prime_tower_width"))->value;
+                         float a = dynamic_cast<const ConfigOptionFloat *>(m_print_config.option("wipe_tower_rotation_angle"))->value;
+                         std::vector<double> v = dynamic_cast<const ConfigOptionFloats *>(m_print_config.option("filament_prime_volume"))->values;
++                        if (m_print_config.option<ConfigOptionEnum<PrimeVolumeMode>>("prime_volume_mode", true)->value == pvmSaving) {
++                            for (auto& val : v)
++                                val = 15.f;
++                        }
+                         unsigned int filaments_cnt = plate_data_src[plate_to_slice-1]->slice_filaments_info.size();
+                         if ((filaments_cnt == 0) || need_skip)
+                         {
+@@ -5875,12 +5963,13 @@ int CLI::run(int argc, char **argv)
+         } else if (opt_key == "load_slicedata") {
+             load_slicedata = true;
+             load_slice_data_dir = m_config.opt_string(opt_key);
+-            if (export_slicedata) {
++            /*if (export_slicedata) {
+                 BOOST_LOG_TRIVIAL(error) << "should not set load_slicedata and export_slicedata together." << std::endl;
+                 record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
+                 flush_and_exit(CLI_INVALID_PARAMS);
+             }
+-            else if (duplicate_count > 0)
++            else*/
++            if (duplicate_count > 0)
+             {
+                 BOOST_LOG_TRIVIAL(error) << "should not set load_slicedata when set repetitions." << std::endl;
+                 record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
+@@ -5958,11 +6047,11 @@ int CLI::run(int argc, char **argv)
+         } else if (opt_key == "export_slicedata") {
+             export_slicedata = true;
+             export_slice_data_dir = m_config.opt_string(opt_key);
+-            if (load_slicedata) {
++            /*if (load_slicedata) {
+                 BOOST_LOG_TRIVIAL(error) << "should not set load_slicedata and export_slicedata together." << std::endl;
+                 record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, 0, cli_errors[CLI_INVALID_PARAMS], sliced_info);
+                 flush_and_exit(CLI_INVALID_PARAMS);
+-            }
++            }*/
+         } else if (opt_key == "slice") {
+             //BBS: slice 0 means all plates, i means plate i;
+             plate_to_slice = m_config.option<ConfigOptionInt>("slice")->value;
+@@ -6226,6 +6315,8 @@ int CLI::run(int argc, char **argv)
+                                 }
+                                 else {
+                                     std::vector<int> filament_maps;
++                                    std::vector<int> filament_nozzle_maps;
++                                    std::vector<int> filament_volume_maps;  // TODO: print with multi volume types
+                                     if (m_extra_config.option<ConfigOptionInts>("filament_map")) {
+                                         filament_maps = m_extra_config.option<ConfigOptionInts>("filament_map")->values;
+                                         int default_value = -1;
+@@ -6270,6 +6361,89 @@ int CLI::run(int argc, char **argv)
+                                     else
+                                         filament_maps = part_plate->get_real_filament_maps(m_print_config);
+ 
++                                    if (support_multi_nozzle && (mode == fmmManual || mode == fmmNozzleManual) && (plate_to_slice != 0)) {
++                                        if (mode == FilamentMapMode::fmmNozzleManual) {
++                                            if (!m_extra_config.option<ConfigOptionInts>("filament_volume_map") ||
++                                                !m_extra_config.option<ConfigOptionInts>("filament_nozzle_map") ||
++                                                !m_extra_config.option<ConfigOptionInts>("extruder_nozzle_count") ||
++                                                !m_extra_config.option<ConfigOptionEnumsGeneric>("extruder_nozzle_volume_type") ||
++                                                !m_extra_config.option<ConfigOptionInts>("filament_map")) {
++                                                BOOST_LOG_TRIVIAL(error)
++                                                    << boost::format(
++                                                           "%1%, can not find filament_volume_map/filament_nozzle_map/extruder_nozzle_count/extruder_nozzle_volume_type/filament_map under "
++                                                           "Nozzle Manual mode") %
++                                                           __LINE__;
++                                                record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, index + 1, cli_errors[CLI_INVALID_PARAMS], sliced_info);
++                                                flush_and_exit(CLI_INVALID_PARAMS);
++                                            }
++                                            filament_nozzle_maps = m_extra_config.option<ConfigOptionInts>("filament_nozzle_map")->values;
++                                            filament_volume_maps = m_extra_config.option<ConfigOptionInts>("filament_volume_map")->values;
++                                            part_plate->set_filament_nozzle_maps(filament_nozzle_maps);
++                                            part_plate->set_filament_volume_maps(filament_volume_maps);
++                                        } else if (mode == fmmManual) {
++                                            if (!m_extra_config.option<ConfigOptionInts>("extruder_nozzle_count") ||
++                                                !m_extra_config.option<ConfigOptionEnumsGeneric>("extruder_nozzle_volume_type") ||
++                                                !m_extra_config.option<ConfigOptionInts>("filament_map")) {
++                                                BOOST_LOG_TRIVIAL(error)
++                                                    << boost::format("%1%, can not find extruder_nozzle_volume_type or extruder_nozzle_count or filament_map under Manual mode") % __LINE__;
++                                                record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, index + 1, cli_errors[CLI_INVALID_PARAMS], sliced_info);
++                                                flush_and_exit(CLI_INVALID_PARAMS);
++                                            }
++                                        }
++                                        //assemble extruder_nozzle_stats
++                                        std::vector<std::map<NozzleVolumeType,int>> extruder_nozzle_stats_maps(new_extruder_count, std::map<NozzleVolumeType,int>{});
++                                        std::vector<int> extruder_nozzle_counts = m_extra_config.option<ConfigOptionInts>("extruder_nozzle_count")->values;
++                                        std::vector<int> extruder_nozzle_volume_types = m_extra_config.option<ConfigOptionEnumsGeneric>("extruder_nozzle_volume_type")->values;
++                                        int nozzle_index = 0;
++                                        for(int e_index = 0; e_index < new_extruder_count; e_index++)
++                                        {
++                                            std::map<NozzleVolumeType,int> nozzle_volume_type_maps;
++                                            for (int sub_index = 0; sub_index < extruder_nozzle_counts[e_index]; sub_index++)
++                                            {
++                                                if (nozzle_volume_type_maps.find(NozzleVolumeType(extruder_nozzle_volume_types[nozzle_index])) != nozzle_volume_type_maps.end())
++                                                {
++                                                    nozzle_volume_type_maps[NozzleVolumeType(extruder_nozzle_volume_types[nozzle_index])]++;
++                                                }
++                                                else
++                                                    nozzle_volume_type_maps[NozzleVolumeType(extruder_nozzle_volume_types[nozzle_index])] = 1;
++
++                                                nozzle_index++;
++                                            }
++                                            extruder_nozzle_stats_maps[e_index] = std::move(nozzle_volume_type_maps);
++                                        }
++                                        m_print_config.option<ConfigOptionStrings>("extruder_nozzle_stats", true)->values = save_extruder_nozzle_stats_to_string(extruder_nozzle_stats_maps);
++                                        if (mode == fmmManual) {
++                                            //refine the values not passed
++                                            ConfigOptionEnumsGeneric* using_nozzle_volume_type_opt = m_extra_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type", true);
++                                            using_nozzle_volume_type_opt->values.resize(new_extruder_count, nvtStandard);
++                                            for (int e_index = 0; e_index < new_extruder_count; e_index++)
++                                            {
++                                                std::map<NozzleVolumeType,int>& nozzle_volume_type_maps = extruder_nozzle_stats_maps[e_index];
++                                                if (nozzle_volume_type_maps.size() > 1) {
++                                                    using_nozzle_volume_type_opt->values[e_index] = nvtHybrid;
++                                                    BOOST_LOG_TRIVIAL(info) << boost::format("%1% : extruder %2%, set nozzle_volume_type to hybrid ") % __LINE__ %(e_index+1);
++                                                }
++                                            }
++                                            std::vector<int>& filament_volume_maps = m_extra_config.option<ConfigOptionInts>("filament_volume_map", true)->values;
++                                            std::vector<int>& filament_maps = m_extra_config.option<ConfigOptionInts>("filament_map")->values;
++                                            filament_volume_maps.resize(filament_count, 0);
++                                            for (int f_index = 0; f_index < filament_count; f_index++)
++                                            {
++                                                int f_extruder_index = filament_maps[f_index] - 1;
++                                                if (using_nozzle_volume_type_opt->values[f_extruder_index] != nvtHybrid) {
++                                                    filament_volume_maps[f_index] = int(using_nozzle_volume_type_opt->values[f_extruder_index]);
++                                                    BOOST_LOG_TRIVIAL(info) << boost::format("%1% : filament %2% extruder %3%, set filament_volume_map to %4% ") % __LINE__ %(f_index+1) %(f_extruder_index+1) % filament_volume_maps[f_index];
++                                                }
++                                            }
++                                        }
++                                    }
++                                    else if (!support_multi_nozzle && (mode == fmmNozzleManual)) {
++                                        BOOST_LOG_TRIVIAL(error)
++                                            << boost::format("%1%, Nozzle Manual mode not supported for %2%") % __LINE__ %new_printer_name;
++                                        record_exit_reson(outfile_dir, CLI_INVALID_PARAMS, index + 1, cli_errors[CLI_INVALID_PARAMS], sliced_info);
++                                        flush_and_exit(CLI_INVALID_PARAMS);
++                                    }
++
+                                     for (int index = 0; index < filament_maps.size(); index++)
+                                     {
+                                         int filament_extruder = filament_maps[index];
+@@ -6367,20 +6541,29 @@ int CLI::run(int argc, char **argv)
+                             }
+                         }
+ 
+-                        //set filament_map
+-                        std::vector<int>& final_filament_maps = new_print_config.option<ConfigOptionInts>("filament_map", true)->values;
+-                        if (final_filament_maps.size() < filament_count)
+-                            final_filament_maps.resize(filament_count, 1);
+-                        if (new_extruder_count == 1) {
+-                            for (int index = 0; index < filament_count; index++)
+-                                final_filament_maps[index] = 1;
+-                        }
+                         if(!new_print_config.has("nozzle_volume_type")) {
+                             //set default nozzle_volume_type
+                             ConfigOptionEnumsGeneric* final_nozzle_volume_type_opt = new_print_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type", true);
+                             final_nozzle_volume_type_opt->values.resize(new_extruder_count, nvtStandard);
+                         }
+ 
++                        //set filament_map
++                        std::vector<int>& final_filament_maps = new_print_config.option<ConfigOptionInts>("filament_map", true)->values;
++                        std::vector<int>& final_volume_maps = new_print_config.option<ConfigOptionInts>("filament_volume_map", true)->values;
++                        int default_extruder_id = 1; // 1 based;
++                        if (final_filament_maps.size() < filament_count)
++                            final_filament_maps.resize(filament_count, default_extruder_id);
++                        if (final_volume_maps.size() < filament_count)
++                            final_volume_maps.resize(filament_count, new_print_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values[default_extruder_id - 1]); // default use volume type for left extruder
++                        if (new_extruder_count == 1) {
++                            for (int index = 0; index < filament_count; index++) {
++                                final_filament_maps[index] = default_extruder_id;
++                                final_volume_maps[index] = new_print_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values[default_extruder_id - 1];
++                            }
++                            part_plate->set_filament_maps(final_filament_maps);
++                            part_plate->set_filament_volume_maps(final_volume_maps);
++                        }
++
+                         print->apply(model, new_print_config);
+                         BOOST_LOG_TRIVIAL(info) << boost::format("set no_check to %1%:")%no_check;
+                         print->set_no_check_flag(no_check);//BBS
+@@ -6636,10 +6819,10 @@ int CLI::run(int argc, char **argv)
+                                 }
+ #endif
+                                 if (export_slicedata) {
+-                                    BOOST_LOG_TRIVIAL(info) << "plate "<< index+1<< ":will export Slicing data to " << export_slice_data_dir;
++                                    BOOST_LOG_TRIVIAL(info) << boost::format("plate %1% will export Slicing data to %2%")%(index+1) %export_slice_data_dir;
+                                     std::string plate_dir = export_slice_data_dir+"/"+std::to_string(index+1);
+                                     bool with_space = (get_logging_level() >= 4)?true:false;
+-                                    int ret = print->export_cached_data(plate_dir, with_space);
++                                    int ret = print->export_cached_data(plate_dir, sliced_plate_info.obj_cached_cnt, with_space);
+                                     if (ret) {
+                                         BOOST_LOG_TRIVIAL(error) << "plate "<< index+1<< ": export Slicing data error, ret=" << ret;
+                                         export_slicedata_error = true;
+@@ -6648,6 +6831,7 @@ int CLI::run(int argc, char **argv)
+                                         record_exit_reson(outfile_dir, ret, index+1, cli_errors[ret], sliced_info);
+                                         flush_and_exit(ret);
+                                     }
++                                    BOOST_LOG_TRIVIAL(info) << boost::format("plate %1% exported %2% objects")%(index+1) %(sliced_plate_info.obj_cached_cnt);
+                                 }
+                                 end_time = (long long)Slic3r::Utils::get_current_milliseconds_time_utc();
+                                 sliced_plate_info.sliced_time = end_time - start_time;
+diff --git src/BambuStudio.hpp src/BambuStudio.hpp
+index 9076b8ec8..147ff542d 100644
+--- src/BambuStudio.hpp
++++ src/BambuStudio.hpp
+@@ -84,6 +84,9 @@ typedef struct _printer_plate_info {
+     int                 printable_width{0};
+     int                 printable_depth{0};
+     int                 printable_height{0};
++    int                 shared_width{0};
++    int                 shared_depth{0};
++    int                 shared_height{0};
+ 
+     int                 exclude_width{0};
+     int                 exclude_depth{0};
+diff --git src/CMakeLists.txt src/CMakeLists.txt
+index 0b4b9a881..9a826e574 100644
+--- src/CMakeLists.txt
++++ src/CMakeLists.txt
+@@ -258,16 +258,16 @@ else ()
+         COMMAND ln -sfn "${SLIC3R_RESOURCES_DIR}" "${BIN_RESOURCES_DIR}"
+         COMMENT "Symlinking the resources directory into the build tree"
+         VERBATIM)
+-    if (UNIX AND NOT APPLE)
+-        add_custom_command(TARGET BambuStudio POST_BUILD
+-            COMMAND ln -sfn "zh_cn" "${BIN_RESOURCES_DIR}/i18n/zh_CN"
+-            COMMENT "Symlinking zh_CN language setting to zh_cn"
+-            VERBATIM)
+-        add_custom_command(TARGET BambuStudio POST_BUILD
+-            COMMAND ln -sfn "pt-BR" "${BIN_RESOURCES_DIR}/i18n/pt_BR"
+-            COMMENT "Symlinking pt_BR language setting to pt_BR"
+-            VERBATIM)
+-    endif()
++    #if (UNIX AND NOT APPLE)
++    #    add_custom_command(TARGET BambuStudio POST_BUILD
++    #        COMMAND ln -sfn "zh_cn" "${BIN_RESOURCES_DIR}/i18n/zh_CN"
++    #        COMMENT "Symlinking zh_CN language setting to zh_cn"
++    #        VERBATIM)
++    #    add_custom_command(TARGET BambuStudio POST_BUILD
++    #        COMMAND ln -sfn "pt-BR" "${BIN_RESOURCES_DIR}/i18n/pt_BR"
++    #        COMMENT "Symlinking pt_BR language setting to pt_BR"
++    #        VERBATIM)
++    #endif()
+ endif ()
+ 
+ # Slic3r binary install target. Default build type is release in case no CMAKE_BUILD_TYPE is provided.
+diff --git src/libslic3r/MultiNozzleUtils.cpp src/libslic3r/MultiNozzleUtils.cpp
+new file mode 100644
+index 000000000..9d945cb44
+diff --git src/libslic3r/MultiNozzleUtils.hpp src/libslic3r/MultiNozzleUtils.hpp
+new file mode 100644
+index 000000000..b5fbf21a2
+diff --git src/slic3r/CMakeLists.txt src/slic3r/CMakeLists.txt
+index 0a852a444..80cdea54c 100644
+--- src/slic3r/CMakeLists.txt
++++ src/slic3r/CMakeLists.txt
+@@ -84,6 +84,8 @@ set(SLIC3R_GUI_SOURCES
+     GUI/Widgets/WebView.hpp
+     GUI/Widgets/ErrorMsgStaticText.cpp
+     GUI/Widgets/ErrorMsgStaticText.hpp
++    GUI/Widgets/MultiNozzleSync.hpp
++    GUI/Widgets/MultiNozzleSync.cpp
+     GUI/AboutDialog.cpp
+     GUI/AboutDialog.hpp
+     GUI/NetworkTestDialog.cpp
+@@ -174,6 +176,8 @@ set(SLIC3R_GUI_SOURCES
+     GUI/GLSelectionRectangle.hpp
+     GUI/Gizmos/GizmoObjectManipulation.cpp
+     GUI/Gizmos/GizmoObjectManipulation.hpp
++    GUI/Gizmos/GLGizmoAlignment.cpp
++    GUI/Gizmos/GLGizmoAlignment.hpp
+     GUI/GLModel.hpp
+     GUI/GLModel.cpp
+     GUI/GLTexture.hpp
+@@ -348,6 +352,8 @@ set(SLIC3R_GUI_SOURCES
+     GUI/TextLines.hpp
+     GUI/PlateSettingsDialog.cpp
+     GUI/PlateSettingsDialog.hpp
++    GUI/PlateMoveDialog.cpp
++    GUI/PlateMoveDialog.hpp
+     GUI/ImGuiWrapper.hpp
+     GUI/ImGuiWrapper.cpp
+     GUI/ImageMessageDialog.hpp
+@@ -415,6 +421,8 @@ set(SLIC3R_GUI_SOURCES
+     GUI/Jobs/BindJob.cpp
+     GUI/Jobs/NotificationProgressIndicator.hpp
+     GUI/Jobs/NotificationProgressIndicator.cpp
++    GUI/Jobs/BooleanOperationJob.hpp
++    GUI/Jobs/BooleanOperationJob.cpp
+     GUI/PhysicalPrinterDialog.hpp
+     GUI/PhysicalPrinterDialog.cpp
+     GUI/ProgressStatusBar.hpp
+@@ -517,6 +525,8 @@ set(SLIC3R_GUI_SOURCES
+     GUI/Calibration.cpp
+     GUI/PrintOptionsDialog.hpp
+     GUI/PrintOptionsDialog.cpp
++    GUI/PurgeModeDialog.hpp
++    GUI/PurgeModeDialog.cpp
+     GUI/SafetyOptionsDialog.hpp
+     GUI/SafetyOptionsDialog.cpp
+     GUI/CreatePresetsDialog.hpp
+diff --git src/slic3r/GUI/DeviceCore/DevAxis.cpp src/slic3r/GUI/DeviceCore/DevAxis.cpp
+new file mode 100644
+index 000000000..201e3afb0
+diff --git src/slic3r/GUI/DeviceCore/DevAxis.h src/slic3r/GUI/DeviceCore/DevAxis.h
+new file mode 100644
+index 000000000..a109ff826
+diff --git src/slic3r/GUI/DeviceCore/DevAxisCtrl.cpp src/slic3r/GUI/DeviceCore/DevAxisCtrl.cpp
+new file mode 100644
+index 000000000..6e276f074
+diff --git src/slic3r/GUI/DeviceCore/DevChamber.cpp src/slic3r/GUI/DeviceCore/DevChamber.cpp
+new file mode 100644
+index 000000000..a0edef51c
+diff --git src/slic3r/GUI/DeviceCore/DevChamber.h src/slic3r/GUI/DeviceCore/DevChamber.h
+new file mode 100644
+index 000000000..29acacff9
+diff --git src/slic3r/GUI/DeviceCore/DevChamberCtrl.cpp src/slic3r/GUI/DeviceCore/DevChamberCtrl.cpp
+new file mode 100644
+index 000000000..651806fd5
+diff --git src/slic3r/GUI/DeviceCore/DevMappingNozzle.cpp src/slic3r/GUI/DeviceCore/DevMappingNozzle.cpp
+new file mode 100644
+index 000000000..2e068a4cd
+diff --git src/slic3r/GUI/DeviceCore/DevNozzleRack.cpp src/slic3r/GUI/DeviceCore/DevNozzleRack.cpp
+new file mode 100644
+index 000000000..de372f1ea
+diff --git src/slic3r/GUI/DeviceCore/DevNozzleRack.h src/slic3r/GUI/DeviceCore/DevNozzleRack.h
+new file mode 100644
+index 000000000..20bf51f0a
+diff --git src/slic3r/GUI/DeviceCore/DevNozzleRackCtrl.cpp src/slic3r/GUI/DeviceCore/DevNozzleRackCtrl.cpp
+new file mode 100644
+index 000000000..cb0272dfe
+diff --git src/slic3r/GUI/DeviceCore/DevUpgrade.cpp src/slic3r/GUI/DeviceCore/DevUpgrade.cpp
+new file mode 100644
+index 000000000..fc9ba0061
+diff --git src/slic3r/GUI/DeviceCore/DevUpgrade.h src/slic3r/GUI/DeviceCore/DevUpgrade.h
+new file mode 100644
+index 000000000..0290d5f7d
+diff --git src/slic3r/GUI/DeviceCore/DevUpgradeCtrl.cpp src/slic3r/GUI/DeviceCore/DevUpgradeCtrl.cpp
+new file mode 100644
+index 000000000..7fa2d2b5c
+diff --git src/slic3r/GUI/DeviceCore/DevUtilBackend.cpp src/slic3r/GUI/DeviceCore/DevUtilBackend.cpp
+new file mode 100644
+index 000000000..3dc461a7d
+diff --git src/slic3r/GUI/DeviceCore/DevUtilBackend.h src/slic3r/GUI/DeviceCore/DevUtilBackend.h
+new file mode 100644
+index 000000000..fc2dc52b7
+diff --git src/slic3r/GUI/DeviceTab/wgtDeviceNozzleRack.cpp src/slic3r/GUI/DeviceTab/wgtDeviceNozzleRack.cpp
+new file mode 100644
+index 000000000..4b9699683
+diff --git src/slic3r/GUI/DeviceTab/wgtDeviceNozzleRack.h src/slic3r/GUI/DeviceTab/wgtDeviceNozzleRack.h
+new file mode 100644
+index 000000000..fe12b8bc5
+diff --git src/slic3r/GUI/DeviceTab/wgtDeviceNozzleRackUpdate.cpp src/slic3r/GUI/DeviceTab/wgtDeviceNozzleRackUpdate.cpp
+new file mode 100644
+index 000000000..f65ed2c0a
+diff --git src/slic3r/GUI/DeviceTab/wgtDeviceNozzleRackUpdate.h src/slic3r/GUI/DeviceTab/wgtDeviceNozzleRackUpdate.h
+new file mode 100644
+index 000000000..48035ed3c
+diff --git src/slic3r/GUI/DeviceTab/wgtDeviceNozzleSelect.cpp src/slic3r/GUI/DeviceTab/wgtDeviceNozzleSelect.cpp
+new file mode 100644
+index 000000000..f2e614dd3
+diff --git src/slic3r/GUI/DeviceTab/wgtDeviceNozzleSelect.h src/slic3r/GUI/DeviceTab/wgtDeviceNozzleSelect.h
+new file mode 100644
+index 000000000..3b7d1ede1
+diff --git src/slic3r/GUI/Gizmos/GLGizmoAlignment.cpp src/slic3r/GUI/Gizmos/GLGizmoAlignment.cpp
+new file mode 100644
+index 000000000..69d75dbad
+diff --git src/slic3r/GUI/Gizmos/GLGizmoAlignment.hpp src/slic3r/GUI/Gizmos/GLGizmoAlignment.hpp
+new file mode 100644
+index 000000000..a748c1595
+diff --git src/slic3r/GUI/Jobs/BooleanOperationJob.cpp src/slic3r/GUI/Jobs/BooleanOperationJob.cpp
+new file mode 100644
+index 000000000..2abd6677d
+diff --git src/slic3r/GUI/Jobs/BooleanOperationJob.hpp src/slic3r/GUI/Jobs/BooleanOperationJob.hpp
+new file mode 100644
+index 000000000..d501d8a1a
+diff --git src/slic3r/GUI/PlateMoveDialog.cpp src/slic3r/GUI/PlateMoveDialog.cpp
+new file mode 100644
+index 000000000..909703b10
+diff --git src/slic3r/GUI/PlateMoveDialog.hpp src/slic3r/GUI/PlateMoveDialog.hpp
+new file mode 100644
+index 000000000..4bbc4c00c
+diff --git src/slic3r/GUI/PurgeModeDialog.cpp src/slic3r/GUI/PurgeModeDialog.cpp
+new file mode 100644
+index 000000000..f9a9faf6b
+diff --git src/slic3r/GUI/PurgeModeDialog.hpp src/slic3r/GUI/PurgeModeDialog.hpp
+new file mode 100644
+index 000000000..faca9aac8
+diff --git src/slic3r/GUI/Widgets/MultiNozzleSync.cpp src/slic3r/GUI/Widgets/MultiNozzleSync.cpp
+new file mode 100644
+index 000000000..200fe92e6
+diff --git src/slic3r/GUI/Widgets/MultiNozzleSync.hpp src/slic3r/GUI/Widgets/MultiNozzleSync.hpp
+new file mode 100644
+index 000000000..9f883d175
+diff --git src/slic3r/Utils/BBLUtil.cpp src/slic3r/Utils/BBLUtil.cpp
+index ec745ed31..8190d9e42 100644
+--- src/slic3r/Utils/BBLUtil.cpp
++++ src/slic3r/Utils/BBLUtil.cpp
+@@ -130,6 +130,28 @@ std::string BBLCrossTalk::Crosstalk_JsonLog(const nlohmann::json& json)
+                     {
+                         iter.value() = "******";
+                     }
++                    else if (key_str.find("authkey") != string::npos)
++                    {
++                        iter.value() = "******";
++                    }
++                    else if (key_str == "uid")
++                    {
++                        iter.value() = Crosstalk_UsrId(iter.value().get<std::string>());
++                    }
++                    else if (key_str.find("region") != string::npos)
++                    {
++                        iter.value() = "******";
++                    }
++                    else if (key_str.find("token") != string::npos)
++                    {
++                        iter.value() = "******";
++                    }
++                }
++                else if (iter.value().is_number())
++                {
++                    if (key_str == "uid") {
++                        iter.value() = Crosstalk_UsrId(std::to_string(iter.value().get<int>()));
++                    }
+                 }
+                 else if (iter.value().is_object())
+                 {
+@@ -139,9 +161,18 @@ std::string BBLCrossTalk::Crosstalk_JsonLog(const nlohmann::json& json)
+                 {
+                     for (auto& array_item : iter.value())
+                     {
+-                        if (array_item.is_object() || array_item.is_array())
+-                        {
++                        if (array_item.is_object() || array_item.is_array()) {
+                             to_traverse_jsons.push_back(&array_item);
++                        } else if (array_item.is_string()) {
++                            try {
++                                const auto& string_val = array_item.get<std::string>();
++                                if (!string_val.empty()) {
++                                    const auto& sub_json = nlohmann::json::parse(string_val);
++                                    array_item = Crosstalk_JsonLog(sub_json);
++                                }
++                            } catch (...) {
++                                continue;
++                            }
+                         }
+                     }
+                 }
+@@ -169,5 +200,17 @@ std::string BBLCrossTalk::Crosstalk_JsonLog(const nlohmann::json& json)
+     return copied_json.dump(1);
+ }
+ 
++std::string BBLCrossTalk::Crosstalk_UsrId(const std::string& uid)
++{
++    if (!s_enable_cross_talk) { return uid; }
++    if (uid.size() > 2)
++    {
++        const string& cs_uid = std::string(uid.size() - 2, '*') + uid.substr(uid.size() - 2, 2);
++        return cs_uid;
++    }
++
++    return "******";
++}
++
+ }// End of namespace Slic3r
+ 
+diff --git src/slic3r/Utils/BBLUtil.hpp src/slic3r/Utils/BBLUtil.hpp
+index aa78cef59..84c9db173 100644
+--- src/slic3r/Utils/BBLUtil.hpp
++++ src/slic3r/Utils/BBLUtil.hpp
+@@ -15,6 +15,7 @@ public:
+     static std::string Crosstalk_DevIP(const std::string& str);
+     static std::string Crosstalk_DevName(const std::string& str);
+     static std::string Crosstalk_JsonLog(const nlohmann::json& json);
++    static std::string Crosstalk_UsrId(const std::string& uid);
+ 
+ private:
+     static std::string Crosstalk_ChannelName(const std::string& str);
+diff --git src/slic3r/Utils/CalibUtils.cpp src/slic3r/Utils/CalibUtils.cpp
+index c0ecc6da8..c33b7b477 100644
+--- src/slic3r/Utils/CalibUtils.cpp
++++ src/slic3r/Utils/CalibUtils.cpp
+@@ -8,8 +8,6 @@
+ 
+ #include "libslic3r/Model.hpp"
+ #include "../GUI/MsgDialog.hpp"
+-#include "BBLUtil.hpp"
+-#include "libslic3r/FlushVolCalc.hpp"
+ 
+ #include "../GUI/DeviceCore/DevConfig.h"
+ #include "../GUI/DeviceCore/DevExtruderSystem.h"
+@@ -18,6 +16,8 @@
+ #include "libslic3r/FlushVolCalc.hpp"
+ #include "BBLUtil.hpp"
+ #include "../GUI/Plater.hpp"
++#include "../GUI/DeviceCore/DevNozzleSystem.h"
++#include "../GUI/DeviceCore/DevNozzleRack.h"
+ 
+ namespace Slic3r {
+ namespace GUI {
+@@ -83,6 +83,8 @@ wxString get_nozzle_volume_type_name(NozzleVolumeType type)
+         return _L("Standard");
+     } else if (NozzleVolumeType::nvtHighFlow == type) {
+         return _L("High Flow");
++    } else if (NozzleVolumeType::nvtHybrid == type) {
++        return _L("Hybrid");
+     }
+     return wxString();
+ }
+@@ -151,6 +153,45 @@ std::vector<double> generate_max_speed_parameter_value(const std::string &key)
+     return speed_values;
+ }
+ 
++float to_nozzle_diameter_float(const NozzleDiameterType &type)
++{
++    switch (type){
++        case NozzleDiameterType::NOZZLE_DIAMETER_0_2: return 0.2f;
++        case NozzleDiameterType::NOZZLE_DIAMETER_0_4: return 0.4f;
++        case NozzleDiameterType::NOZZLE_DIAMETER_0_6: return 0.6f;
++        case NozzleDiameterType::NOZZLE_DIAMETER_0_8: return 0.8f;
++        default: return 0.4f;
++    }
++}
++
++NozzleFlowType to_nozzle_flow_type(const std::string &type)
++{
++    if(type == "Standard")
++        return NozzleFlowType::S_FLOW;
++    else if(type == "High Flow")
++        return NozzleFlowType::H_FLOW;
++    else
++        return NozzleFlowType::NONE_FLOWTYPE;
++}
++
++NozzleFlowType to_nozzle_flow_type(const NozzleVolumeType &type)
++{
++    switch (type) {
++        case NozzleVolumeType::nvtStandard: return NozzleFlowType::S_FLOW;
++        case NozzleVolumeType::nvtHighFlow: return NozzleFlowType::H_FLOW;
++        default: return NozzleFlowType::NONE_FLOWTYPE;
++    }
++}
++
++NozzleVolumeType to_nozzle_volume_type(const NozzleFlowType &type)
++{
++    switch (type) {
++        case NozzleFlowType::S_FLOW: return NozzleVolumeType::nvtStandard;
++        case NozzleFlowType::H_FLOW: return NozzleVolumeType::nvtHighFlow;
++        default: return NozzleVolumeType::nvtStandard;
++    }
++}
++
+ static int get_physical_extruder_idx(std::vector<int> physical_extruder_maps, int extruder_id)
+ {
+     for (size_t index = 0; index < physical_extruder_maps.size(); ++index) {
+@@ -375,9 +416,27 @@ static void init_multi_extruder_params_for_cali(DynamicPrintConfig& config, cons
+     std::vector<int>& filament_maps = config.option<ConfigOptionInts>("filament_map", true)->values;
+     filament_maps.clear();
+     filament_maps.resize(num_filaments, extruder_id);
++    config.option<ConfigOptionInts>("filament_volume_map", true)->values = {static_cast<int>(calib_info.nozzle_volume_type)};
+ 
+     config.option<ConfigOptionEnum<FilamentMapMode>>("filament_map_mode", true)->value = FilamentMapMode::fmmManual;
+ 
++    DeviceManager *dev = Slic3r::GUI::wxGetApp().getDeviceManager();
++    if (!dev)
++        return;
++
++    const MachineObject *obj = dev->get_selected_machine();
++    if (obj == nullptr)
++        return;
++
++    if (obj->GetNozzleSystem()->GetNozzleRack()->IsSupported()) {
++        config.option<ConfigOptionEnum<FilamentMapMode>>("filament_map_mode", true)->value = FilamentMapMode::fmmNozzleManual;
++        config.option<ConfigOptionInts>("filament_nozzle_map", true)->values = {calib_info.nozzle_pos_id};
++
++        ExtruderNozzleStat nozzle_stat;
++        nozzle_stat.set_extruder_nozzle_count(extruder_id - 1, calib_info.nozzle_volume_type, 1, false);
++        auto str_values = save_extruder_nozzle_stats_to_string(nozzle_stat.get_raw_stat());
++        config.option<ConfigOptionStrings>("extruder_nozzle_stats", true)->values = str_values;
++    }
+ }
+ 
+ 
+@@ -1054,9 +1113,12 @@ bool CalibUtils::calib_generic_auto_pa_cali(const std::vector<CalibInfo> &calib_
+         return left_item.index < right_item.index;
+     });
+ 
++    std::map<std::pair<int, NozzleVolumeType>, int> extruder_nozzle_counts;
+     std::vector<Preset> filament_presets;
+-    std::vector<int>    filament_map;
+-    filament_map.resize(sorted_calib_infos.size());
++    std::vector<int>    filament_map, f_volume_maps, f_nozzle_map;
++    filament_map.resize(calib_infos.size(), 1);
++    f_volume_maps.resize(calib_infos.size(), static_cast<int>(NozzleVolumeType::nvtStandard));
++    f_nozzle_map.resize(calib_infos.size(), 0);
+     std::vector<int> physical_extruder_maps = dynamic_cast<ConfigOptionInts *>(printer_config.option("physical_extruder_map", true))->values;
+     for (size_t i = 0; i < sorted_calib_infos.size(); ++i) {
+         CalibInfo calib_info = sorted_calib_infos[i];
+@@ -1068,12 +1130,38 @@ bool CalibUtils::calib_generic_auto_pa_cali(const std::vector<CalibInfo> &calib_
+                 break;
+             }
+         }
++
++        f_volume_maps[i] = static_cast<int>(calib_info.nozzle_volume_type);
++        f_nozzle_map[i]  = static_cast<int>(calib_info.nozzle_pos_id);
++
++        std::pair<int, NozzleVolumeType> key = {filament_map[i], calib_info.nozzle_volume_type};
++        if (extruder_nozzle_counts.find(key) != extruder_nozzle_counts.end()) {
++            extruder_nozzle_counts[key]++;
++        } else {
++            extruder_nozzle_counts[key] = 1;
++        }
++    }
++    //todo: need to use the correct filament_volume_map later
++
++    ExtruderNozzleStat nozzle_stat;
++    for (auto item : extruder_nozzle_counts) {
++        nozzle_stat.set_extruder_nozzle_count(item.first.first, item.first.second, item.second, false);
+     }
+ 
+     PresetBundle *preset_bundle = wxGetApp().preset_bundle;
+-    DynamicPrintConfig full_config   = PresetBundle::construct_full_config(printer_preset, print_preset, preset_bundle->project_config, filament_presets, false, filament_map);
++    DynamicPrintConfig full_config   = PresetBundle::construct_full_config(printer_preset, print_preset, preset_bundle->project_config, filament_presets, false, filament_map, f_volume_maps);
+ 
+     set_for_auto_pa_model_and_config(sorted_calib_infos, full_config, model);
++
++    auto rack = obj_->GetNozzleSystem()->GetNozzleRack();
++    if (rack->IsSupported()) {
++        full_config.option<ConfigOptionEnum<FilamentMapMode>>("filament_map_mode", true)->value = FilamentMapMode::fmmNozzleManual;
++        full_config.option<ConfigOptionInts>("filament_nozzle_map", true)->values = f_nozzle_map;
++
++        auto str_values = save_extruder_nozzle_stats_to_string(nozzle_stat.get_raw_stat());
++        full_config.option<ConfigOptionStrings>("extruder_nozzle_stats", true)->values = str_values;
++    }
++
+     if (!process_and_store_3mf(&model, full_config, params, error_message))
+         return false;
+ 
+@@ -1536,7 +1624,7 @@ bool CalibUtils::check_printable_status_before_cali(const MachineObject *obj, co
+             return false;
+         }
+ 
+-        if (NozzleVolumeType(nozzle_volume_type - 1) != cali_info.nozzle_volume_type) {
++        if (!(NozzleVolumeType(nozzle_volume_type - 1) == cali_info.nozzle_volume_type || cali_info.nozzle_volume_type == NozzleVolumeType::nvtHybrid)) {
+             if (is_multi_extruder)
+                 error_message = wxString::Format(_L("The currently selected nozzle type of %s extruder does not match the actual printer nozzle type.\n"
+                                                 "Please click the Sync button above and restart the calibration."), name);
+@@ -1585,6 +1673,11 @@ bool CalibUtils::check_printable_status_before_cali(const MachineObject *obj, co
+ 
+         float diameter = obj->GetExtderSystem()->GetNozzleDiameter(extruder_id);
+         NozzleFlowType nozzle_volume_type = obj->GetExtderSystem()->GetNozzleFlowType(cali_info.extruder_id);
++        if (cali_info.nozzle_pos_id != -1) {
++            auto nozzle = obj->get_nozzle_by_id_code(cali_info.nozzle_pos_id);
++            diameter = nozzle.GetNozzleDiameter();
++            nozzle_volume_type = nozzle.GetNozzleFlowType();
++        }
+ 
+         if (!is_approx(cali_info.nozzle_diameter, diameter)) {
+             if (is_multi_extruder)
+@@ -1604,7 +1697,7 @@ bool CalibUtils::check_printable_status_before_cali(const MachineObject *obj, co
+             return false;
+         }
+ 
+-        if (NozzleVolumeType(nozzle_volume_type - 1) != cali_info.nozzle_volume_type) {
++        if (!(NozzleVolumeType(nozzle_volume_type - 1) == cali_info.nozzle_volume_type || cali_info.nozzle_volume_type == NozzleVolumeType::nvtHybrid)) {
+             if (is_multi_extruder)
+                 error_message = wxString::Format(_L("The currently selected nozzle type of %s extruder does not match the actual printer nozzle type.\n"
+                                                 "Please click the Sync button above and restart the calibration."), name);
+@@ -1614,6 +1707,12 @@ bool CalibUtils::check_printable_status_before_cali(const MachineObject *obj, co
+         }
+     }
+ 
++    if(!std::all_of(cali_infos.begin(), cali_infos.end(), [&](auto& info){ return is_approx(info.nozzle_diameter, cali_infos.front().nozzle_diameter);}))
++    {
++        error_message = _L("Flow calibration does not support multiple nozzle diameters at the same time. Please ensure that the nozzle diameter used by the filament being calibrated is consistent before starting the calibration again.");
++        return false;
++    }
++
+     return true;
+ }
+ 
+@@ -1635,6 +1734,12 @@ bool CalibUtils::check_printable_status_before_cali(const MachineObject* obj, co
+ 
+     float  diameter = obj->GetExtderSystem()->GetNozzleDiameter(cali_info.extruder_id);
+     NozzleFlowType nozzle_volume_type = obj->GetExtderSystem()->GetNozzleFlowType(cali_info.extruder_id);
++    if (cali_info.nozzle_pos_id != -1) {
++        auto nozzle        = obj->get_nozzle_by_id_code(cali_info.nozzle_pos_id);
++        diameter           = nozzle.GetNozzleDiameter();
++        nozzle_volume_type = nozzle.GetNozzleFlowType();
++    }
++
+ 
+     if (!is_approx(nozzle_diameter, diameter)) {
+         if (is_multi_extruder)
+@@ -1655,7 +1760,7 @@ bool CalibUtils::check_printable_status_before_cali(const MachineObject* obj, co
+         return false;
+     }
+ 
+-    if (NozzleVolumeType(nozzle_volume_type - 1) != cali_info.nozzle_volume_type) {
++    if (!(NozzleVolumeType(nozzle_volume_type - 1) == cali_info.nozzle_volume_type || cali_info.nozzle_volume_type == NozzleVolumeType::nvtHybrid)) {
+         if (is_multi_extruder)
+             error_message = wxString::Format(_L("The currently selected nozzle type of %s extruder does not match the actual printer nozzle type.\n"
+                                             "Please click the Sync button above and restart the calibration."), name);
+@@ -1769,8 +1874,10 @@ bool CalibUtils::process_and_store_3mf(Model *model, const DynamicPrintConfig &f
+         plate_data->gcode_file      = temp_gcode_path;
+         plate_data->is_sliced_valid = true;
+         plate_data->printer_model_id = obj_->printer_type;
+-        FilamentInfo& filament_info = plate_data->slice_filaments_info.front();
+-        filament_info.type          = full_config.opt_string("filament_type", 0);
++        for (size_t i = 0; i < plate_data->slice_filaments_info.size(); ++i) {
++            FilamentInfo &filament_info = plate_data->slice_filaments_info[i];
++            filament_info.type          = full_config.opt_string("filament_type", i);
++        }
+     }
+ 
+     //draw thumbnails
+@@ -1935,17 +2042,27 @@ void CalibUtils::send_to_print(const CalibInfo &calib_info, wxString &error_mess
+     std::string new_ams_mapping = "[{\"ams_id\":" + std::to_string(calib_info.ams_id) + ", \"slot_id\":" + std::to_string(calib_info.slot_id) + "}]";
+     print_job->task_ams_mapping2 = new_ams_mapping;
+ 
++    auto nozzle_tar = obj_->GetNozzleSystem()->GetReplaceNozzleTar();
++    if (calib_info.nozzle_pos_id == 0 && nozzle_tar.has_value()) {
++        print_job->task_nozzle_mapping = "[" + std::to_string(nozzle_tar.value()) + "]";
++    } else {
++        print_job->task_nozzle_mapping = "[" + std::to_string(calib_info.nozzle_pos_id) + "]";
++    }
++
+     CalibMode cali_mode       = calib_info.params.mode;
+     print_job->m_project_name = get_calib_mode_name(cali_mode, flow_ratio_mode);
+     print_job->set_calibration_task(true);
+ 
+     print_job->has_sdcard = obj_->GetStorage()->get_sdcard_state() == DevStorage::HAS_SDCARD_NORMAL;
+     print_job->could_emmc_print = obj_->is_support_print_with_emmc;
+-    print_job->set_print_config(MachineBedTypeString[bed_type], true, false, false, false, true, false, 0, 0, 0);
++    print_job->set_print_config(MachineBedTypeString[bed_type], true, false, false, false, true, false, 0, 0, 0, 0);
+     print_job->set_print_job_finished_event(wxGetApp().plater()->get_send_calibration_finished_event(), print_job->m_project_name);
+ 
+     {  // after send: record the print job
+         json j;
++        j["print"]["ams_mapping"]     = print_job->task_ams_mapping;
++        j["print"]["ams_mapping_2"]   = print_job->task_ams_mapping2;
++        j["print"]["nozzle_mapping"]  = print_job->task_nozzle_mapping;
+         j["print"]["project_name"]    = print_job->m_project_name;
+         j["print"]["is_cali_task"]    = print_job->m_is_calibration_task;
+         BOOST_LOG_TRIVIAL(info) << "send_cali_job - after send: " << j.dump();
+@@ -2030,19 +2147,30 @@ void CalibUtils::send_to_print(const std::vector<CalibInfo> &calib_infos, wxStri
+     // set AMS mapping
+     std::string select_ams     = "[";
+     std::string new_select_ams = "[";
++    std::string nozzle_mapping = "[";
+     for (size_t i = 0; i < calib_infos.size(); ++i) {
+         select_ams += calib_infos[i].select_ams;
+         new_select_ams += "{\"ams_id\":" + std::to_string(calib_infos[i].ams_id) + ", \"slot_id\":" + std::to_string(calib_infos[i].slot_id) + "}";
++
++        auto nozzle_tar = obj_->GetNozzleSystem()->GetReplaceNozzleTar();
++        if (calib_infos[i].nozzle_pos_id == 0 && nozzle_tar.has_value())
++            nozzle_mapping += std::to_string(nozzle_tar.value());
++        else
++            nozzle_mapping += std::to_string(calib_infos[i].nozzle_pos_id);
++
+         if (i != calib_infos.size() - 1) {
+             select_ams += ",";
+             new_select_ams += ",";
++            nozzle_mapping += ",";
+         }
+     }
+     select_ams += "]";
+     new_select_ams += "]";
++    nozzle_mapping += "]";
+     print_job->task_ams_mapping      = select_ams;
+     print_job->task_ams_mapping_info = "";
+     print_job->task_ams_mapping2     = new_select_ams;
++    print_job->task_nozzle_mapping   = nozzle_mapping;
+ 
+     print_job->task_use_ams = false;
+     for (const CalibInfo& calib_info : calib_infos) {
+@@ -2058,13 +2186,14 @@ void CalibUtils::send_to_print(const std::vector<CalibInfo> &calib_infos, wxStri
+ 
+     print_job->has_sdcard = obj_->GetStorage()->get_sdcard_state() == DevStorage::HAS_SDCARD_NORMAL;
+     print_job->could_emmc_print = obj_->is_support_print_with_emmc;
+-    print_job->set_print_config(MachineBedTypeString[bed_type], true, true, false, false, true, false, 0, 1, 0);
++    print_job->set_print_config(MachineBedTypeString[bed_type], true, true, false, false, true, false, 0, 1, 0, 0);
+     print_job->set_print_job_finished_event(wxGetApp().plater()->get_send_calibration_finished_event(), print_job->m_project_name);
+ 
+     { // after send: record the print job
+         json j;
+         j["print"]["ams_mapping"] = print_job->task_ams_mapping;
+         j["print"]["ams_mapping_2"] = print_job->task_ams_mapping2;
++        j["print"]["nozzle_mapping"] = print_job->task_nozzle_mapping;
+         j["print"]["project_name"] = print_job->m_project_name;
+         j["print"]["is_cali_task"] = print_job->m_is_calibration_task;
+         BOOST_LOG_TRIVIAL(info) << "send_cali_job - after send: " << j.dump();
+diff --git src/slic3r/Utils/CalibUtils.hpp src/slic3r/Utils/CalibUtils.hpp
+index 2c140cc29..0f75f15fe 100644
+--- src/slic3r/Utils/CalibUtils.hpp
++++ src/slic3r/Utils/CalibUtils.hpp
+@@ -20,6 +20,8 @@ public:
+     int                                ams_id = 0;
+     int                                slot_id = 0;
+     float                              nozzle_diameter;
++    int                                nozzle_pos_id = -1;  //-1 means no nozzle pos;   0:right extruder, 1:left extruder, 0x10~0x15: nozzle pos
++    std::string                        nozzle_sn;
+     ExtruderType                       extruder_type{ExtruderType::etDirectDrive};
+     NozzleVolumeType                   nozzle_volume_type;
+     Calib_Params                       params;
+@@ -98,5 +100,9 @@ extern bool     is_pa_params_valid(const Calib_Params &params);
+ extern void update_speed_parameter(const std::string &key);
+ extern std::vector<double> generate_max_speed_parameter_value(const std::string &key);
+ 
++float to_nozzle_diameter_float(const NozzleDiameterType &type);
++NozzleFlowType to_nozzle_flow_type(const std::string &type);
++extern NozzleFlowType to_nozzle_flow_type(const NozzleVolumeType &type);
++extern NozzleVolumeType to_nozzle_volume_type(const NozzleFlowType &type);
+ }
+ }
+\ No newline at end of file
+diff --git src/slic3r/Utils/HelioDragon.cpp src/slic3r/Utils/HelioDragon.cpp
+index 6d72c5c0c..60b86e38c 100644
+--- src/slic3r/Utils/HelioDragon.cpp
++++ src/slic3r/Utils/HelioDragon.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include <string>
+ #include <wx/string.h>
++#include <wx/file.h>
+ #include <boost/optional.hpp>
+ #include <boost/asio/ip/address.hpp>
+ #include <vector>
+@@ -408,7 +408,7 @@ HelioQuery::PresignedURLResult HelioQuery::create_presigned_url(const std::strin
+         .header("X-BambuStudio-Version", GUI::VersionInfo::convert_full_version(SLIC3R_VERSION))
+         .set_post_body(query_body);
+ 
+-    if (GUI::wxGetApp().app_config->get("region") == "China") {
++    if (GUI::wxGetApp().app_config->get("language") == "zh_CN") {
+         http.header("Accept-Language", "zh-CN");
+     }
+ 
+@@ -568,7 +568,7 @@ HelioQuery::CreateGCodeResult HelioQuery::create_gcode(const std::string key,
+         .header("X-BambuStudio-Version", GUI::VersionInfo::convert_full_version(SLIC3R_VERSION))
+         .set_post_body(query_body);
+ 
+-    if (GUI::wxGetApp().app_config->get("region") == "China") {
++    if (GUI::wxGetApp().app_config->get("language") == "zh_CN") {
+         http.header("Accept-Language", "zh-CN");
+     }
+ 
+@@ -843,7 +843,7 @@ HelioQuery::CreateSimulationResult HelioQuery::create_simulation(const std::stri
+         .header("X-BambuStudio-Version", GUI::VersionInfo::convert_full_version(SLIC3R_VERSION))
+         .set_post_body(query_body);
+ 
+-    if (GUI::wxGetApp().app_config->get("region") == "China") {
++    if (GUI::wxGetApp().app_config->get("language") == "zh_CN") {
+         http.header("Accept-Language", "zh-CN");
+     }
+ 
+@@ -943,7 +943,7 @@ HelioQuery::CheckSimulationProgressResult HelioQuery::check_simulation_progress(
+         .header("X-BambuStudio-Version", GUI::VersionInfo::convert_full_version(SLIC3R_VERSION))
+         .set_post_body(query_body);
+ 
+-    if (GUI::wxGetApp().app_config->get("region") == "China") {
++    if (GUI::wxGetApp().app_config->get("language") == "zh_CN") {
+         http.header("Accept-Language", "zh-CN");
+     }
+ 
+@@ -1058,7 +1058,7 @@ Slic3r::HelioQuery::CreateOptimizationResult HelioQuery::create_optimization(con
+         .header("X-BambuStudio-Version", GUI::VersionInfo::convert_full_version(SLIC3R_VERSION))
+         .set_post_body(query_body);
+ 
+-    if (GUI::wxGetApp().app_config->get("region") == "China") {
++    if (GUI::wxGetApp().app_config->get("language") == "zh_CN") {
+         http.header("Accept-Language", "zh-CN");
+     }
+ 
+@@ -1158,7 +1158,7 @@ Slic3r::HelioQuery::CheckOptimizationResult HelioQuery::check_optimization_progr
+         .header("X-BambuStudio-Version", GUI::VersionInfo::convert_full_version(SLIC3R_VERSION))
+         .set_post_body(query_body);
+ 
+-    if (GUI::wxGetApp().app_config->get("region") == "China") {
++    if (GUI::wxGetApp().app_config->get("language") == "zh_CN") {
+         http.header("Accept-Language", "zh-CN");
+     }
+ 
+@@ -1644,9 +1644,11 @@ void HelioBackgroundProcess::save_downloaded_gcode_and_load_preview(std::string
+     }
+ 
+     if (response_error.empty() && !was_canceled()) {
+-        FILE* file = fopen(helio_gcode_path.c_str(), "wb");
+-        fwrite(downloaded_gcode.c_str(), 1, downloaded_gcode.size(), file);
+-        fclose(file);
++        wxFile file(wxString::FromUTF8(helio_gcode_path), wxFile::write);
++        if (file.IsOpened()) {
++            file.Write(downloaded_gcode.data(), downloaded_gcode.size());
++            file.Close();
++        }
+ 
+         Slic3r::PrintBase::SlicingStatus status = Slic3r::PrintBase::SlicingStatus(100, _u8L("Helio: GCode downloaded successfully"));
+         status.is_helio = true;
+diff --git src/slic3r/Utils/NetworkAgent.cpp src/slic3r/Utils/NetworkAgent.cpp
+index ef1465d85..61861062b 100644
+--- src/slic3r/Utils/NetworkAgent.cpp
++++ src/slic3r/Utils/NetworkAgent.cpp
+@@ -110,6 +110,7 @@ func_get_slice_info                 NetworkAgent::get_slice_info_ptr = nullptr;
+ func_query_bind_status              NetworkAgent::query_bind_status_ptr = nullptr;
+ func_modify_printer_name            NetworkAgent::modify_printer_name_ptr = nullptr;
+ func_get_camera_url                 NetworkAgent::get_camera_url_ptr = nullptr;
++func_get_camera_url_for_golive      NetworkAgent::get_camera_url_for_golive_ptr = nullptr;
+ func_get_design_staffpick           NetworkAgent::get_design_staffpick_ptr = nullptr;
+ func_start_pubilsh                  NetworkAgent::start_publish_ptr = nullptr;
+ func_get_model_publish_url          NetworkAgent::get_model_publish_url_ptr = nullptr;
+@@ -355,6 +356,7 @@ int NetworkAgent::initialize_network_module(bool using_backup, bool validate_cer
+     query_bind_status_ptr             =  reinterpret_cast<func_query_bind_status>(get_network_function("bambu_network_query_bind_status"));
+     modify_printer_name_ptr           =  reinterpret_cast<func_modify_printer_name>(get_network_function("bambu_network_modify_printer_name"));
+     get_camera_url_ptr                =  reinterpret_cast<func_get_camera_url>(get_network_function("bambu_network_get_camera_url"));
++    get_camera_url_for_golive_ptr     =  reinterpret_cast<func_get_camera_url_for_golive>(get_network_function("bambu_network_get_camera_url_for_golive"));
+     get_design_staffpick_ptr          =  reinterpret_cast<func_get_design_staffpick>(get_network_function("bambu_network_get_design_staffpick"));
+     start_publish_ptr                 =  reinterpret_cast<func_start_pubilsh>(get_network_function("bambu_network_start_publish"));
+     get_model_publish_url_ptr         =  reinterpret_cast<func_get_model_publish_url>(get_network_function("bambu_network_get_model_publish_url"));
+@@ -477,6 +479,7 @@ int NetworkAgent::unload_network_module()
+     query_bind_status_ptr             =  nullptr;
+     modify_printer_name_ptr           =  nullptr;
+     get_camera_url_ptr                =  nullptr;
++    get_camera_url_for_golive_ptr     =  nullptr;
+     get_design_staffpick_ptr          =  nullptr;
+     start_publish_ptr                 =  nullptr;
+     get_model_publish_url_ptr         =  nullptr;
+@@ -1406,6 +1409,17 @@ int NetworkAgent::get_camera_url(std::string dev_id, std::function<void(std::str
+     return ret;
+ }
+ 
++int NetworkAgent::get_camera_url_for_golive(std::string dev_id, std::string sdev_id, std::function<void(std::string)> callback)
++{
++    int ret = 0;
++    if (network_agent && get_camera_url_for_golive_ptr) {
++        ret = get_camera_url_for_golive_ptr(network_agent, dev_id, sdev_id, callback);
++        if (ret)
++            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(" error: network_agent=%1%, ret=%2%, dev_id=%3%") %network_agent %ret %BBLCrossTalk::Crosstalk_DevId(dev_id);
++    }
++    return ret;
++}
++
+ int NetworkAgent::get_design_staffpick(int offset, int limit, std::function<void(std::string)> callback)
+ {
+     int ret = 0;
+diff --git src/slic3r/Utils/NetworkAgent.hpp src/slic3r/Utils/NetworkAgent.hpp
+index 9d1c749ad..0c77706d7 100644
+--- src/slic3r/Utils/NetworkAgent.hpp
++++ src/slic3r/Utils/NetworkAgent.hpp
+@@ -88,6 +88,7 @@ typedef int (*func_get_slice_info)(void *agent, std::string project_id, std::str
+ typedef int (*func_query_bind_status)(void *agent, std::vector<std::string> query_list, unsigned int* http_code, std::string* http_body);
+ typedef int (*func_modify_printer_name)(void *agent, std::string dev_id, std::string dev_name);
+ typedef int (*func_get_camera_url)(void *agent, std::string dev_id, std::function<void(std::string)> callback);
++typedef int (*func_get_camera_url_for_golive)(void *agent, std::string dev_id, std::string sdev_id, std::function<void(std::string)> callback);
+ typedef int (*func_get_design_staffpick)(void *agent, int offset, int limit, std::function<void(std::string)> callback);
+ typedef int (*func_start_pubilsh)(void *agent, PublishParams params, OnUpdateStatusFn update_fn, WasCancelledFn cancel_fn, std::string* out);
+ typedef int (*func_get_model_publish_url)(void *agent, std::string* url);
+@@ -207,6 +208,7 @@ public:
+     int query_bind_status(std::vector<std::string> query_list, unsigned int* http_code, std::string* http_body);
+     int modify_printer_name(std::string dev_id, std::string dev_name);
+     int get_camera_url(std::string dev_id, std::function<void(std::string)> callback);
++    int get_camera_url_for_golive(std::string dev_id, std::string sdev_id, std::function<void(std::string)> callback);
+     int get_design_staffpick(int offset, int limit, std::function<void(std::string)> callback);
+     int start_publish(PublishParams params, OnUpdateStatusFn update_fn, WasCancelledFn cancel_fn, std::string* out);
+     int get_model_publish_url(std::string* url);
+@@ -316,6 +318,7 @@ private:
+     static func_query_bind_status              query_bind_status_ptr;
+     static func_modify_printer_name            modify_printer_name_ptr;
+     static func_get_camera_url                 get_camera_url_ptr;
++    static func_get_camera_url_for_golive      get_camera_url_for_golive_ptr;
+     static func_get_design_staffpick           get_design_staffpick_ptr;
+     static func_start_pubilsh                  start_publish_ptr;
+     static func_get_model_publish_url          get_model_publish_url_ptr;
+diff --git src/slic3r/Utils/UndoRedo.cpp src/slic3r/Utils/UndoRedo.cpp
+index f664e2ebf..af797c8be 100644
+--- src/slic3r/Utils/UndoRedo.cpp
++++ src/slic3r/Utils/UndoRedo.cpp
+@@ -977,8 +977,8 @@ void StackImpl::reduce_noisy_snapshots(const std::string& new_name)
+ 	-- it_last; -- it_last;
+ 	assert(it_last != m_snapshots.begin() && (it_last->snapshot_data.snapshot_type == SnapshotType::LeavingGizmoNoAction || it_last->snapshot_data.snapshot_type == SnapshotType::LeavingGizmoWithAction));
+     if ( it_last->snapshot_data.snapshot_type == SnapshotType::LeavingGizmoWithAction) {
+-		for (-- it_last; it_last->snapshot_data.snapshot_type != SnapshotType::EnteringGizmo; -- it_last) {
+-            if (it_last > m_snapshots.begin() && it_last->snapshot_data.snapshot_type == SnapshotType::GizmoAction) {
++        for (--it_last; it_last >= m_snapshots.begin() && it_last->snapshot_data.snapshot_type != SnapshotType::EnteringGizmo; --it_last) {
++            if (it_last->snapshot_data.snapshot_type == SnapshotType::GizmoAction) {
+                 it_last->name = new_name;
+                 auto it = it_last;
+ 				for (-- it; it->snapshot_data.snapshot_type == SnapshotType::GizmoAction; -- it) ;
+diff --git src/slic3r/Utils/bambu_networking.hpp src/slic3r/Utils/bambu_networking.hpp
+index d06aa3fe9..5fa917035 100644
+--- src/slic3r/Utils/bambu_networking.hpp
++++ src/slic3r/Utils/bambu_networking.hpp
+@@ -97,7 +97,7 @@ namespace BBL {
+ #define BAMBU_NETWORK_LIBRARY               "bambu_networking"
+ #define BAMBU_NETWORK_AGENT_NAME            "bambu_network_agent"
+ 
+-#define BAMBU_NETWORK_AGENT_VERSION         "02.03.00.62"
++#define BAMBU_NETWORK_AGENT_VERSION         "02.04.00.58"
+ 
+ //iot preset type strings
+ #define IOT_PRINTER_TYPE_STRING     "printer"
+@@ -234,6 +234,7 @@ struct PrintParams {
+     int             auto_bed_leveling{ 0 };
+     int             auto_flow_cali{ 0 };
+     int             auto_offset_cali{ 0 };
++    int             extruder_cali_manual_mode{ -1 };
+     bool            task_ext_change_assist;
+     bool            try_emmc_print;
+ };

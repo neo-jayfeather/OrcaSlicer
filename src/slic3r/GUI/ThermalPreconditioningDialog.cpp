@@ -12,8 +12,8 @@ BEGIN_EVENT_TABLE(ThermalPreconditioningDialog, wxDialog)
 EVT_BUTTON(wxID_OK, ThermalPreconditioningDialog::on_ok_clicked)
 END_EVENT_TABLE()
 
-ThermalPreconditioningDialog::ThermalPreconditioningDialog(wxWindow *parent, std::string dev_id, const wxString &remaining_time)
-    : wxDialog(parent, wxID_ANY, _L("Thermal Preconditioning for first layer optimization"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
+ThermalPreconditioningDialog::ThermalPreconditioningDialog(wxWindow *parent, std::string dev_id, bool is_show_remain_time)
+    : wxDialog(parent, wxID_ANY, _L("Thermal Preconditioning for first layer optimization"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE)
     , m_dev_id(dev_id)
 {
     // Apply dark-mode-friendly background for the dialog
@@ -24,7 +24,10 @@ ThermalPreconditioningDialog::ThermalPreconditioningDialog(wxWindow *parent, std
     m_refresh_timer->Start(1000);
 
     // Set remaining time
-    m_remaining_time_label->SetLabelText(_L("Remaining time: Calculating..."));
+    if (is_show_remain_time)
+        m_remaining_time_label->SetLabelText(_L("Remaining time: Calculating..."));
+    else
+        m_remaining_time_label->Hide();
 
      Layout();
     // Set dialog size and position
@@ -111,6 +114,7 @@ void ThermalPreconditioningDialog::on_timer(wxTimerEvent &event) {
     if (IsShown() && m_obj && m_obj->stage_curr == 58) {
         update_thermal_remaining_time();
     } else {
+        EndModal(wxID_OK);
         m_refresh_timer->Stop();
     }
 }

@@ -1,4 +1,5 @@
 #include <nlohmann/json.hpp>
+#include "DevInfo.h"
 #include "DevManager.h"
 #include "DevUtil.h"
 
@@ -203,7 +204,7 @@ namespace Slic3r
                 if (it->second->get_dev_ip() != dev_ip ||
                     it->second->bind_state != bind_state ||
                     it->second->bind_sec_link != sec_link ||
-                    it->second->dev_connection_type != connect_type ||
+                    it->second->connection_type() != connect_type ||
                     it->second->bind_ssdp_version != ssdp_version)
                 {
                     if (it->second->bind_state != bind_state) {
@@ -213,7 +214,7 @@ namespace Slic3r
                     it->second->set_dev_ip(dev_ip);
                     it->second->bind_state          = bind_state;
                     it->second->bind_sec_link       = sec_link;
-                    it->second->dev_connection_type = connect_type;
+                    it->second->GetInfo()->SetConnectionType(connect_type);
                     it->second->bind_ssdp_version   = ssdp_version;
                     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " UpdateUserMachineInfo"
                         << ", dev_id= " << dev_id
@@ -249,13 +250,13 @@ namespace Slic3r
                 }
 
                 if (obj->wifi_signal != printer_signal ||
-                    obj->dev_connection_type != connect_type ||
+                    obj->connection_type() != connect_type ||
                     obj->bind_state != bind_state ||
                     obj->bind_sec_link != sec_link ||
                     obj->bind_ssdp_version != ssdp_version ||
                     obj->printer_type != _parse_printer_type(printer_type_str))
                 {
-                    if (obj->dev_connection_type != connect_type ||
+                    if (obj->connection_type() != connect_type ||
                         obj->bind_state != bind_state ||
                         obj->bind_sec_link != sec_link ||
                         obj->bind_ssdp_version != ssdp_version ||
@@ -279,7 +280,7 @@ namespace Slic3r
                     }
 
                     obj->wifi_signal         = printer_signal;
-                    obj->dev_connection_type = connect_type;
+                    it->second->GetInfo()->SetConnectionType(connect_type);
                     obj->bind_state          = bind_state;
                     obj->bind_sec_link       = sec_link;
                     obj->bind_ssdp_version   = ssdp_version;
@@ -287,10 +288,9 @@ namespace Slic3r
                 }
 
                 // U0 firmware
-                if (obj->dev_connection_type.empty() && obj->bind_state.empty())
+                if (obj->connection_type().empty() && obj->bind_state.empty())
                     obj->bind_state = "free";
 
-                obj->last_alive = Slic3r::Utils::get_current_time_utc();
                 obj->m_is_online = true;
                 obj->set_dev_name(dev_name);
                 /* if (!obj->dev_ip.empty()) {
@@ -303,7 +303,7 @@ namespace Slic3r
                 obj = new MachineObject(this, m_agent, dev_name, dev_id, dev_ip);
                 obj->printer_type = _parse_printer_type(printer_type_str);
                 obj->wifi_signal = printer_signal;
-                obj->dev_connection_type = connect_type;
+                obj->GetInfo()->SetConnectionType(connect_type);
                 obj->bind_state     = bind_state;
                 obj->bind_sec_link  = sec_link;
                 obj->dev_connection_name = connection_name;
@@ -349,7 +349,12 @@ namespace Slic3r
             obj->printer_type = _parse_printer_type("C11");
         else
             obj->printer_type = _parse_printer_type(machine.printer_type);
-        obj->dev_connection_type = connection_type == "farm" ? "lan":connection_type;
+        // obj->dev_connection_type = connection_type == "farm" ? "lan":connection_type;
+        if (connection_type == "farm") {
+            obj->GetInfo()->SetConnectionType("lan");
+        } else {
+            obj->GetInfo()->SetConnectionType(connection_type);
+        }
         obj->bind_state          = connection_type == "farm" ? "free":bind_state;
         obj->bind_sec_link = "secure";
         obj->bind_ssdp_version = version;
@@ -526,7 +531,6 @@ namespace Slic3r
 #else
                         it->second->connect(it->second->local_use_ssl);
 #endif
-                        it->second->set_lan_mode_connection_state(true);
                     }
                 }
             }
@@ -550,7 +554,6 @@ namespace Slic3r
 #else
                         it->second->connect(it->second->local_use_ssl);
 #endif
-                        it->second->set_lan_mode_connection_state(true);
                     }
                 }
             }
@@ -740,11 +743,11 @@ namespace Slic3r
                     {
                         /* update field */
                         obj = iter->second;
-                        obj->set_dev_id(dev_id);
+                        obj->GetInfo()->SetDevId(dev_id);
                     }
                     else
                     {
-                        obj = new MachineObject(this, m_agent, "", "", "");
+                        obj = new MachineObject(this, m_agent, "", dev_id, "");
                         if (m_agent)
                         {
                             obj->set_bind_status(m_agent->get_user_name(provider));
@@ -760,7 +763,7 @@ namespace Slic3r
                     if (!obj) continue;
 
                     if (!elem["dev_id"].is_null())
-                        obj->set_dev_id(elem["dev_id"].get<std::string>());
+                        obj->GetInfo()->SetDevId(elem["dev_id"].get<std::string>());
                     if (!elem["dev_name"].is_null())
                         obj->set_dev_name(elem["dev_name"].get<std::string>());
                     if (!elem["dev_online"].is_null())
@@ -782,8 +785,6 @@ namespace Slic3r
                     }
                     if (!elem["task_status"].is_null())
                         obj->iot_print_status = elem["task_status"].get<std::string>();
-                    if (elem.contains("dev_product_name") && !elem["dev_product_name"].is_null())
-                        obj->dev_product_name = elem["dev_product_name"].get<std::string>();
                     if (elem.contains("dev_access_code") && !elem["dev_access_code"].is_null())
                     {
                         std::string acc_code = elem["dev_access_code"].get<std::string>();
@@ -823,7 +824,9 @@ namespace Slic3r
         int result = m_agent->get_user_print_info(&http_code, &body, provider);
         if (result == 0)
         {
-            parse_user_print_info(body);
+            Slic3r::GUI::wxGetApp().CallAfter([this, body]() {
+                 parse_user_print_info(body);
+            });
         }
     }
 

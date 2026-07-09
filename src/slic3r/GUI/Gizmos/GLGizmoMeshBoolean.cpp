@@ -7,6 +7,7 @@
 #include "slic3r/GUI/Plater.hpp"
 #include "slic3r/GUI/Camera.hpp"
 #include "slic3r/GUI/NotificationManager.hpp"
+#include "slic3r/GUI/Jobs/BooleanOperationJob.hpp"
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
@@ -488,5 +489,6 @@ void GLGizmoMeshBoolean::generate_new_volume(bool delete_input, const TriangleMe
     m_selecting_state = MeshBooleanSelectingState::SelectSource;
 }
 
+// ========================== PRIVATE: VOLUME PROCESSING HELPERS ==========================
 
 }}

@@ -1069,8 +1069,7 @@ FanControlNewSwitchPanel::FanControlNewSwitchPanel(wxWindow* parent, const wxStr
 
     wxSizer* m_label_sizer = new wxBoxSizer(wxHORIZONTAL);
     m_label_sizer->Add(label, 0, wxALIGN_LEFT, 0);
-    m_label_sizer->AddSpacer(FromDIP(10));
-    m_label_sizer->Add(0, 1, wxEXPAND, FromDIP(10));
+    m_label_sizer->AddStretchSpacer(1);
     m_label_sizer->Add(m_switch_btn, 0, wxALIGN_RIGHT, 0);
 
     Label* tips_label = new Label(this);
@@ -1079,7 +1078,7 @@ FanControlNewSwitchPanel::FanControlNewSwitchPanel(wxWindow* parent, const wxStr
     tips_label->Wrap(FromDIP(400));
 
     wxSizer* m_sizer_main = new wxBoxSizer(wxVERTICAL);
-    m_sizer_main->Add(m_label_sizer, 0, wxALL | wxALIGN_LEFT, FromDIP(5));
+    m_sizer_main->Add(m_label_sizer, 0, wxALL | wxEXPAND, FromDIP(5));
     m_sizer_main->Add(tips_label, 0, wxALL | wxALIGN_LEFT, FromDIP(5));
     SetSizer(m_sizer_main);
 
