@@ -1,15 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <boost/filesystem.hpp>
-#include <boost/dll.hpp>
+#include <filesystem>
 #include <boost/property_tree/ini_parser.hpp>
-#include <boost/nowide/fstream.hpp>
-#include <boost/algorithm/string/predicate.hpp>
+#include <boost/property_tree/ptree.hpp>
 
-bool write_to_pot(boost::filesystem::path path, const std::vector<std::pair<std::string, std::string>>& data)
+bool write_to_pot(std::filesystem::path path, const std::vector<std::pair<std::string, std::string>>& data)
 {
-	boost::nowide::ofstream file(path.string(), std::ios_base::app);
+	std::ofstream file(path, std::ios_base::app);
 	for (const auto& element : data)
 	{
 		//Example of .pot element 
@@ -22,20 +20,19 @@ bool write_to_pot(boost::filesystem::path path, const std::vector<std::pair<std:
 	file.close();
 	return true;
 }
-bool read_hints_ini(boost::filesystem::path path, std::vector<std::pair<std::string, std::string>>& pot_elements)
+bool read_hints_ini(const std::filesystem::path& path, std::vector<std::pair<std::string, std::string>>& pot_elements)
 {
-	namespace pt = boost::property_tree;
-	pt::ptree tree;
-	boost::nowide::ifstream ifs(path.string());
+	boost::property_tree::ptree tree;
+	std::ifstream ifs(path.string());
 	try {
-		pt::read_ini(ifs, tree);
+		boost::property_tree::read_ini(ifs, tree);
 	}
 	catch (const boost::property_tree::ini_parser::ini_parser_error& err) {
 		std::cout << err.what() << std::endl;
 		return false;
 	}
 	for (const auto& section : tree) {
-		if (boost::starts_with(section.first, "hint:")) {
+		if (section.first.rfind("hint:", 0) == 0) {
 			for (const auto& data : section.second) {
 				if (data.first == "text")
 				{
@@ -51,22 +48,22 @@ bool read_hints_ini(boost::filesystem::path path, std::vector<std::pair<std::str
 int main(int argc, char* argv[])
 {
 	std::vector<std::pair<std::string, std::string>> data;
-	boost::filesystem::path path_to_ini;
-	boost::filesystem::path path_to_pot;
+	std::filesystem::path path_to_ini;
+	std::filesystem::path path_to_pot;
 	if (argc != 3)
 	{
 		std::cout << "HINTS_TO_POT FAILED: WRONG NUM OF ARGS" << std::endl;
 		return -1;
 	}
 	try {
-		path_to_ini = boost::filesystem::canonical(boost::filesystem::path(argv[1])).parent_path() / "resources" / "data" / "hints.ini";
-		path_to_pot = boost::filesystem::canonical(boost::filesystem::path(argv[2])).parent_path() / "i18n" /"OrcaSlicer.pot";
+		path_to_ini = std::filesystem::canonical(argv[1]).parent_path() / "resources" / "data" / "hints.ini";
+		path_to_pot = std::filesystem::canonical(argv[2]).parent_path() / "i18n" /"OrcaSlicer.pot";
 	} catch (std::exception&) {
-		std::cout << "HINTS_TO_POT FAILED: BOOST CANNONICAL" << std::endl;
+		std::cout << "HINTS_TO_POT FAILED: STD CANNONICAL" << std::endl;
 		return -1;
 	}
 	
-	if (!boost::filesystem::exists(path_to_ini)){
+	if (!std::filesystem::exists(path_to_ini)){
 		std::cout << "HINTS_TO_POT FAILED: PATH TO INI DOES NOT EXISTS" << std::endl;
 		std::cout << path_to_ini.string() << std::endl;
 		return -1;
