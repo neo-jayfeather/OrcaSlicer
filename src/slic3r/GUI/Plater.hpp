@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <vector>
-#include <boost/filesystem/path.hpp>
+#include <filesystem>
 
 #include <wx/panel.h>
 // BBS
@@ -276,7 +276,7 @@ private:
 class Plater: public wxPanel
 {
 public:
-    using fs_path = boost::filesystem::path;
+    using fs_path = std::filesystem::path;
 
     Plater(wxWindow *parent, MainFrame *main_frame);
     Plater(Plater &&) = delete;
@@ -318,8 +318,8 @@ public:
     // BBS: check snapshot
     bool up_to_date(bool saved, bool backup);
 
-    bool open_3mf_file(const fs::path &file_path);
-    int  get_3mf_file_count(std::vector<fs::path> paths);
+    bool open_3mf_file(const std::filesystem::path &file_path);
+    int  get_3mf_file_count(std::vector<std::filesystem::path> paths);
     void add_file();
     void add_model(bool imperial_units = false, std::string fname = "");
     void import_zip_archive();
@@ -372,10 +372,10 @@ public:
     static wxColour get_next_color_for_filament();
     static wxString get_slice_warning_string(GCodeProcessorResult::SliceWarning& warning);
 
-    bool preview_zip_archive(const boost::filesystem::path& archive_path);
+    bool preview_zip_archive(const std::filesystem::path& archive_path);
 
     // BBS: restore
-    std::vector<size_t> load_files(const std::vector<boost::filesystem::path>& input_files, LoadStrategy strategy = LoadStrategy::LoadModel | LoadStrategy::LoadConfig,  bool ask_multi = false);
+    std::vector<size_t> load_files(const std::vector<std::filesystem::path>& input_files, LoadStrategy strategy = LoadStrategy::LoadModel | LoadStrategy::LoadConfig,  bool ask_multi = false);
     // To be called when providing a list of files to the GUI slic3r on command line.
     std::vector<size_t> load_files(const std::vector<std::string>& input_files, LoadStrategy strategy = LoadStrategy::LoadModel | LoadStrategy::LoadConfig,  bool ask_multi = false);
     // to be called on drag and drop
@@ -493,7 +493,7 @@ public:
     //void export_amf();
     //BBS add extra param for exporting 3mf silence
     // BBS: backup
-    int export_3mf(const boost::filesystem::path& output_path = boost::filesystem::path(), SaveStrategy strategy = SaveStrategy::Default, int export_plate_idx = -1, Export3mfProgressFn proFn = nullptr);
+    int export_3mf(const std::filesystem::path& output_path = std::filesystem::path(), SaveStrategy strategy = SaveStrategy::Default, int export_plate_idx = -1, Export3mfProgressFn proFn = nullptr);
 
     //BBS
     void publish_project();

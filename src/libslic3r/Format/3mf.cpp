@@ -20,7 +20,6 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/filesystem/operations.hpp>
 #include <boost/spirit/include/karma.hpp>
 #include <boost/spirit/include/qi_int.hpp>
 #include <boost/log/trivial.hpp>
@@ -736,7 +735,7 @@ ModelVolumeType type_from_string(const std::string &s)
 
         mz_zip_archive_file_stat stat;
 
-        m_name = boost::filesystem::path(filename).stem().string();
+        m_name = std::filesystem::path(filename).stem().string();
 
         // we first loop the entries to read from the archive the .model file only, in order to extract the version from it
         for (mz_uint i = 0; i < num_entries; ++i) {
@@ -2347,7 +2346,7 @@ ModelVolumeType type_from_string(const std::string &s)
         // The content of this file is the same for each PrusaSlicer 3mf.
         if (!_add_content_types_file_to_archive(archive)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             return false;
         }
 
@@ -2355,7 +2354,7 @@ ModelVolumeType type_from_string(const std::string &s)
             // Adds the file Metadata/thumbnail.png.
             if (!_add_thumbnail_file_to_archive(archive, *thumbnail_data)) {
                 close_zip_writer(&archive);
-                boost::filesystem::remove(filename);
+                std::filesystem::remove(filename);
                 return false;
             }
         }
@@ -2365,7 +2364,7 @@ ModelVolumeType type_from_string(const std::string &s)
         // The relationshis file contains a reference to the geometry file "3D/3dmodel.model", the name was chosen to be compatible with CURA.
         if (!_add_relationships_file_to_archive(archive)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             return false;
         }
 
@@ -2374,7 +2373,7 @@ ModelVolumeType type_from_string(const std::string &s)
         IdToObjectDataMap objects_data;
         if (!_add_model_file_to_archive(filename, archive, model, objects_data)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             return false;
         }
 
@@ -2383,7 +2382,7 @@ ModelVolumeType type_from_string(const std::string &s)
         // The index differes from the index of an object ID of an object instance of a 3MF file!
         if (!_add_layer_height_profile_file_to_archive(archive, model)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             return false;
         }
 
@@ -2392,7 +2391,7 @@ ModelVolumeType type_from_string(const std::string &s)
         // The index differes from the index of an object ID of an object instance of a 3MF file!
         if (!_add_layer_config_ranges_file_to_archive(archive, model)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             return false;
         }
 
@@ -2401,13 +2400,13 @@ ModelVolumeType type_from_string(const std::string &s)
         // The index differes from the index of an object ID of an object instance of a 3MF file!
         if (!_add_sla_support_points_file_to_archive(archive, model)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             return false;
         }
 
         if (!_add_sla_drain_holes_file_to_archive(archive, model)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             return false;
         }
 
@@ -2416,7 +2415,7 @@ ModelVolumeType type_from_string(const std::string &s)
         // All custom gcode per height of whole Model are stored here
         if (!_add_custom_gcode_per_print_z_file_to_archive(archive, model, config)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             return false;
         }
 
@@ -2425,7 +2424,7 @@ ModelVolumeType type_from_string(const std::string &s)
         if (config != nullptr) {
             if (!_add_print_config_file_to_archive(archive, *config)) {
                 close_zip_writer(&archive);
-                boost::filesystem::remove(filename);
+                std::filesystem::remove(filename);
                 return false;
             }
         }
@@ -2436,13 +2435,13 @@ ModelVolumeType type_from_string(const std::string &s)
         // is stored here as well.
         if (!_add_model_config_file_to_archive(archive, model, objects_data)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             return false;
         }
 
         if (!mz_zip_writer_finalize_archive(&archive)) {
             close_zip_writer(&archive);
-            boost::filesystem::remove(filename);
+            std::filesystem::remove(filename);
             add_error("Unable to finalize the archive");
             return false;
         }
@@ -2551,7 +2550,7 @@ ModelVolumeType type_from_string(const std::string &s)
             if (model.is_mm_painted())
                 stream << " <" << METADATA_TAG << " name=\"" << SLIC3RPE_MM_PAINTING_VERSION << "\">" << MM_PAINTING_VERSION << "</" << METADATA_TAG << ">\n";
 
-            std::string name = xml_escape(boost::filesystem::path(filename).stem().string());
+            std::string name = xml_escape(std::filesystem::path(filename).stem().string());
             stream << " <" << METADATA_TAG << " name=\"Title\">" << name << "</" << METADATA_TAG << ">\n";
             stream << " <" << METADATA_TAG << " name=\"Designer\">" << "</" << METADATA_TAG << ">\n";
             stream << " <" << METADATA_TAG << " name=\"Description\">" << name << "</" << METADATA_TAG << ">\n";
@@ -3143,7 +3142,7 @@ ModelVolumeType type_from_string(const std::string &s)
 
                             // stores volume's source data
                             {
-                                std::string input_file = xml_escape(m_fullpath_sources ? volume->source.input_file : boost::filesystem::path(volume->source.input_file).filename().string());
+                                std::string input_file = xml_escape(m_fullpath_sources ? volume->source.input_file : std::filesystem::path(volume->source.input_file).filename().string());
                                 std::string prefix = std::string("   <") + METADATA_TAG + " " + TYPE_ATTR + "=\"" + VOLUME_TYPE + "\" " + KEY_ATTR + "=\"";
                                 if (! volume->source.input_file.empty()) {
                                     stream << prefix << SOURCE_FILE_KEY      << "\" " << VALUE_ATTR << "=\"" << input_file << "\"/>\n";

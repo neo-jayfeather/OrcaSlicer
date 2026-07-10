@@ -987,7 +987,7 @@ private:
         ss << "items.size=" << items_.size()
             << "-merged_pile.size=" << merged_pile_.size();
         svgwriter.draw_text(20, 40, ss.str(), "blue", 20);
-        svgwriter.save(boost::filesystem::path("SVG")/ ("nfpplacer_" + std::to_string(plate_id) + "_" + ss.str() + "_" + item.name + ".svg"));
+        svgwriter.save(std::filesystem::path("SVG")/ ("nfpplacer_" + std::to_string(plate_id) + "_" + ss.str() + "_" + item.name + ".svg"));
 #endif
 
         if(can_pack) {

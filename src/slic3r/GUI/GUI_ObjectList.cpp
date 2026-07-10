@@ -28,6 +28,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <filesystem>
 #include <boost/algorithm/string.hpp>
 #include <boost/log/trivial.hpp>
 #include <wx/progdlg.h>
@@ -2235,7 +2236,7 @@ void ObjectList::load_part(ModelObject& model_object, std::vector<ModelVolume*>&
         std::string input_file = input_files.Item(i).ToUTF8().data();
 
         dlg.Update(static_cast<int>(100.0f * static_cast<float>(i) / static_cast<float>(input_files.size())),
-            _L("Loading file") + ": " + from_path(boost::filesystem::path(input_file).filename()));
+            _L("Loading file") + ": " + from_path(std::filesystem::path(input_file).filename()));
         dlg.Fit();
 
         Model model;
@@ -2257,7 +2258,7 @@ void ObjectList::load_part(ModelObject& model_object, std::vector<ModelVolume*>&
             for (auto volume : object->volumes) {
                 volume->translate(delta);
                 auto new_volume = model_object.add_volume(*volume, type);
-                new_volume->name = boost::filesystem::path(input_file).filename().string();
+                new_volume->name = std::filesystem::path(input_file).filename().string();
                 // set a default extruder value, since user can't add it manually
                 // BBS
                 new_volume->config.set_key_value("extruder", new ConfigOptionInt(1));
@@ -2308,7 +2309,7 @@ void ObjectList::load_modifier(const wxArrayString& input_files, ModelObject& mo
         const std::string input_file = input_files.Item(i).ToUTF8().data();
 
         dlg.Update(static_cast<int>(100.0f * static_cast<float>(i) / static_cast<float>(input_files.size())),
-            _L("Loading file") + ": " + from_path(boost::filesystem::path(input_file).filename()));
+            _L("Loading file") + ": " + from_path(std::filesystem::path(input_file).filename()));
         dlg.Fit();
         
         bool is_user_cancel = false;
@@ -2374,7 +2375,7 @@ void ObjectList::load_modifier(const wxArrayString& input_files, ModelObject& mo
         TriangleMesh mesh = model.mesh();
         // Mesh will be centered when loading.
         ModelVolume* new_volume = model_object.add_volume(std::move(mesh), type);
-        new_volume->name = boost::filesystem::path(input_file).filename().string();
+        new_volume->name = std::filesystem::path(input_file).filename().string();
 
         // adjust offset as prusaslicer ObjectList::load_from_files does (works) instead of BBS method
         //// BBS: object_mesh.get_init_shift() keep the relative position

@@ -11,7 +11,7 @@
 #include "libslic3r/BuildVolume.hpp"
 #include "libslic3r/Geometry/ConvexHull.hpp"
 
-#include <boost/filesystem/operations.hpp>
+#include <filesystem>
 #include <boost/algorithm/string/predicate.hpp>
 
 #if defined(L)
@@ -544,7 +544,7 @@ void GLModel::init_from(const Polygons& polygons, float z)
 
 bool GLModel::init_from_file(const std::string& filename)
 {
-    if (!boost::filesystem::exists(filename))
+    if (!std::filesystem::exists(filename))
         return false;
 
     if (!boost::algorithm::iends_with(filename, ".stl"))

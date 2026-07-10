@@ -3,8 +3,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/operations.hpp>
+#include <filesystem>
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
 #include <mutex>
@@ -30,11 +29,11 @@ CBaseException::CBaseException(HANDLE hProcess, WORD wPID, LPCTSTR lpSymbolPath,
 
 	if (!g_log_folder.empty()) {
 		buf << std::put_time(now_time, "crash_%a_%b_%d_%H_%M_%S_") <<g_crash_log_count++ <<".log";
-		auto log_folder = (boost::filesystem::path(g_log_folder) / "log").make_preferred();
-		if (!boost::filesystem::exists(log_folder)) {
-		    boost::filesystem::create_directory(log_folder);
+		auto log_folder = (std::filesystem::path(g_log_folder) / "log").make_preferred();
+		if (!std::filesystem::exists(log_folder)) {
+		    std::filesystem::create_directory(log_folder);
 	    }
-		auto crash_log_path = boost::filesystem::path(log_folder / buf.str()).make_preferred();
+		auto crash_log_path = std::filesystem::path(log_folder / buf.str()).make_preferred();
 		std::string log_filename = crash_log_path.string();
 		output_file->open(log_filename, std::ios::out | std::ios::app);
 

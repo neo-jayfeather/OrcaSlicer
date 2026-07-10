@@ -14,7 +14,6 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/nowide/fstream.hpp>
 #include <boost/nowide/cstdio.hpp>
-#include <boost/filesystem/path.hpp>
 
 #include <fast_float/fast_float.h>
 

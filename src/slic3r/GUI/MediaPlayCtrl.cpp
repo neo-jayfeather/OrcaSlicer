@@ -483,7 +483,7 @@ void MediaPlayCtrl::ToggleStream()
         file.close();
         m_streaming = false;
         return;
-    } else if (!boost::filesystem::exists(file_url)) {
+    } else if (!std::filesystem::exists(file_url)) {
         boost::nowide::ofstream file(file_url);
         file.close();
     }
@@ -746,12 +746,12 @@ bool MediaPlayCtrl::start_stream_service(bool *need_install)
     auto file_ffmpeg = tools_dir + "ffmpeg";
     auto file_ff_cfg = tools_dir + "ffmpeg.cfg";
 #endif
-    if (!boost::filesystem::exists(file_source) || !boost::filesystem::exists(file_ffmpeg) || !boost::filesystem::exists(file_ff_cfg)) {
+    if (!std::filesystem::exists(file_source) || !std::filesystem::exists(file_ffmpeg) || !std::filesystem::exists(file_ff_cfg)) {
         if (need_install) *need_install = true;
         return false;
     }
     std::string file_url  = data_dir() + "/cameratools/url.txt";
-    if (!boost::filesystem::exists(file_url)) {
+    if (!std::filesystem::exists(file_url)) {
         boost::nowide::ofstream file(file_url);
         file.close();
     }
@@ -765,24 +765,24 @@ bool MediaPlayCtrl::start_stream_service(bool *need_install)
         boost::algorithm::split(configss, configs, boost::algorithm::is_any_of("\r\n"));
         configss.erase(std::remove(configss.begin(), configss.end(), std::string()), configss.end());
         boost::process::pipe intermediate;
-        boost::filesystem::path start_dir(boost::filesystem::path(data_dir()) / "plugins");
+        std::filesystem::path start_dir(std::filesystem::path(data_dir()) / "plugins");
 #ifdef __WXMSW__
         auto plugins_dir = boost::nowide::widen(data_dir()) + L"\\plugins\\";
         for (auto dll : {L"BambuSource.dll", L"live555.dll"}) {
             auto file_dll  = tools_dir + dll;
             auto file_dll2 = plugins_dir + dll;
-            if (!boost::filesystem::exists(file_dll) || boost::filesystem::last_write_time(file_dll) != boost::filesystem::last_write_time(file_dll2))
-                boost::filesystem::copy_file(file_dll2, file_dll, boost::filesystem::copy_options::overwrite_existing);
+            if (!std::filesystem::exists(file_dll) || std::filesystem::last_write_time(file_dll) != std::filesystem::last_write_time(file_dll2))
+                std::filesystem::copy_file(file_dll2, file_dll, std::filesystem::copy_options::overwrite_existing);
         }
-        boost::process::child process_source(file_source, file_url2.ToStdWstring(), boost::process::start_dir(tools_dir), 
+        boost::process::child process_source(file_source, file_url2.ToStdWstring(), boost::process::start_dir(tools_dir.string()), 
                                              boost::process::windows::create_no_window, 
                                              boost::process::std_out > intermediate, boost::process::limit_handles);
         boost::process::child process_ffmpeg(file_ffmpeg, configss, boost::process::windows::create_no_window, 
                                              boost::process::std_in < intermediate, boost::process::limit_handles);
 #else
-        boost::filesystem::permissions(file_source, boost::filesystem::owner_exe | boost::filesystem::add_perms);
-        boost::filesystem::permissions(file_ffmpeg, boost::filesystem::owner_exe | boost::filesystem::add_perms);
-        boost::process::child process_source(file_source, file_url2.data().AsInternal(), boost::process::start_dir(start_dir), 
+        std::filesystem::permissions(file_source, std::filesystem::perms::owner_exec, std::filesystem::perm_options::add);
+        std::filesystem::permissions(file_ffmpeg, std::filesystem::perms::owner_exec, std::filesystem::perm_options::add);
+        boost::process::child process_source(file_source, file_url2.data().AsInternal(), boost::process::start_dir(start_dir.string()), 
                                              boost::process::std_out > intermediate, boost::process::limit_handles);
         boost::process::child process_ffmpeg(file_ffmpeg, configss, boost::process::std_in < intermediate, boost::process::limit_handles);
 #endif

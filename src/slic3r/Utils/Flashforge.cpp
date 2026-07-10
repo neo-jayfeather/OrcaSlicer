@@ -8,7 +8,6 @@
 #include <fstream>
 #include <set>
 #include <map>
-#include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -37,7 +36,7 @@
 #include "SerialMessage.hpp"
 #include "SerialMessageType.hpp"
 
-namespace fs = boost::filesystem;
+
 namespace pt = boost::property_tree;
 using json = nlohmann::json;
 
@@ -184,7 +183,7 @@ bool validate_local_api_response(const std::string& response_body, wxString& err
 
 std::string sanitize_flashforge_filename(const std::string& filename, const std::string& fallback_extension = {})
 {
-    std::string basename = fs::path(filename).filename().string();
+    std::string basename = std::filesystem::path(filename).filename().string();
     if (basename.empty()) {
         basename = "print";
         if (!fallback_extension.empty())
@@ -574,7 +573,7 @@ bool Flashforge::upload_local_api(PrintHostUpload upload_data, ProgressFn progre
     auto        filename = sanitize_flashforge_filename(upload_data.upload_path.string(), fallback_extension);
     std::string file_size;
     try {
-        file_size = std::to_string(fs::file_size(upload_data.source_path));
+        file_size = std::to_string(std::filesystem::file_size(upload_data.source_path));
     } catch (...) {
         file_size = "0";
     }

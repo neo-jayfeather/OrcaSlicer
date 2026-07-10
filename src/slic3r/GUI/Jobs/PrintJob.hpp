@@ -7,7 +7,7 @@
 #include "Job.hpp"
 #include "slic3r/GUI/DeviceCore/DevStorage.h" 
 
-namespace fs = boost::filesystem;
+
 
 namespace Slic3r {
 namespace GUI {
@@ -21,9 +21,9 @@ class PrintPrepareData
 public:
     bool            is_from_plater = true;
     int             plate_idx;
-    fs::path        _3mf_path;
-    fs::path        _3mf_config_path;
-    fs::path        _temp_path;
+    std::filesystem::path        _3mf_path;
+    std::filesystem::path        _3mf_config_path;
+    std::filesystem::path        _temp_path;
     PrintPrepareData() {
         plate_idx = 0;
     }

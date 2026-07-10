@@ -1477,7 +1477,7 @@ void GLGizmoSVG::draw_filename(){
     if (can_reload) {
         ImGui::SameLine();
         if (draw_clickable(m_icons, IconType::refresh)) {
-            if (!boost::filesystem::exists(m_volume_shape.svg_file->path)) {
+            if (!std::filesystem::exists(m_volume_shape.svg_file->path)) {
                 m_volume_shape.svg_file->path.clear();
             } else {
                 file_changed = true;
@@ -2187,7 +2187,7 @@ std::string choose_svg_file()
         BOOST_LOG_TRIVIAL(warning) << "SVG file dialog result contain multiple files but only first is used.";
 
     std::string path = into_u8(input_files.front());
-    if (!boost::filesystem::exists(path)) {
+    if (!std::filesystem::exists(path)) {
         BOOST_LOG_TRIVIAL(warning) << "SVG file dialog return invalid path.";
         return {};
     }
@@ -2218,8 +2218,8 @@ EmbossShape select_shape(std::string_view filepath, double tesselation_tolerance
     }
     
 
-    boost::filesystem::path path(svg.path);
-    if (!boost::filesystem::exists(path)) {
+    std::filesystem::path path(svg.path);
+    if (!std::filesystem::exists(path)) {
         show_error(nullptr, GUI::format(_u8L("File does NOT exist (%1%)."), svg.path));
         return {};
     }

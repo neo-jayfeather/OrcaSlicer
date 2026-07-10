@@ -17,9 +17,9 @@
 #include "Widgets/DialogButtons.hpp"
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
 
 #include <algorithm>
+#include <filesystem>
 
 namespace Slic3r {
 namespace GUI {
@@ -340,10 +340,10 @@ wxPanel* BedShapePanel::init_texture_panel()
             }));
 
         filename_lbl->Bind(wxEVT_UPDATE_UI, ([this](wxUpdateUIEvent& e) {
-                e.SetText(_(boost::filesystem::path(m_custom_texture).filename().string()));
+                e.SetText(_(std::filesystem::path(m_custom_texture).filename().string()));
                 wxStaticText* lbl = dynamic_cast<wxStaticText*>(e.GetEventObject());
                 if (lbl != nullptr) {
-                    bool exists = (m_custom_texture == NONE) || boost::filesystem::exists(m_custom_texture);
+                    bool exists = (m_custom_texture == NONE) || std::filesystem::exists(m_custom_texture);
                     lbl->SetForegroundColour(exists ? wxGetApp().get_label_clr_default() : wxColour("#E14747")); // ORCA
 
                     wxString tooltip_text = "";
@@ -418,10 +418,10 @@ wxPanel* BedShapePanel::init_model_panel()
             }));
 
         filename_lbl->Bind(wxEVT_UPDATE_UI, ([this](wxUpdateUIEvent& e) {
-                e.SetText(_(boost::filesystem::path(m_custom_model).filename().string()));
+                e.SetText(_(std::filesystem::path(m_custom_model).filename().string()));
                 wxStaticText* lbl = dynamic_cast<wxStaticText*>(e.GetEventObject());
                 if (lbl != nullptr) {
-                    bool exists = (m_custom_model == NONE) || boost::filesystem::exists(m_custom_model);
+                    bool exists = (m_custom_model == NONE) || std::filesystem::exists(m_custom_model);
                     lbl->SetForegroundColour(exists ? wxGetApp().get_label_clr_default() : wxColour("#E14747")); // ORCA
 
                     wxString tooltip_text = "";

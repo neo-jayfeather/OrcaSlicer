@@ -4,7 +4,6 @@
 #include <cctype>
 
 #include <wx/dir.h>
-#include <boost/filesystem.hpp>
 
 using namespace nlohmann;
 
@@ -170,16 +169,16 @@ std::map<std::string, std::vector<std::string>> DevPrinterConfigUtil::get_all_su
     try
     {
         const auto& from_dir = m_resource_file_path + "/printers/";
-        if (!boost::filesystem::exists(from_dir))
+        if (!std::filesystem::exists(from_dir))
         {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": direction does not exist ";
             return subseries;
         }
 
-        for (const auto& entry : boost::filesystem::directory_iterator(from_dir))
+        for (const auto& entry : std::filesystem::directory_iterator(from_dir))
         {
-            const boost::filesystem::path& file_path = entry.path();
-            if (boost::filesystem::is_regular_file(file_path) && file_path.extension() == ".json")
+            const std::filesystem::path& file_path = entry.path();
+            if (std::filesystem::is_regular_file(file_path) && file_path.extension() == ".json")
             {
                 try
                 {

@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 
 #include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/AppConfig.hpp"
@@ -9,43 +10,43 @@ using namespace Slic3r;
 
 namespace {
 
-namespace fs = boost::filesystem;
+
 
 struct TempPresetDir {
-    fs::path path;
+    std::filesystem::path path;
 
+    // NTODO: fix
     TempPresetDir()
     {
-        path = fs::temp_directory_path() / fs::unique_path("orcaslicer-preset-%%%%-%%%%-%%%%");
-        fs::create_directories(path);
+        path = std::filesystem::temp_directory_path() / boost::filesystem::unique_path("orcaslicer-preset-%%%%-%%%%-%%%%");
+        std::filesystem::create_directories(path);
     }
 
     ~TempPresetDir()
     {
-        boost::system::error_code ec;
-        fs::remove_all(path, ec);
+        std::filesystem::remove_all(path);
     }
 };
 
-void write_print_preset(const DynamicPrintConfig &default_config, const fs::path &file, const std::string &name, const std::string &inherits = {})
+void write_print_preset(const DynamicPrintConfig &default_config, const std::filesystem::path &file, const std::string &name, const std::string &inherits = {})
 {
     DynamicPrintConfig config(default_config);
     config.option<ConfigOptionString>("print_settings_id", true)->value = name;
     config.option<ConfigOptionString>(BBL_JSON_KEY_INHERITS, true)->value = inherits;
 
-    fs::create_directories(file.parent_path());
+    std::filesystem::create_directories(file.parent_path());
     config.save_to_json(file.string(), name, "User", "1.0.0");
 }
 
 // Write a preset json carrying a name and an "inherits" value, using the given collection's
 // default config so it loads back into that collection. Works for any preset type.
-void write_preset_with_inherits(const DynamicPrintConfig &default_config, const fs::path &file,
+void write_preset_with_inherits(const DynamicPrintConfig &default_config, const std::filesystem::path &file,
                                 const std::string &name, const std::string &inherits)
 {
     DynamicPrintConfig config(default_config);
     config.option<ConfigOptionString>(BBL_JSON_KEY_INHERITS, true)->value = inherits;
 
-    fs::create_directories(file.parent_path());
+    std::filesystem::create_directories(file.parent_path());
     config.save_to_json(file.string(), name, "User", "1.0.0");
 }
 
@@ -119,10 +120,10 @@ TEST_CASE("Legacy bundle import without bundle metadata stays in the user preset
     std::vector<std::string>   result;
     int                        overwrite = 0;
     std::string                file      = (temp_dir.path / "legacy-bundle" / "Imported.json").string();
-    const fs::path             user_root = temp_dir.path / "user";
+    const std::filesystem::path             user_root = temp_dir.path / "user";
 
     write_print_preset(bundle.prints.default_preset().config, file, "Imported");
-    fs::create_directories(user_root);
+    std::filesystem::create_directories(user_root);
     bundle.prints.update_user_presets_directory(user_root.string(), PRESET_PRINT_NAME);
 
     REQUIRE(bundle.import_json_presets(
@@ -139,7 +140,7 @@ TEST_CASE("Legacy bundle import without bundle metadata stays in the user preset
     CHECK(imported->bundle_id.empty());
     CHECK_FALSE(imported->is_from_bundle());
     // Detached user presets (no inherits) are saved in the "base" subfolder of the user preset root.
-    CHECK(fs::equivalent(fs::path(imported->file).parent_path().parent_path(), user_root / PRESET_PRINT_NAME));
+    CHECK(std::filesystem::equivalent(std::filesystem::path(imported->file).parent_path().parent_path(), user_root / PRESET_PRINT_NAME));
 }
 
 TEST_CASE("Current vendor type tolerates missing printer model", "[Preset][Bundle]")

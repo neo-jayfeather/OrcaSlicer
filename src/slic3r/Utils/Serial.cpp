@@ -10,9 +10,9 @@
 #include <fstream>
 #include <exception>
 #include <stdexcept>
+#include <filesystem>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 #include <boost/optional.hpp>
 
@@ -222,7 +222,7 @@ std::vector<SerialPortInfo> scan_serial_ports_extended()
 #else
     // UNIX / Linux
     std::initializer_list<const char*> prefixes { "ttyUSB" , "ttyACM", "tty.", "cu.", "rfcomm" };
-    for (auto &dir_entry : boost::filesystem::directory_iterator(boost::filesystem::path("/dev"))) {
+    for (auto &dir_entry : std::filesystem::directory_iterator(std::filesystem::path("/dev"))) {
         std::string name = dir_entry.path().filename().string();
         for (const char *prefix : prefixes) {
             if (boost::starts_with(name, prefix)) {

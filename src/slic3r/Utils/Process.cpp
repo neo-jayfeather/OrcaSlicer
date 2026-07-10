@@ -11,7 +11,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 
 // For starting another OrcaSlicer instance on OSX.
@@ -57,7 +56,7 @@ static void start_new_slicer_or_gcodeviewer(const NewSlicerInstanceType instance
 		BOOST_LOG_TRIVIAL(error) << "Failed to spawn a new slicer \"" << into_u8(path);
 #else 
 	// Own executable path.
-	boost::filesystem::path bin_path = into_path(wxStandardPaths::Get().GetExecutablePath());
+	std::filesystem::path bin_path = into_path(wxStandardPaths::Get().GetExecutablePath());
 #if defined(__APPLE__)
 	{
         auto bundle_path = bin_path.parent_path().parent_path().parent_path();

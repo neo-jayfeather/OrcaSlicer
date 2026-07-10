@@ -25,7 +25,7 @@
 #include "Bonjour.hpp"
 #include "slic3r/GUI/BonjourDialog.hpp"
 
-namespace fs = boost::filesystem;
+
 namespace pt = boost::property_tree;
 
 

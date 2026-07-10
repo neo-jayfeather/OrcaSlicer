@@ -26,7 +26,6 @@
 #include <numeric>
 #include <unordered_set>
 #include <sstream>
-#include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/regex.hpp>
@@ -3103,7 +3102,7 @@ int Print::get_hrc_by_nozzle_type(const NozzleType&type)
 {
     static std::map<std::string, int>nozzle_type_to_hrc;
     if (nozzle_type_to_hrc.empty()) {
-        fs::path file_path = fs::path(resources_dir()) / "info" / "nozzle_info.json";
+        std::filesystem::path file_path = std::filesystem::path(resources_dir()) / "info" / "nozzle_info.json";
         boost::nowide::ifstream in(file_path.string());
         //std::ifstream in(file_path.string());
         json j;
@@ -3136,7 +3135,7 @@ std::vector<std::string> Print::get_incompatible_filaments_by_nozzle(const float
 {
     static std::map<std::string, std::map<std::string, std::vector<std::string>>> incompatible_filaments;
     if(incompatible_filaments.empty()){
-        fs::path file_path = fs::path(resources_dir()) / "info" / "nozzle_incompatibles.json";
+        std::filesystem::path file_path = std::filesystem::path(resources_dir()) / "info" / "nozzle_incompatibles.json";
         boost::nowide::ifstream in(file_path.string());
         json j;
         try {
@@ -3856,7 +3855,7 @@ std::string PrintStatistics::finalize_output_path(const std::string &path_in) co
 {
     std::string final_path;
     try {
-        boost::filesystem::path path(path_in);
+        std::filesystem::path path(path_in);
         DynamicConfig cfg = this->config();
         PlaceholderParser pp;
         std::string new_stem = pp.process(path.stem().string(), 0, &cfg);
@@ -4674,7 +4673,7 @@ static void from_json(const json& j, groupedVolumeSlices& firstlayer_group)
 int Print::export_cached_data(const std::string& directory, bool with_space)
 {
     int ret = 0;
-    boost::filesystem::path directory_path(directory);
+    std::filesystem::path directory_path(directory);
 
     auto convert_layer_to_json = [](json& layer_json, const Layer* layer) {
         json slice_polygons_json = json::array(), slice_bboxs_json = json::array(), overhang_polygons_json = json::array(), layer_regions_json = json::array();
@@ -4721,11 +4720,11 @@ int Print::export_cached_data(const std::string& directory, bool with_space)
     };
 
     //firstly clear this directory
-    if (fs::exists(directory_path)) {
-        fs::remove_all(directory_path);
+    if (std::filesystem::exists(directory_path)) {
+        std::filesystem::remove_all(directory_path);
     }
     try {
-        if (!fs::create_directory(directory_path)) {
+        if (!std::filesystem::create_directory(directory_path)) {
             BOOST_LOG_TRIVIAL(error) << boost::format("create directory %1% failed")%directory;
             return CLI_EXPORT_CACHE_DIRECTORY_CREATE_FAILED;
         }
@@ -4942,9 +4941,9 @@ int Print::export_cached_data(const std::string& directory, bool with_space)
 int Print::load_cached_data(const std::string& directory)
 {
     int ret = 0;
-    boost::filesystem::path directory_path(directory);
+    std::filesystem::path directory_path(directory);
 
-    if (!fs::exists(directory_path)) {
+    if (!std::filesystem::exists(directory_path)) {
         BOOST_LOG_TRIVIAL(info) << boost::format("directory %1% not exist.")%directory;
         return CLI_IMPORT_CACHE_NOT_FOUND;
     }
@@ -4980,7 +4979,7 @@ int Print::load_cached_data(const std::string& directory)
         }
         std::string file_name = directory +"/obj_"+std::to_string(identify_id)+".json";
 
-        if (!fs::exists(file_name)) {
+        if (!std::filesystem::exists(file_name)) {
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__<<boost::format(": file %1% not exist, maybe a shared object, skip it")%file_name;
             continue;
         }

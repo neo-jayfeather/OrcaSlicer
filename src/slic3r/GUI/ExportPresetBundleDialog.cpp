@@ -54,7 +54,7 @@ void ExportPresetBundleDialog::on_dpi_changed(const wxRect& suggested_rect) { th
 void ExportPresetBundleDialog::Init()
 {
     wxString TargetUrl = from_u8(
-        (boost::filesystem::path(resources_dir()) / "web/dialog/ExportPresetDialog/index.html").make_preferred().string());
+        (std::filesystem::path(resources_dir()) / "web/dialog/ExportPresetDialog/index.html").make_preferred().string());
     wxString strlang = wxGetApp().current_language_code_safe();
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", strlang=%1%") % into_u8(strlang);
     if (strlang != "")
@@ -195,22 +195,22 @@ static mz_bool initial_zip_archive(mz_zip_archive& zip_archive, const std::strin
 void ExportPresetBundleDialog::InitExportData()
 {
     // Delete the Temp folder
-    boost::filesystem::path folder(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp");
-    if (boost::filesystem::exists(folder))
-        boost::filesystem::remove_all(folder);
+    std::filesystem::path folder(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp");
+    if (std::filesystem::exists(folder))
+        std::filesystem::remove_all(folder);
 
     boost::system::error_code ec;
-    boost::filesystem::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
+    std::filesystem::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
     bool temp_folder_exist = true;
-    if (!boost::filesystem::exists(user_folder)) {
-        if (!boost::filesystem::create_directories(user_folder, ec)) {
+    if (!std::filesystem::exists(user_folder)) {
+        if (!std::filesystem::create_directories(user_folder, ec)) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " create directory failed: " << user_folder << " " << ec.message();
             temp_folder_exist = false;
         }
     }
-    boost::filesystem::path temp_folder(user_folder / "Temp");
-    if (!boost::filesystem::exists(temp_folder)) {
-        if (!boost::filesystem::create_directories(temp_folder, ec)) {
+    std::filesystem::path temp_folder(user_folder / "Temp");
+    if (!std::filesystem::exists(temp_folder)) {
+        if (!std::filesystem::create_directories(temp_folder, ec)) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " create directory failed: " << temp_folder << " " << ec.message();
             temp_folder_exist = false;
         }
@@ -255,7 +255,7 @@ void ExportPresetBundleDialog::InitExportData()
             // make new and erase sensitive information
             Preset* new_printer_preset = new Preset(printer_preset);
             if (new_printer_preset->type == Preset::Type::TYPE_PRINTER) {
-                boost::filesystem::path file_path(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp" + "/" +
+                std::filesystem::path file_path(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp" + "/" +
                                                   (new_printer_preset->name + ".json"));
                 new_printer_preset->file = file_path.make_preferred().string();
 
@@ -382,14 +382,14 @@ void ExportPresetBundleDialog::OnExportData(const wxString& path, const wxString
     if (export_path.empty() || "initial_failed" == export_path)
         return;
 
-    boost::filesystem::path export_file_path = boost::filesystem::path(export_path).make_preferred();
+    std::filesystem::path export_file_path = std::filesystem::path(export_path).make_preferred();
     if (export_file_path.extension().empty())
         export_file_path += ".orca_bundle";
 
-    const boost::filesystem::path export_dir = export_file_path.parent_path();
-    if (!export_dir.empty() && !boost::filesystem::exists(export_dir)) {
+    const std::filesystem::path export_dir = export_file_path.parent_path();
+    if (!export_dir.empty() && !std::filesystem::exists(export_dir)) {
         boost::system::error_code ec;
-        if (!boost::filesystem::create_directories(export_dir, ec)) {
+        if (!std::filesystem::create_directories(export_dir, ec)) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " create directory failed: " << export_dir << " " << ec.message();
             return;
         }
@@ -422,7 +422,7 @@ void ExportPresetBundleDialog::OnExportData(const wxString& path, const wxString
         show_export_result(ExportCase::INITIALIZE_FAIL);
     }
     for (auto& printer : selected_printers) {
-        boost::filesystem::path printer_file_path = boost::filesystem::path(printer->file);
+        std::filesystem::path printer_file_path = std::filesystem::path(printer->file);
         std::string preset_path                   = printer_file_path.make_preferred().string();
         if (preset_path.empty()) {
             BOOST_LOG_TRIVIAL(info) << "Export printer preset: " << printer->name << " skip because of the preset file path is empty.";
@@ -443,7 +443,7 @@ void ExportPresetBundleDialog::OnExportData(const wxString& path, const wxString
         BOOST_LOG_TRIVIAL(info) << "Printer preset json add successful: " << printer->name;
     }
     for (auto& filament : selected_filaments) {
-        boost::filesystem::path filament_file_path = boost::filesystem::path(filament->file);
+        std::filesystem::path filament_file_path = std::filesystem::path(filament->file);
         std::string filament_preset_path           = filament_file_path.make_preferred().string();
         if (filament_preset_path.empty()) {
             BOOST_LOG_TRIVIAL(info) << "Export filament preset: " << filament->name << " skip because of the preset file path is empty.";
@@ -463,7 +463,7 @@ void ExportPresetBundleDialog::OnExportData(const wxString& path, const wxString
     }
 
     for (auto& process : selected_processes) {
-        boost::filesystem::path process_file_path = boost::filesystem::path(process->file);
+        std::filesystem::path process_file_path = std::filesystem::path(process->file);
         std::string process_preset_path           = process_file_path.make_preferred().string();
         if (process_preset_path.empty()) {
             BOOST_LOG_TRIVIAL(info) << "Export process preset: " << process->name << " skip because of the preset file path is empty.";

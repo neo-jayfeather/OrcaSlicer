@@ -912,7 +912,7 @@ void SendToPrinterDialog::on_ok(wxCommandEvent &event)
    /* std::string  file_name       = "";
 	auto default_output_file    = wxGetApp().plater()->get_export_gcode_filename(".3mf");
     if (!default_output_file.empty()) {
-		fs::path default_output_file_path = boost::filesystem::path(default_output_file.c_str());
+		std::filesystem::path default_output_file_path = std::filesystem::path(default_output_file.c_str());
 		file_name = default_output_file_path.filename().string();
     }*/
 
@@ -1542,7 +1542,7 @@ void SendToPrinterDialog::set_default()
         if (filename.empty()) filename = _L("Untitled");
     }
 
-    fs::path filename_path(filename.c_str());
+    std::filesystem::path filename_path(filename.ToStdString());
     m_current_project_name = from_path(filename_path.filename());
 
     //unsupported character filter

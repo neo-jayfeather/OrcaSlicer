@@ -4,7 +4,6 @@
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/Print.hpp"
 #include "libslic3r/Utils.hpp"
-#include <boost/filesystem/operations.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
@@ -68,13 +67,13 @@ void generate_custom_presets(PresetBundle* preset_bundle, AppConfig& app_config)
     std::string       user_sub_folder  = DEFAULT_USER_FOLDER_NAME;
     const std::string dir_user_presets = data_dir() + "/" + PRESET_USER_DIR + "/" + user_sub_folder;
 
-    fs::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
-    if (!fs::exists(user_folder))
-        fs::create_directory(user_folder);
+    std::filesystem::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
+    if (!std::filesystem::exists(user_folder))
+        std::filesystem::create_directory(user_folder);
 
-    fs::path folder(dir_user_presets);
-    if (!fs::exists(folder))
-        fs::create_directory(folder);
+    std::filesystem::path folder(dir_user_presets);
+    if (!std::filesystem::exists(folder))
+        std::filesystem::create_directory(folder);
     std::map<std::string, std::string> need_to_delete_list; // store setting ids of preset
 
     preset_bundle->prints.save_user_presets(dir_user_presets, PRESET_PRINT_NAME, need_to_delete_list);
@@ -122,7 +121,7 @@ int main(int argc, char* argv[])
     bool        check_filament_subtypes = vm["check_filament_subtypes"].as<bool>();
 
     //  check if path is valid, and return error if not
-    if (!fs::exists(path) || !fs::is_directory(path)) {
+    if (!std::filesystem::exists(path) || !std::filesystem::is_directory(path)) {
         std::cerr << "Error: " << path << " is not a valid directory\n";
         return 1;
     }
@@ -133,10 +132,10 @@ int main(int argc, char* argv[])
 
     set_data_dir(path);
 
-    auto user_dir = fs::path(Slic3r::data_dir()) / PRESET_USER_DIR;
+    auto user_dir = std::filesystem::path(Slic3r::data_dir()) / PRESET_USER_DIR;
     user_dir.make_preferred();
-    if (!fs::exists(user_dir))
-        fs::create_directory(user_dir);
+    if (!std::filesystem::exists(user_dir))
+        std::filesystem::create_directory(user_dir);
 
     set_logging_level(log_level);
     auto preset_bundle = new PresetBundle();

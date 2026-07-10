@@ -583,7 +583,7 @@ static json get_config_json(const Preset* preset) {
 
 static char* read_json_file(const std::string &preset_path)
 {
-    FILE *json_file = boost::nowide::fopen(boost::filesystem::path(preset_path).make_preferred().string().c_str(), "rb");
+    FILE *json_file = boost::nowide::fopen(std::filesystem::path(preset_path).make_preferred().string().c_str(), "rb");
     if (json_file == NULL) {
         BOOST_LOG_TRIVIAL(info) << "Failed to open JSON file: " << preset_path;
         return NULL;
@@ -2132,7 +2132,7 @@ void CreatePrinterPresetDialog::load_texture() {
     }
     m_custom_texture = file_name;
     wxGCDC dc;
-    auto text = wxControl::Ellipsize(_L(boost::filesystem::path(file_name).filename().string()), dc, wxELLIPSIZE_END, FromDIP(200));
+    auto text = wxControl::Ellipsize(_L(std::filesystem::path(file_name).filename().string()), dc, wxELLIPSIZE_END, FromDIP(200));
     m_upload_svg_tip_text->SetLabelText(text);
 }
 
@@ -2163,7 +2163,7 @@ void CreatePrinterPresetDialog::load_model_stl()
     }
     m_custom_model = file_name;
     wxGCDC dc;
-    auto text      = wxControl::Ellipsize(_L(boost::filesystem::path(file_name).filename().string()), dc, wxELLIPSIZE_END, FromDIP(200));
+    auto text      = wxControl::Ellipsize(_L(std::filesystem::path(file_name).filename().string()), dc, wxELLIPSIZE_END, FromDIP(200));
     m_upload_stl_tip_text->SetLabelText(text);
 }
 
@@ -2201,10 +2201,10 @@ bool CreatePrinterPresetDialog::load_system_and_user_presets_with_curr_model(Pre
     } else {
         selected_vendor_id = m_printer_preset_vendor_selected.id;
 
-        if (boost::filesystem::exists(boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR / selected_vendor_id)) {
-            preset_path = (boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR).string();
-        } else if (boost::filesystem::exists(boost::filesystem::path(Slic3r::resources_dir()) / "profiles" / selected_vendor_id)) {
-            preset_path = (boost::filesystem::path(Slic3r::resources_dir()) / "profiles").string();
+        if (std::filesystem::exists(std::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR / selected_vendor_id)) {
+            preset_path = (std::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR).string();
+        } else if (std::filesystem::exists(std::filesystem::path(Slic3r::resources_dir()) / "profiles" / selected_vendor_id)) {
+            preset_path = (std::filesystem::path(Slic3r::resources_dir()) / "profiles").string();
         }
 
         if (preset_path.empty()) {
@@ -2273,8 +2273,8 @@ bool CreatePrinterPresetDialog::load_system_and_user_presets_with_curr_model(Pre
     } else {
         selected_vendor_id = PRESET_TEMPLATE_DIR;
         preset_path.clear();
-        if (boost::filesystem::exists(boost::filesystem::path(Slic3r::resources_dir()) / PRESET_PROFILES_TEMOLATE_DIR / selected_vendor_id)) {
-            preset_path = (boost::filesystem::path(Slic3r::resources_dir()) / PRESET_PROFILES_TEMOLATE_DIR).string();
+        if (std::filesystem::exists(std::filesystem::path(Slic3r::resources_dir()) / PRESET_PROFILES_TEMOLATE_DIR / selected_vendor_id)) {
+            preset_path = (std::filesystem::path(Slic3r::resources_dir()) / PRESET_PROFILES_TEMOLATE_DIR).string();
         }
         if (preset_path.empty()) {
             BOOST_LOG_TRIVIAL(info) << "Preset path was not found";
@@ -3602,8 +3602,8 @@ ExportConfigsDialog::~ExportConfigsDialog()
     }
 
     // Delete the Temp folder
-    boost::filesystem::path temp_folder(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp");
-    if (boost::filesystem::exists(temp_folder)) boost::filesystem::remove_all(temp_folder);
+    std::filesystem::path temp_folder(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp");
+    if (std::filesystem::exists(temp_folder)) std::filesystem::remove_all(temp_folder);
 }
 
 void ExportConfigsDialog::on_dpi_changed(const wxRect &suggested_rect) {
@@ -3657,7 +3657,7 @@ bool ExportConfigsDialog::earse_preset_fields_for_safe(Preset *preset)
 {
     if (preset->type != Preset::Type::TYPE_PRINTER) return true;
 
-    boost::filesystem::path file_path(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp" + "/" + (preset->name + ".json"));
+    std::filesystem::path file_path(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp" + "/" + (preset->name + ".json"));
     preset->file = file_path.make_preferred().string();
 
     DynamicPrintConfig &config = preset->config;
@@ -3677,9 +3677,9 @@ std::string ExportConfigsDialog::initial_file_path(const wxString &path, const s
 {
     std::string             export_path         = into_u8(path);
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "initial file path and path is:" << export_path << " and sub path is: " << sub_file_path;
-    boost::filesystem::path printer_export_path = (boost::filesystem::path(export_path) / sub_file_path).make_preferred();
-    if (!boost::filesystem::exists(printer_export_path)) {
-        boost::filesystem::create_directories(printer_export_path);
+    std::filesystem::path printer_export_path = (std::filesystem::path(export_path) / sub_file_path).make_preferred();
+    if (!std::filesystem::exists(printer_export_path)) {
+        std::filesystem::create_directories(printer_export_path);
         export_path = printer_export_path.string();
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "Same path exists, delete and rebuild, and path is: " << export_path;
     }
@@ -3689,13 +3689,13 @@ std::string ExportConfigsDialog::initial_file_path(const wxString &path, const s
 std::string ExportConfigsDialog::initial_file_name(const wxString &path, const std::string file_name)
 {
     std::string             export_path         = into_u8(path);
-    boost::filesystem::path printer_export_path = (boost::filesystem::path(export_path) / file_name).make_preferred();
-    if (boost::filesystem::exists(printer_export_path)) {
+    std::filesystem::path printer_export_path = (std::filesystem::path(export_path) / file_name).make_preferred();
+    if (std::filesystem::exists(printer_export_path)) {
         MessageDialog dlg(this, wxString::Format(_L("The \'%s\' folder already exists in the current directory. Do you want to clear it and rebuild it\?\nIf not, a time suffix will be added, and you can modify the name after creation."), file_name), wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"), wxYES_NO | wxYES_DEFAULT | wxCENTRE);
         int           res = dlg.ShowModal();
         if (wxID_YES == res) {
             try {
-                boost::filesystem::remove_all(printer_export_path);
+                std::filesystem::remove_all(printer_export_path);
             }
             catch(...) {
                 MessageDialog dlg(this,
@@ -3710,15 +3710,15 @@ std::string ExportConfigsDialog::initial_file_name(const wxString &path, const s
             export_path = printer_export_path.string();
             export_path = export_path.substr(0, export_path.find(".zip"));
             std::string              export_path_with_time;
-            boost::filesystem::path *printer_export_path_with_time = nullptr;
+            std::filesystem::path *printer_export_path_with_time = nullptr;
             do {
                 if (printer_export_path_with_time) {
                     delete printer_export_path_with_time;
                     printer_export_path_with_time = nullptr;
                 }
                 export_path_with_time         = export_path + " " + get_curr_time() + ".zip";
-                printer_export_path_with_time = new boost::filesystem::path(export_path_with_time);
-            } while (boost::filesystem::exists(*printer_export_path_with_time));
+                printer_export_path_with_time = new std::filesystem::path(export_path_with_time);
+            } while (std::filesystem::exists(*printer_export_path_with_time));
             export_path = export_path_with_time;
             if (printer_export_path_with_time) {
                 delete printer_export_path_with_time;
@@ -3957,7 +3957,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_preset_bundle_to_fi
                 return ExportCase::INITIALIZE_FAIL;
             }
 
-            boost::filesystem::path printer_file_path      = boost::filesystem::path(printer_preset->file);
+            std::filesystem::path printer_file_path      = std::filesystem::path(printer_preset->file);
             std::string             preset_path       = printer_file_path.make_preferred().string();
             if (preset_path.empty()) {
                 BOOST_LOG_TRIVIAL(info) << "Export printer preset: " << printer_preset->name << " skip because of the preset file path is empty.";
@@ -3980,7 +3980,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_preset_bundle_to_fi
             std::unordered_map<std::string, std::vector<Preset *>>::iterator iter = m_filament_presets.find(printer_preset_name);
             if (m_filament_presets.end() != iter) {
                 for (Preset *preset : iter->second) {
-                    boost::filesystem::path filament_file_path   = boost::filesystem::path(preset->file);
+                    std::filesystem::path filament_file_path   = std::filesystem::path(preset->file);
                     std::string             filament_preset_path = filament_file_path.make_preferred().string();
                     if (filament_preset_path.empty()) {
                         BOOST_LOG_TRIVIAL(info) << "Export filament preset: " << preset->name << " skip because of the preset file path is empty.";
@@ -4002,7 +4002,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_preset_bundle_to_fi
             iter = m_process_presets.find(printer_preset_name);
             if (m_process_presets.end() != iter) {
                 for (Preset *preset : iter->second) {
-                    boost::filesystem::path process_file_path   = boost::filesystem::path(preset->file);
+                    std::filesystem::path process_file_path   = std::filesystem::path(preset->file);
                     std::string             process_preset_path = process_file_path.make_preferred().string();
                     if (process_preset_path.empty()) {
                         BOOST_LOG_TRIVIAL(info) << "Export process preset: " << preset->name << " skip because of the preset file path is empty.";
@@ -4086,7 +4086,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_filament_bundle_to_
                 Preset *    filament_preset = printer_name_to_preset.second;
                 if (vendor_to_filament_name.find(std::make_pair(printer_vendor, filament_preset->name)) != vendor_to_filament_name.end()) continue;
                 vendor_to_filament_name.insert(std::make_pair(printer_vendor, filament_preset->name));
-                std::string preset_path     = boost::filesystem::path(filament_preset->file).make_preferred().string();
+                std::string preset_path     = std::filesystem::path(filament_preset->file).make_preferred().string();
                 if (preset_path.empty()) {
                     BOOST_LOG_TRIVIAL(info) << "Export printer preset: " << filament_preset->name << " skip because of the preset file path is empty.";
                     continue;
@@ -4150,7 +4150,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_printer_preset_to_f
     for (std::pair<::CheckBox *, Preset *> checkbox_preset : m_preset) {
         if (checkbox_preset.first->GetValue()) {
             Preset *    printer_preset = checkbox_preset.second;
-            std::string preset_path    = boost::filesystem::path(printer_preset->file).make_preferred().string();
+            std::string preset_path    = std::filesystem::path(printer_preset->file).make_preferred().string();
             if (preset_path.empty()) {
                 BOOST_LOG_TRIVIAL(info) << "Export printer preset: " << printer_preset->name << " skip because of the preset file path is empty.";
                 continue;
@@ -4192,7 +4192,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_filament_preset_to_
                 Preset *    filament_preset = printer_name_preset.second;
                 if (filament_presets.find(filament_preset->name) != filament_presets.end()) continue;
                 filament_presets.insert(filament_preset->name);
-                std::string preset_path     = boost::filesystem::path(filament_preset->file).make_preferred().string();
+                std::string preset_path     = std::filesystem::path(filament_preset->file).make_preferred().string();
                 if (preset_path.empty()) {
                     BOOST_LOG_TRIVIAL(info) << "Export filament preset: " << filament_preset->name << " skip because of the filament file path is empty.";
                     continue;
@@ -4230,7 +4230,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_process_preset_to_f
                 for (Preset *process_preset : iter->second) {
                     if (process_presets.find(process_preset->name) != process_presets.end()) continue;
                     process_presets.insert(process_preset->name);
-                    std::string preset_path = boost::filesystem::path(process_preset->file).make_preferred().string();
+                    std::string preset_path = std::filesystem::path(process_preset->file).make_preferred().string();
                     if (preset_path.empty()) {
                         BOOST_LOG_TRIVIAL(info) << "Export process preset: " << process_preset->name << " skip because of the preset file path is empty.";
                         continue;
@@ -4330,21 +4330,21 @@ wxBoxSizer *ExportConfigsDialog::create_select_printer(wxWindow *parent)
 void ExportConfigsDialog::data_init()
 {
     // Delete the Temp folder
-    boost::filesystem::path folder(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp");
-    if (boost::filesystem::exists(folder)) boost::filesystem::remove_all(folder);
+    std::filesystem::path folder(data_dir() + "/" + PRESET_USER_DIR + "/" + "Temp");
+    if (std::filesystem::exists(folder)) std::filesystem::remove_all(folder);
 
     boost::system::error_code ec;
-    boost::filesystem::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
+    std::filesystem::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
     bool                      temp_folder_exist = true;
-    if (!boost::filesystem::exists(user_folder)) {
-        if (!boost::filesystem::create_directories(user_folder, ec)) {
+    if (!std::filesystem::exists(user_folder)) {
+        if (!std::filesystem::create_directories(user_folder, ec)) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " create directory failed: " << user_folder << " "<<ec.message();
             temp_folder_exist = false;
         }
     }
-    boost::filesystem::path temp_folder(user_folder / "Temp");
-    if (!boost::filesystem::exists(temp_folder)) {
-        if (!boost::filesystem::create_directories(temp_folder, ec)) {
+    std::filesystem::path temp_folder(user_folder / "Temp");
+    if (!std::filesystem::exists(temp_folder)) {
+        if (!std::filesystem::create_directories(temp_folder, ec)) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " create directory failed: " << temp_folder << " " << ec.message();
             temp_folder_exist = false;
         }

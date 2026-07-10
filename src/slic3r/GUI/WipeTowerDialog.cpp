@@ -407,7 +407,7 @@ WipingDialog::WipingDialog(wxWindow* parent, const int max_flush_volume) :
     m_webview->AddScriptMessageHandler("wipingDialog");
     main_sizer->Add(m_webview, 1, wxEXPAND);
 
-    fs::path filepath = fs::path(resources_dir()) / "web/flush/WipingDialog.html";
+    std::filesystem::path filepath = std::filesystem::path(resources_dir()) / "web/flush/WipingDialog.html";
     wxString filepath_str = from_path(filepath);
     wxFileName fn(filepath_str);
     if(fn.FileExists()) {

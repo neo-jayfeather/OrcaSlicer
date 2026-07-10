@@ -8,7 +8,6 @@
 #include "slic3r/GUI/MainFrame.hpp"
 #include "libslic3r_version.h"
 
-#include <boost/filesystem/path.hpp>
 #include <wx/sizer.h>
 #include <wx/string.h>
 #include <wx/toolbar.h>
@@ -120,7 +119,7 @@ PrinterWebView::PrinterWebView(wxWindow *parent)
 #ifdef __linux__
     inject_vue_resize_workaround(m_browser);
 
-    auto cookiesPath = boost::filesystem::path(data_dir() + "/cache/cookies.db");
+    auto cookiesPath = std::filesystem::path(data_dir() + "/cache/cookies.db");
     auto wv = static_cast<WebKitWebView*>(m_browser->GetNativeBackend());
     auto wv_ctx = webkit_web_view_get_context(wv);
     auto cookieManager = webkit_web_context_get_cookie_manager(wv_ctx);

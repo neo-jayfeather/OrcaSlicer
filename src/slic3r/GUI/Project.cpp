@@ -256,9 +256,9 @@ void ProjectPanel::OnScriptMessage(wxWebViewEvent& evt)
 
             if (!accessory_path.empty()) {
                 std::string decode_path = wxGetApp().url_decode(accessory_path.ToStdString());
-                fs::path path(decode_path);
+                std::filesystem::path path(decode_path);
 
-                if (fs::exists(path)) {
+                if (std::filesystem::exists(path)) {
                     wxLaunchDefaultApplication(path.wstring(), 0);
                 }
             }
@@ -320,8 +320,8 @@ void ProjectPanel::clear_model_info()
 
 std::map<std::string, std::vector<json>> ProjectPanel::Reload(wxString aux_path)
 {
-    std::vector<fs::path>                           dir_cache;
-    fs::directory_iterator                          iter_end;
+    std::vector<std::filesystem::path>                           dir_cache;
+    std::filesystem::directory_iterator                          iter_end;
     std::map<std::string, std::vector<json>> m_paths_list;
 
     const static std::array<wxString, 5> s_default_folders = {
@@ -337,35 +337,35 @@ std::map<std::string, std::vector<json>> ProjectPanel::Reload(wxString aux_path)
         m_paths_list[folder.ToStdString()] = std::vector<json>{};
 
 
-    fs::path new_aux_path(aux_path.ToStdWstring());
+    std::filesystem::path new_aux_path(aux_path.ToStdWstring());
 
     // Check new path. If not exist, create a new one.
-    if (!fs::exists(new_aux_path)) {
-        fs::create_directory(new_aux_path);
+    if (!std::filesystem::exists(new_aux_path)) {
+        std::filesystem::create_directory(new_aux_path);
     }
 
     // Create default folders if they are not loaded
     for (auto folder : s_default_folders) {
         wxString folder_path = aux_path + "/" + folder;
-        if (fs::exists(folder_path.ToStdWstring())) continue;
-        fs::create_directory(folder_path.ToStdWstring());
+        if (std::filesystem::exists(folder_path.ToStdWstring())) continue;
+        std::filesystem::create_directory(folder_path.ToStdWstring());
     }
 
     // Load from new path
-    for (fs::directory_iterator iter(new_aux_path); iter != iter_end; iter++) {
+    for (std::filesystem::directory_iterator iter(new_aux_path); iter != iter_end; iter++) {
         wxString path = iter->path().generic_wstring();
         dir_cache.push_back(iter->path());
     }
 
 
     for (auto dir : dir_cache) {
-        for (fs::directory_iterator iter(dir); iter != iter_end; iter++) {
-            if (fs::is_directory(iter->path())) continue;
+        for (std::filesystem::directory_iterator iter(dir); iter != iter_end; iter++) {
+            if (std::filesystem::is_directory(iter->path())) continue;
 
             json pfile_obj;
 
             std::string file_path = iter->path().string();
-            fs::path file_path_obj = fs::path(iter->path().string());
+            std::filesystem::path file_path_obj = std::filesystem::path(iter->path().string());
 
             for (auto folder : s_default_folders) {
                 auto idx = file_path.find(folder.ToStdString());

@@ -4,7 +4,6 @@
 #include <ctime>
 #include <chrono>
 #include <thread>
-#include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -28,7 +27,7 @@
 #include "SerialMessage.hpp"
 #include "SerialMessageType.hpp"
 
-namespace fs = boost::filesystem;
+
 namespace pt = boost::property_tree;
 
 namespace Slic3r {
@@ -159,7 +158,7 @@ int ESP3D::get_err_code_from_body(const std::string& body) const
 std::string ESP3D::get_short_name(const std::string& filename) const
 {
     std::string             shortname = "";
-    boost::filesystem::path p(filename);
+    std::filesystem::path p(filename);
     std::string             stem      = p.stem().string();
     std::string             extension = p.extension().string();
     if (!extension.empty() && extension[0] == '.') {

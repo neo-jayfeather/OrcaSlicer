@@ -8,6 +8,7 @@
 #include "Widgets/HyperLink.hpp"
 #include <string>
 #include <vector>
+#include <filesystem>
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/Utils.hpp"
 
@@ -1478,12 +1479,12 @@ FlowRateCalibrationDialog::FlowRateCalibrationDialog(wxWindow* parent, wxWindowI
     // ORCA: Use ComboBox with icons instead of RadioGroup
     m_rbPattern = new ComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY);
     
-    boost::filesystem::path image_path(Slic3r::resources_dir());
+    std::filesystem::path image_path(Slic3r::resources_dir());
     image_path /= "images";
 
     auto add_pattern_item = [&](const std::string& name, const wxString& label) {
         auto icon_name = "param_" + name;
-        if (boost::filesystem::exists(image_path / (icon_name + ".svg"))) {
+        if (std::filesystem::exists(image_path / (icon_name + ".svg"))) {
             // Using 24px icon size to match other settings (Field.cpp uses 24)
             ScalableBitmap bm(this, icon_name, 24);
             m_rbPattern->Append(label, bm.bmp());

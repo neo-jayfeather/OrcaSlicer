@@ -6,6 +6,9 @@
 #include "STEP.hpp"
 
 #include <string>
+#include <filesystem>
+#include <fstream>
+
 #include <boost/nowide/cstdio.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/fstream.hpp>
@@ -42,13 +45,13 @@ namespace Slic3r {
 
 bool StepPreProcessor::preprocess(const char* path, std::string &output_path)
 {
-    boost::nowide::ifstream infile(path);
+    std::ifstream infile(path);
     if (!infile.good()) {
         throw Slic3r::RuntimeError(std::string("Load step file failed.\nCannot open file for reading.\n"));
         return false;
     }
 
-    boost::filesystem::path temp_path(temporary_dir());
+    std::filesystem::path temp_path(temporary_dir());
     std::string temp_step_path = temp_path.string() + "/temp.step";
     boost::nowide::remove(temp_step_path.c_str());
     boost::nowide::ofstream temp_file(temp_step_path, std::ios::app);
@@ -90,7 +93,7 @@ bool StepPreProcessor::preprocess(const char* path, std::string &output_path)
 
 bool StepPreProcessor::isUtf8File(const char* path)
 {
-    boost::nowide::ifstream infile(path);
+    std::ifstream infile(path);
     if (!infile.good()) {
         throw Slic3r::RuntimeError(std::string("Load step file failed.\nCannot open file for reading.\n"));
         return false;
@@ -413,7 +416,7 @@ static void getNamedSolids(const TopLoc_Location& location,
 //    return true;
 //}
 
-Step::Step(fs::path path, ImportStepProgressFn stepFn, StepIsUtf8Fn isUtf8Fn):
+Step::Step(std::filesystem::path path, ImportStepProgressFn stepFn, StepIsUtf8Fn isUtf8Fn):
     m_stepFn(stepFn),
     m_utf8Fn(isUtf8Fn)
 {

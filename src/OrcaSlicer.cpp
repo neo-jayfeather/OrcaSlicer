@@ -36,7 +36,7 @@ using namespace nlohmann;
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/cstdlib.hpp>
 #include <boost/nowide/iostream.hpp>
@@ -1337,7 +1337,7 @@ int CLI::run(int argc, char **argv)
             false;
 #else
             // On Unix systems, the prusa-slicer binary may be symlinked to give the application a different meaning.
-            boost::algorithm::iends_with(boost::filesystem::path(argv[0]).filename().string(), "gcodeviewer");
+            boost::algorithm::iends_with(std::filesystem::path(argv[0]).filename().string(), "gcodeviewer");
 #endif // _WIN32*/
 
     bool translate_old = false, regenerate_thumbnails = false, keep_old_params = false, remove_wrapping_detect = false, filament_color_changed = false, downward_check = false;
@@ -1594,7 +1594,7 @@ int CLI::run(int argc, char **argv)
     }
 
     /*for (const std::string& file : m_input_files)
-        if (is_gcode_file(file) && boost::filesystem::exists(file)) {
+        if (is_gcode_file(file) && std::filesystem::exists(file)) {
             start_as_gcodeviewer = true;
             BOOST_LOG_TRIVIAL(info) << "found a gcode file:" << file << ", will start as gcode viewer\n";
             break;
@@ -7155,7 +7155,7 @@ bool CLI::setup(int argc, char **argv)
 #endif
 
     // See Invoking prusa-slicer from $PATH environment variable crashes #5542
-    // boost::filesystem::path path_to_binary = boost::filesystem::system_complete(argv[0]);
+    // std::filesystem::path path_to_binary = std::filesystem::system_complete(argv[0]);
     std::filesystem::path path_to_binary(boost::dll::program_location().string());
 
     // Path from the Slic3r binary to its resources.

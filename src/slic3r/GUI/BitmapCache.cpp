@@ -6,7 +6,6 @@
 #include "GUI_Utils.hpp"
 
 #include <boost/nowide/cstdio.hpp>
-#include <boost/filesystem.hpp>
 
 #ifdef __WXGTK2__
     // Broken alpha workaround

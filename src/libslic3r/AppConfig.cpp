@@ -15,9 +15,8 @@
 #include <vector>
 #include <stdexcept>
 #include <sstream>
+#include <filesystem>
 
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/operations.hpp>
 #include <boost/nowide/fstream.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -700,7 +699,7 @@ std::string AppConfig::load()
         // The configuration file is corrupted, try replacing it with the backup configuration.
         ifs.close();
         std::string backup_path = (boost::format("%1%.bak") % AppConfig::loading_path()).str();
-        if (boost::filesystem::exists(backup_path)) {
+        if (std::filesystem::exists(backup_path)) {
             // Compute checksum of the configuration backup file and try to load configuration from it when the checksum is correct.
             boost::nowide::ifstream backup_ifs(backup_path);
             std::stringstream back_input_stream;
@@ -715,12 +714,12 @@ std::string AppConfig::load()
             if (back_md5_str != back_right_string) {
                 BOOST_LOG_TRIVIAL(error) << format("Both \"%1%\" and \"%2%\" are corrupted. It isn't possible to restore configuration from the backup.", AppConfig::loading_path(), backup_path);
                 backup_ifs.close();
-                boost::filesystem::remove(backup_path);
+                std::filesystem::remove(backup_path);
             }
             else if (std::string error_message; copy_file(backup_path, AppConfig::loading_path(), error_message, false) != SUCCESS) {
                 BOOST_LOG_TRIVIAL(error) << format("Configuration file \"%1%\" is corrupted. Failed to restore from backup \"%2%\": %3%", AppConfig::loading_path(), backup_path, error_message);
                 backup_ifs.close();
-                boost::filesystem::remove(backup_path);
+                std::filesystem::remove(backup_path);
             }
             else {
                 BOOST_LOG_TRIVIAL(info) << format("Configuration file \"%1%\" was corrupted. It has been succesfully restored from the backup \"%2%\".", AppConfig::loading_path(), backup_path);
@@ -1093,18 +1092,18 @@ std::string AppConfig::load()
         // The configuration file is corrupted, try replacing it with the backup configuration.
         ifs.close();
         std::string backup_path = (boost::format("%1%.bak") % AppConfig::loading_path()).str();
-        if (boost::filesystem::exists(backup_path)) {
+        if (std::filesystem::exists(backup_path)) {
             // Compute checksum of the configuration backup file and try to load configuration from it when the checksum is correct.
             boost::nowide::ifstream backup_ifs(backup_path);
             if (!verify_config_file_checksum(backup_ifs)) {
                 BOOST_LOG_TRIVIAL(error) << format("Both \"%1%\" and \"%2%\" are corrupted. It isn't possible to restore configuration from the backup.", AppConfig::loading_path(), backup_path);
                 backup_ifs.close();
-                boost::filesystem::remove(backup_path);
+                std::filesystem::remove(backup_path);
             }
             else if (std::string error_message; copy_file(backup_path, AppConfig::loading_path(), error_message, false) != SUCCESS) {
                 BOOST_LOG_TRIVIAL(error) << format("Configuration file \"%1%\" is corrupted. Failed to restore from backup \"%2%\": %3%", AppConfig::loading_path(), backup_path, error_message);
                 backup_ifs.close();
-                boost::filesystem::remove(backup_path);
+                std::filesystem::remove(backup_path);
             }
             else {
                 BOOST_LOG_TRIVIAL(info) << format("Configuration file \"%1%\" was corrupted. It has been succesfully restored from the backup \"%2%\".", AppConfig::loading_path(), backup_path);
@@ -1735,12 +1734,12 @@ std::string AppConfig::config_path()
 {
 #ifdef USE_JSON_CONFIG
     std::string path = (m_mode == EAppMode::Editor) ?
-        (boost::filesystem::path(Slic3r::data_dir()) / (SLIC3R_APP_KEY ".conf")).make_preferred().string() :
-        (boost::filesystem::path(Slic3r::data_dir()) / (GCODEVIEWER_APP_KEY ".conf")).make_preferred().string();
+        (std::filesystem::path(Slic3r::data_dir()) / (SLIC3R_APP_KEY ".conf")).make_preferred().string() :
+        (std::filesystem::path(Slic3r::data_dir()) / (GCODEVIEWER_APP_KEY ".conf")).make_preferred().string();
 #else
     std::string path = (m_mode == EAppMode::Editor) ?
-        (boost::filesystem::path(Slic3r::data_dir()) / (SLIC3R_APP_KEY ".ini")).make_preferred().string() :
-        (boost::filesystem::path(Slic3r::data_dir()) / (GCODEVIEWER_APP_KEY ".ini")).make_preferred().string();
+        (std::filesystem::path(Slic3r::data_dir()) / (SLIC3R_APP_KEY ".ini")).make_preferred().string() :
+        (std::filesystem::path(Slic3r::data_dir()) / (GCODEVIEWER_APP_KEY ".ini")).make_preferred().string();
 #endif
 
     return path;
@@ -1759,7 +1758,7 @@ std::string AppConfig::profile_update_url() const
 
 bool AppConfig::exists()
 {
-    return boost::filesystem::exists(config_path());
+    return std::filesystem::exists(config_path());
 }
 
 }; // namespace Slic3r

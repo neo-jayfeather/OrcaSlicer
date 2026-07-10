@@ -46,10 +46,10 @@ void UpgradeNetworkJob::process(Ctl &ctl)
     BOOST_LOG_TRIVIAL(info) << "[UpgradeNetworkJob process]: enter";
 
     // get temp path
-    fs::path target_file_path = (fs::temp_directory_path() / package_name);
-    fs::path tmp_path = target_file_path;
+    std::filesystem::path target_file_path = (std::filesystem::temp_directory_path() / package_name);
+    std::filesystem::path tmp_path = target_file_path;
     auto path_str = tmp_path.string() + wxString::Format(".%d%s", get_current_pid(), ".tmp").ToStdString();
-    tmp_path = fs::path(path_str);
+    tmp_path = std::filesystem::path(path_str);
 
     BOOST_LOG_TRIVIAL(info) << "UpgradeNetworkJob: save netowrk_plugin to " << tmp_path.string();
 

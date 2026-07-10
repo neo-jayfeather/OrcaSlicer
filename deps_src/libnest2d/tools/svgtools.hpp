@@ -138,7 +138,7 @@ public:
     }
 
     // save svg in utf-8 file name
-    void save(const boost::filesystem::path &filepath)
+    void save(const std::filesystem::path &filepath)
     {
         size_t lyrc = svg_layers_.size() > 1 ? 1 : 0;
         size_t last = svg_layers_.size() > 1 ? svg_layers_.size() : 0;

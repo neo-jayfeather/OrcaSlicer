@@ -2,7 +2,6 @@
 #define slic3r_GUI_hpp_
 
 namespace boost { class any; }
-namespace boost::filesystem { class path; }
 
 #include <wx/string.h>
 
@@ -72,10 +71,10 @@ void combochecklist_set_flags(wxComboCtrl* comboCtrl, unsigned int flags);
 wxString	from_u8(const std::string &str);
 // std::string in UTF8 from wxString
 std::string	into_u8(const wxString &str);
-// wxString from boost path
-wxString	from_path(const boost::filesystem::path &path);
-// boost path from wxString
-boost::filesystem::path	into_path(const wxString &str);
+// wxString from path
+wxString	from_path(const std::filesystem::path &path);
+// path from wxString
+std::filesystem::path	into_path(const wxString &str);
 
 // Display an About dialog
 extern void about();

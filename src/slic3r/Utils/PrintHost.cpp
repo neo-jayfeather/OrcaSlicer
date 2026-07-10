@@ -5,7 +5,6 @@
 #include <exception>
 #include <boost/optional.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/filesystem.hpp>
 
 #include <wx/string.h>
 #include <wx/app.h>
@@ -30,7 +29,7 @@
 #include "3DPrinterOS.hpp"
 #include "Moonraker.hpp"
 
-namespace fs = boost::filesystem;
+
 using boost::optional;
 using Slic3r::GUI::PrintHostQueueDialog;
 
@@ -142,7 +141,7 @@ struct PrintHostJobQueue::priv
     Channel<size_t> channel_cancels;
     size_t job_id = 0;
     int prev_progress = -1;
-    fs::path source_to_remove;
+    std::filesystem::path source_to_remove;
 
     std::thread bg_thread;
     bool bg_exit = false;
@@ -161,7 +160,7 @@ struct PrintHostJobQueue::priv
     void progress_fn(Http::Progress progress, bool &cancel);
     void error_fn(wxString error);
     void info_fn(wxString tag, wxString status);
-    void remove_source(const fs::path &path);
+    void remove_source(const std::filesystem::path &path);
     void remove_source();
     void perform_job(PrintHostJob the_job);
 };
@@ -337,11 +336,11 @@ void PrintHostJobQueue::priv::info_fn(wxString tag, wxString status)
     emit_info(tag, status);
 }
 
-void PrintHostJobQueue::priv::remove_source(const fs::path &path)
+void PrintHostJobQueue::priv::remove_source(const std::filesystem::path &path)
 {
     if (! path.empty()) {
         boost::system::error_code ec;
-        fs::remove(path, ec);
+        std::filesystem::remove(path, ec);
         if (ec) {
             BOOST_LOG_TRIVIAL(error) << boost::format("PrintHostJobQueue: Error removing file `%1%`: %2%") % path % ec;
         }

@@ -5,6 +5,8 @@
 #include <boost/nowide/convert.hpp>
 #include <boost/log/trivial.hpp>
 
+#include <filesystem>
+
 #if _WIN32
 #include <windows.h>
 #include <tchar.h>
@@ -20,7 +22,6 @@
 #include <sys/stat.h>
 #include <glob.h>
 #include <pwd.h>
-#include <boost/filesystem.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/process.hpp>
 #endif
@@ -194,14 +195,14 @@ namespace search_for_drives_internal
 			! compare_filesystem_id(path, parent_path)) {
 			//free space
 			boost::system::error_code ec;
-			boost::filesystem::space_info si = boost::filesystem::space(path, ec);
+			std::filesystem::space_info si = std::filesystem::space(path, ec);
 			if (!ec && si.available != 0) {
 				//user id
 				struct stat buf;
 				stat(path.c_str(), &buf);
 				uid_t uid = buf.st_uid;
 				if (getuid() == uid)
-					out.emplace_back(DriveData{ boost::filesystem::path(path).stem().string(), path });
+					out.emplace_back(DriveData{ std::filesystem::path(path).stem().string(), path });
 			}
 		}
 	}
@@ -370,7 +371,7 @@ std::string RemovableDriveManager::get_removable_drive_path(const std::string &p
 std::string RemovableDriveManager::get_removable_drive_from_path(const std::string& path)
 {
 	std::string new_path(path);
-	if (!boost::filesystem::is_directory(path)) {
+	if (!std::filesystem::is_directory(path)) {
 		std::size_t found = path.find_last_of("/");
 		if (found != std::string::npos)
 			new_path.erase(found);

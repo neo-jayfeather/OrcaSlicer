@@ -27,9 +27,10 @@
 #include <cassert>
 #include <stdexcept>
 #include <cctype>
+#include <filesystem>
+#include <random>
 
 #include <boost/format/format_fwd.hpp>
-#include <boost/filesystem/operations.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/nowide/cstdio.hpp>
 #include "I18N.hpp"
@@ -108,7 +109,7 @@ BackgroundSlicingProcess::BackgroundSlicingProcess()
 {
 	//BBS: move this logic to part plate
 #if 0
-    boost::filesystem::path temp_path(wxStandardPaths::Get().GetTempDir().utf8_str().data());
+    std::filesystem::path temp_path(wxStandardPaths::Get().GetTempDir().utf8_str().data());
     temp_path /= (boost::format(".%1%.gcode") % get_current_pid()).str();
 	m_temp_output_path = temp_path.string();
 #endif
@@ -181,7 +182,7 @@ PrinterTechnology BackgroundSlicingProcess::current_printer_technology() const
 	//return m_print->technology();
 }
 
-std::string BackgroundSlicingProcess::output_filepath_for_project(const boost::filesystem::path &project_path)
+std::string BackgroundSlicingProcess::output_filepath_for_project(const std::filesystem::path &project_path)
 {
 	assert(m_print != nullptr);
     if (project_path.empty())
@@ -804,7 +805,7 @@ void BackgroundSlicingProcess::finalize_gcode()
 	auto remove_post_processed_temp_file = [post_processed, &output_path]() {
 		if (post_processed)
 			try {
-				boost::filesystem::remove(output_path);
+				std::filesystem::remove(output_path);
 			} catch (const std::exception &ex) {
 				BOOST_LOG_TRIVIAL(error) << "Failed to remove temp file " << output_path << ": " << ex.what();
 			}
@@ -909,12 +910,35 @@ void BackgroundSlicingProcess::export_gcode()
 void BackgroundSlicingProcess::prepare_upload()
 {
 	// Generate a unique temp path to which the gcode/zip file is copied/exported
-	boost::filesystem::path source_path = boost::filesystem::temp_directory_path()
-		/ boost::filesystem::unique_path("." SLIC3R_APP_KEY ".upload.%%%%-%%%%-%%%%-%%%%");
+	// NTODO: go back to boost?
+	std::filesystem::path source_path;
+    {
+        auto temp_dir = std::filesystem::temp_directory_path();
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, 15);
+        const char* hex_chars = "0123456789abcdef";
+
+        while (true) {
+            std::string pattern = "." SLIC3R_APP_KEY ".upload.%%%%-%%%%-%%%%-%%%%";
+            for (char& c : pattern) {
+                if (c == '%') {
+                    c = hex_chars[dis(gen)];
+                }
+            }
+            
+            auto candidate = temp_dir / pattern;
+            if (!std::filesystem::exists(candidate)) {
+                source_path = std::move(candidate);
+                break;
+            }
+        }
+    }
 
 	if (m_print == m_fff_print) {
         if (m_upload_job.upload_data.use_3mf) {
-            source_path = m_upload_job.upload_data.source_path;
+			// NTODO: remove when done
+            source_path = std::filesystem::path(m_upload_job.upload_data.source_path.string());
         } else {
 		    m_print->set_status(95, _utf8(L("Running post-processing scripts")));
 		    std::string error_message;

@@ -21,7 +21,6 @@
 #include <wx/msgdlg.h>
 
 #include <boost/log/trivial.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
@@ -41,7 +40,6 @@
 
 #include <nlohmann/json.hpp>
 
-namespace fs = boost::filesystem;
 using json = nlohmann::json;
 
 namespace Slic3r {
@@ -423,7 +421,7 @@ static const char *CONFIG_KEY_PATH  = "printhost_path";
 static const char *CONFIG_KEY_GROUP = "printhost_group";
 static const char* CONFIG_KEY_STORAGE = "printhost_storage";
 
-PrintHostSendDialog::PrintHostSendDialog(const fs::path &path, PrintHostPostUploadActions post_actions, const wxArrayString &groups, const wxArrayString& storage_paths, const wxArrayString& storage_names, bool switch_to_device_tab)
+PrintHostSendDialog::PrintHostSendDialog(const std::filesystem::path &path, PrintHostPostUploadActions post_actions, const wxArrayString &groups, const wxArrayString& storage_paths, const wxArrayString& storage_names, bool switch_to_device_tab)
     : MsgDialog(static_cast<wxWindow*>(wxGetApp().mainframe), _L("Send G-code to printer host"), _L("Upload to Printer Host with the following filename:"), 0) // Set style = 0 to avoid default creation of the "OK" button. 
                                                                                                                                                                // All buttons will be added later in this constructor 
     , txt_filename(new wxTextCtrl(this, wxID_ANY))
@@ -586,7 +584,7 @@ void PrintHostSendDialog::init()
     });
 }
 
-fs::path PrintHostSendDialog::filename() const
+std::filesystem::path PrintHostSendDialog::filename() const
 {
     return into_path(txt_filename->GetValue());
 }
@@ -642,7 +640,7 @@ void PrintHostSendDialog::EndModal(int ret)
     MsgDialog::EndModal(ret);
 }
 
-FlashforgePrintHostSendDialog::FlashforgePrintHostSendDialog(const fs::path&             path,
+FlashforgePrintHostSendDialog::FlashforgePrintHostSendDialog(const std::filesystem::path&             path,
                                                              PrintHostPostUploadActions  post_actions,
                                                              const wxArrayString&        groups,
                                                              const wxArrayString&        storage_paths,
@@ -1303,7 +1301,7 @@ void PrintHostQueueDialog::append_job(const PrintHostJob &job)
     fields.push_back(wxVariant(_L("Queued")));
     fields.push_back(wxVariant(job.printhost->get_host()));
     boost::system::error_code ec;
-    boost::uintmax_t size_i = boost::filesystem::file_size(job.upload_data.source_path, ec);
+    boost::uintmax_t size_i = std::filesystem::file_size(job.upload_data.source_path, ec);
     std::stringstream stream;
     if (ec) {
         stream << "unknown";
@@ -1533,7 +1531,7 @@ bool PrintHostQueueDialog::load_user_data(int udt, std::vector<int>& vector)
     return true;
 }
 
-ElegooPrintHostSendDialog::ElegooPrintHostSendDialog(const fs::path&            path,
+ElegooPrintHostSendDialog::ElegooPrintHostSendDialog(const std::filesystem::path&            path,
                                                      PrintHostPostUploadActions post_actions,
                                                      const wxArrayString&       groups,
                                                      const wxArrayString&       storage_paths,
@@ -1859,7 +1857,7 @@ void ElegooPrintHostSendDialog::refresh()
     this->Fit();
 }
 
-CrealityPrintHostSendDialog::CrealityPrintHostSendDialog(const fs::path&            path,
+CrealityPrintHostSendDialog::CrealityPrintHostSendDialog(const std::filesystem::path&            path,
                                                          PrintHostPostUploadActions post_actions,
                                                          const wxArrayString&       groups,
                                                          const wxArrayString&       storage_paths,

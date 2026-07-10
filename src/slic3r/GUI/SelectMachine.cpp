@@ -3742,7 +3742,7 @@ void SelectMachineDialog::set_default()
         if (filename.empty()) filename = _L("Untitled");
     }
 
-    fs::path filename_path(filename.c_str());
+    std::filesystem::path filename_path(filename.ToStdString());
     std::string file_name  = filename_path.filename().string();
     if (from_u8(file_name).find(_L("Untitled")) != wxString::npos) {
         PartPlate *part_plate = m_plater->get_partplate_list().get_plate(m_print_plate_idx);

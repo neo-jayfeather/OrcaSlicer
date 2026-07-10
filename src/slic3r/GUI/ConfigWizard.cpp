@@ -66,7 +66,7 @@ using Config::SnapshotDB;
 
 // Configuration data structures extensions needed for the wizard
 //BBS: set BBL as default
-bool Bundle::load(fs::path source_path, bool ais_in_resources, bool ais_bbl_bundle)
+bool Bundle::load(std::filesystem::path source_path, bool ais_in_resources, bool ais_bbl_bundle)
 {
     this->preset_bundle = std::make_unique<PresetBundle>();
     this->is_in_resources = ais_in_resources;
@@ -120,14 +120,14 @@ BundleMap BundleMap::load()
     BundleMap res;
 
     //BBS: change directories by design
-    const auto vendor_dir = (boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
-    const auto rsrc_vendor_dir = (boost::filesystem::path(resources_dir()) / "profiles").make_preferred();
+    const auto vendor_dir = (std::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
+    const auto rsrc_vendor_dir = (std::filesystem::path(resources_dir()) / "profiles").make_preferred();
 
     //Orca: add custom as default
     //Orca: add json logic for vendor bundle
     auto orca_bundle_path = (vendor_dir / PresetBundle::ORCA_DEFAULT_BUNDLE).replace_extension(".json");
     auto orca_bundle_rsrc = false;
-    if (!boost::filesystem::exists(orca_bundle_path)) {
+    if (!std::filesystem::exists(orca_bundle_path)) {
         orca_bundle_path = (rsrc_vendor_dir / PresetBundle::ORCA_DEFAULT_BUNDLE).replace_extension(".json");
         orca_bundle_rsrc = true;
     }
@@ -141,7 +141,7 @@ BundleMap BundleMap::load()
     // and then additionally from resources/profiles.
     bool is_in_resources = false;
     for (auto dir : { &vendor_dir, &rsrc_vendor_dir }) {
-        for (const auto &dir_entry : boost::filesystem::directory_iterator(*dir)) {
+        for (const auto &dir_entry : std::filesystem::directory_iterator(*dir)) {
             //BBS: add json logic for vendor bundle
             if (Slic3r::is_json_file(dir_entry.path().string())) {
                 std::string id = dir_entry.path().stem().string();  // stem() = filename() without the trailing ".json" part
@@ -1844,8 +1844,8 @@ void ConfigWizard::priv::load_vendors()
     } else {
         // In case of legacy datadir, try to guess the preference based on the printer preset files that are present
         //BBS: change directories by design
-        const auto printer_dir = fs::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR / PRESET_PRINTER_NAME;
-        for (auto &dir_entry : boost::filesystem::directory_iterator(printer_dir))
+        const auto printer_dir = std::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR / PRESET_PRINTER_NAME;
+        for (auto &dir_entry : std::filesystem::directory_iterator(printer_dir))
             if (Slic3r::is_ini_file(dir_entry)) {
                 auto needle = legacy_preset_map.find(dir_entry.path().filename().string());
                 if (needle == legacy_preset_map.end()) { continue; }

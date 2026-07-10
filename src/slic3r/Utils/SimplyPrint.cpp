@@ -3,7 +3,7 @@
 #include <openssl/sha.h>
 #include <boost/beast/core/detail/base64.hpp>
 #include <boost/nowide/fstream.hpp>
-#include <boost/filesystem.hpp>
+#include <fstream>
 
 #include "nlohmann/json.hpp"
 #include "libslic3r/Utils.hpp"
@@ -102,7 +102,7 @@ static bool should_open_in_external_browser()
 
 SimplyPrint::SimplyPrint(DynamicPrintConfig* config)
 {
-    cred_file = (boost::filesystem::path(data_dir()) / OAUTH_CREDENTIAL_PATH).make_preferred().string();
+    cred_file = (std::filesystem::path(data_dir()) / OAUTH_CREDENTIAL_PATH).make_preferred().string();
     load_oauth_credential();
 }
 
@@ -142,7 +142,7 @@ GUI::OAuthParams SimplyPrint::get_oauth_params() const
 void SimplyPrint::load_oauth_credential()
 {
     cred.clear();
-    if (boost::filesystem::exists(cred_file)) {
+    if (std::filesystem::exists(cred_file)) {
         nlohmann::json j;
         try {
             boost::nowide::ifstream ifs(cred_file);
@@ -276,7 +276,7 @@ bool SimplyPrint::test(wxString& curl_msg) const
         });
 }
 
-bool SimplyPrint::do_temp_upload(const boost::filesystem::path& file_path,
+bool SimplyPrint::do_temp_upload(const std::filesystem::path& file_path,
                                  const std::string&             chunk_id,
                                  const std::string&             filename,
                                  ProgressFn                     prorgess_fn,
@@ -338,9 +338,9 @@ bool SimplyPrint::do_temp_upload(const boost::filesystem::path& file_path,
         });
 }
 
-bool SimplyPrint::do_chunk_upload(const boost::filesystem::path& file_path, const std::string& filename, ProgressFn prorgess_fn, ErrorFn error_fn) const
+bool SimplyPrint::do_chunk_upload(const std::filesystem::path& file_path, const std::string& filename, ProgressFn prorgess_fn, ErrorFn error_fn) const
 {
-    const auto file_size = boost::filesystem::file_size(file_path);
+    const auto file_size = std::filesystem::file_size(file_path);
 #ifdef SIMPLYPRINT_TEST
     constexpr auto buffer_size = MAX_SINGLE_UPLOAD_FILE_SIZE;
 #else
@@ -405,7 +405,7 @@ bool SimplyPrint::do_chunk_upload(const boost::filesystem::path& file_path, cons
         }
 
         // Calculate the offset and length of current chunk
-        const boost::filesystem::ifstream::off_type offset = i * buffer_size;
+        const std::ifstream::off_type offset = i * buffer_size;
         const size_t length = i == (chunk_amount - 1) ? file_size - offset : buffer_size;
 
         const bool succ = do_api_call(
@@ -480,7 +480,7 @@ bool SimplyPrint::upload(PrintHostUpload upload_data, ProgressFn prorgess_fn, Er
     }
     const auto filename = upload_data.upload_path.filename().string();
 
-    if (boost::filesystem::file_size(upload_data.source_path) > MAX_SINGLE_UPLOAD_FILE_SIZE) {
+    if (std::filesystem::file_size(upload_data.source_path) > MAX_SINGLE_UPLOAD_FILE_SIZE) {
         // If file is over 100 MB, do chunk upload
         return do_chunk_upload(upload_data.source_path, filename, prorgess_fn, error_fn);
     } else {

@@ -78,7 +78,7 @@ private:
                        const std::string&             host_header,
                        const std::string&             token,
                        const std::string&             md5,
-                       const boost::filesystem::path& path,
+                       const std::filesystem::path& path,
                        const std::string&             filename,
                        size_t                         filesize,
                        size_t                         offset,

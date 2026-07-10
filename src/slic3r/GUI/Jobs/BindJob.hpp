@@ -5,7 +5,7 @@
 #include <boost/filesystem/operations.hpp>
 #include "Job.hpp"
 
-namespace fs = boost::filesystem;
+
 
 namespace Slic3r {
 namespace GUI {

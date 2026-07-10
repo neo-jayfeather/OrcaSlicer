@@ -618,7 +618,7 @@ void MediaFilePanel::doAction(size_t index, int action)
                         return;
                     }
 #ifdef __WXMSW__
-                    auto             wfile = boost::filesystem::path(file.local_path).wstring();
+                    auto             wfile = std::filesystem::path(file.local_path).wstring();
                     SHELLEXECUTEINFO info{sizeof(info), 0, NULL, NULL, wfile.c_str(), L"", SW_HIDE};
                     ::ShellExecuteEx(&info);
 #else

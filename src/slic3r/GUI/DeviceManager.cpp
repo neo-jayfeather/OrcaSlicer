@@ -336,7 +336,7 @@ std::string MachineObject::get_printer_thumbnail_img_str() const
      if (!img_str.empty())
      {
         img_url = Slic3r::resources_dir() + "\\images\\" + img_str ;
-        if (fs::exists(img_url + ".svg"))
+        if (std::filesystem::exists(img_url + ".svg"))
         {
             return img_url;
         }

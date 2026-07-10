@@ -6,9 +6,7 @@
 #include <deque>
 #include <sstream>
 #include <exception>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem.hpp>
+#include <mutex>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 
@@ -18,7 +16,7 @@
 #include <openssl/x509.h>
 #endif
 
-namespace fs = boost::filesystem;
+
 
 namespace Slic3r {
 
@@ -44,7 +42,7 @@ struct CurlGlobalInit
             "/etc/ssl/ca-bundle.pem"              // OpenSUSE Tumbleweed
         };
 
-        namespace fs = boost::filesystem;
+        
         // Env var name for the OpenSSL CA bundle (SSL_CERT_FILE nomally)
         const char *const SSL_CA_FILE = X509_get_default_cert_file_env();
         const char * ssl_cafile = ::getenv(SSL_CA_FILE);
@@ -53,10 +51,10 @@ struct CurlGlobalInit
             ssl_cafile = X509_get_default_cert_file();
 
         int replace = true;
-        if (!ssl_cafile || !fs::exists(fs::path(ssl_cafile))) {
+        if (!ssl_cafile || !std::filesystem::exists(std::filesystem::path(ssl_cafile))) {
             const char * bundle = nullptr;
             for (const char * b : CA_BUNDLES) {
-                if (fs::exists(fs::path(b))) {
+                if (std::filesystem::exists(std::filesystem::path(b))) {
                     ::setenv(SSL_CA_FILE, bundle = b, replace);
                     break;
                 }
@@ -88,11 +86,11 @@ std::mutex g_mutex;
 
 struct form_file
 {
-    fs::ifstream                          ifs;
-    boost::filesystem::ifstream::off_type init_offset;
+    std::ifstream                          ifs;
+    std::ifstream::off_type init_offset;
     size_t                                content_length;
 
-    form_file(fs::path const& p, const boost::filesystem::ifstream::off_type offset, const size_t content_length)
+    form_file(std::filesystem::path const& p, const std::ifstream::off_type offset, const size_t content_length)
         : ifs(p, std::ios::in | std::ios::binary), init_offset(offset), content_length(content_length)
     {}
 };
@@ -144,13 +142,13 @@ struct Http::priv
 
 	void set_timeout_connect(long timeout);
     void set_timeout_max(long timeout);
-	void form_add_file(const char *name, const fs::path &path, const char* filename, boost::filesystem::ifstream::off_type offset, size_t length);
+	void form_add_file(const char *name, const std::filesystem::path &path, const char* filename, std::ifstream::off_type offset, size_t length);
 	/* mime */
 	void mime_form_add_text(const char* name, const char* value);
 	void mime_form_add_file(const char* name, const char* path);
-	void set_post_body(const fs::path &path);
+	void set_post_body(const std::filesystem::path &path);
 	void set_post_body(const std::string &body);
-	void set_put_body(const fs::path &path);
+	void set_put_body(const std::filesystem::path &path);
 	void set_del_body(const std::string& body);
     void set_range(const std::string &range);
 
@@ -318,7 +316,7 @@ void Http::priv::set_timeout_max(long timeout)
     ::curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
 }
 
-void Http::priv::form_add_file(const char *name, const fs::path &path, const char* filename, boost::filesystem::ifstream::off_type offset, size_t length)
+void Http::priv::form_add_file(const char *name, const std::filesystem::path &path, const char* filename, std::ifstream::off_type offset, size_t length)
 {
 	// We can't use CURLFORM_FILECONTENT, because curl doesn't support Unicode filenames on Windows
 	// and so we use CURLFORM_STREAM with boost ifstream to read the file.
@@ -377,7 +375,7 @@ void Http::priv::mime_form_add_file(const char* name, const char* path)
 }
 
 //FIXME may throw! Is the caller aware of it?
-void Http::priv::set_post_body(const fs::path &path)
+void Http::priv::set_post_body(const std::filesystem::path &path)
 {
 	std::ifstream file(path.string());
 	std::string file_content { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
@@ -389,10 +387,10 @@ void Http::priv::set_post_body(const std::string &body)
 	postfields = body;
 }
 
-void Http::priv::set_put_body(const fs::path &path)
+void Http::priv::set_put_body(const std::filesystem::path &path)
 {
-	boost::system::error_code ec;
-	boost::uintmax_t filesize = file_size(path, ec);
+	std::error_code ec;
+	boost::uintmax_t filesize = std::filesystem::file_size(path, ec);
 	if (!ec) {
         putFile = std::make_unique<form_file>(path, 0, 0);
 		::curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
@@ -662,7 +660,7 @@ Http& Http::form_add(const std::string &name, const std::string &contents)
 	return *this;
 }
 
-Http& Http::form_add_file(const std::string &name, const fs::path &path, boost::filesystem::ifstream::off_type offset, size_t length)
+Http& Http::form_add_file(const std::string &name, const std::filesystem::path &path, std::ifstream::off_type offset, size_t length)
 {
 	if (p) { p->form_add_file(name.c_str(), path.c_str(), nullptr, offset, length); }
 	return *this;
@@ -682,13 +680,13 @@ Http& Http::mime_form_add_file(std::string &name, const char* path)
 }
 
 
-Http& Http::form_add_file(const std::wstring& name, const fs::path& path, boost::filesystem::ifstream::off_type offset, size_t length)
+Http& Http::form_add_file(const std::wstring& name, const std::filesystem::path& path, std::ifstream::off_type offset, size_t length)
 {
 	if (p) { p->form_add_file((char*)name.c_str(), path.c_str(), nullptr, offset, length); }
 	return *this;
 }
 
-Http& Http::form_add_file(const std::string &name, const fs::path &path, const std::string &filename, boost::filesystem::ifstream::off_type offset, size_t length)
+Http& Http::form_add_file(const std::string &name, const std::filesystem::path &path, const std::string &filename, std::ifstream::off_type offset, size_t length)
 {
 	if (p) { p->form_add_file(name.c_str(), path.c_str(), filename.c_str(), offset, length); }
 	return *this;
@@ -709,7 +707,7 @@ Http& Http::ssl_revoke_best_effort(bool set)
 }
 #endif // WIN32
 
-Http& Http::set_post_body(const fs::path &path)
+Http& Http::set_post_body(const std::filesystem::path &path)
 {
 	if (p) { p->set_post_body(path);}
 	return *this;
@@ -721,7 +719,7 @@ Http& Http::set_post_body(const std::string &body)
 	return *this;
 }
 
-Http& Http::set_put_body(const fs::path &path)
+Http& Http::set_put_body(const std::filesystem::path &path)
 {
 	if (p) { p->set_put_body(path);}
 	return *this;

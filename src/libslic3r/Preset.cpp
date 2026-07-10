@@ -26,9 +26,8 @@
 #include <fstream>
 #include <stdexcept>
 #include <unordered_map>
+#include <filesystem>
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 //BBS: add regex
@@ -108,7 +107,7 @@ std::string get_preset_bare_name(const std::string &canonical_name)
     return pos == std::string::npos ? canonical_name : canonical_name.substr(pos + 1);
 }
 
-PresetOrigin detect_origin_from_path(const boost::filesystem::path &path, const PresetOrigin &explicit_origin)
+PresetOrigin detect_origin_from_path(const std::filesystem::path &path, const PresetOrigin &explicit_origin)
 {
     if (explicit_origin.kind != PresetOrigin::Kind::Auto)
         return explicit_origin;
@@ -208,10 +207,10 @@ ConfigFileType guess_config_file_type(const ptree &tree)
 }
 
 
-VendorProfile VendorProfile::from_ini(const boost::filesystem::path &path, bool load_all)
+VendorProfile VendorProfile::from_ini(const std::filesystem::path &path, bool load_all)
 {
     ptree tree;
-    boost::filesystem::ifstream ifs(path);
+    std::ifstream ifs(path);
     boost::property_tree::read_ini(ifs, tree);
     return VendorProfile::from_ini(tree, path, load_all);
 }
@@ -278,7 +277,7 @@ void extend_default_config_length(DynamicPrintConfig& config, const bool set_nil
 }
 
 
-VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem::path &path, bool load_all)
+VendorProfile VendorProfile::from_ini(const ptree &tree, const std::filesystem::path &path, bool load_all)
 {
     static const std::string printer_model_key = "printer_model:";
     static const std::string filaments_section = "default_filaments";
@@ -286,7 +285,7 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
 
     const std::string id = path.stem().string();
 
-    if (! boost::filesystem::exists(path)) {
+    if (! std::filesystem::exists(path)) {
         throw Slic3r::RuntimeError((boost::format("Cannot load Vendor Config Bundle `%1%`: File not found: `%2%`.") % id % path).str());
     }
 
@@ -624,7 +623,7 @@ void Preset::save_info(std::string file)
     if (this->is_project_embedded || this->is_from_bundle())
         return;
     if (file.empty()) {
-        fs::path idx_file(this->file);
+        std::filesystem::path idx_file(this->file);
         idx_file.replace_extension(".info");
         file = idx_file.string();
     }
@@ -651,9 +650,9 @@ void Preset::remove_files(bool cloud_already_deleted)
     }
     // Erase the preset file.
     boost::nowide::remove(this->file.c_str());
-    fs::path idx_path(this->file);
+    std::filesystem::path idx_path(this->file);
     idx_path.replace_extension(".info");
-    if (fs::exists(idx_path)) {
+    if (std::filesystem::exists(idx_path)) {
         if (!this->setting_id.empty() && !cloud_already_deleted) {
             // Cloud-synced preset - mark for deletion and keep .info file until sync confirms
             this->sync_info = "delete";
@@ -685,7 +684,7 @@ void Preset::save(DynamicPrintConfig* parent_config)
     else
         from_str = std::string("Default");
 
-    boost::filesystem::create_directories(fs::path(this->file).parent_path());
+    std::filesystem::create_directories(std::filesystem::path(this->file).parent_path());
     const std::string bare_name = get_preset_bare_name(this->name);
 
     //BBS: only save difference if it has parent
@@ -738,7 +737,7 @@ void Preset::save(DynamicPrintConfig* parent_config)
 
     // Bundle presets are synced via bundle_id and don't need individual .info files.
     if (! this->is_from_bundle()) {
-        fs::path idx_file(this->file);
+        std::filesystem::path idx_file(this->file);
         idx_file.replace_extension(".info");
         this->save_info(idx_file.string());
     }
@@ -1589,11 +1588,11 @@ void PresetCollection::load_presets(
 {
     // Don't use boost::filesystem::canonical() on Windows, it is broken in regard to reparse points,
     // see https://github.com/prusa3d/PrusaSlicer/issues/732
-    boost::filesystem::path dir = boost::filesystem::absolute(boost::filesystem::path(dir_path) / subdir).make_preferred();
+    std::filesystem::path dir = std::filesystem::absolute(std::filesystem::path(dir_path) / subdir).make_preferred();
     const PresetOrigin resolved_origin = detect_origin_from_path(dir, load_origin);
 
     // Load custom roots first
-    if (fs::exists(dir / "base")) {
+    if (std::filesystem::exists(dir / "base")) {
         load_presets(dir.string(), "base", substitutions, substitution_rule, nullptr, resolved_origin);
     }
 
@@ -1601,8 +1600,8 @@ void PresetCollection::load_presets(
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(" enter, load presets from %1%, current type %2%")%dir %Preset::get_type_string(m_type);
     //BBS do not parse folder if not exists
     m_dir_path = dir.string();
-    if (!fs::exists(dir)) {
-        fs::create_directory(dir);
+    if (!std::filesystem::exists(dir)) {
+        std::filesystem::create_directory(dir);
         return;
     }
 
@@ -1617,7 +1616,7 @@ void PresetCollection::load_presets(
     Preset::get_extruder_names_and_keysets(m_type, extruder_id_name, extruder_variant_name, &key_set1, &key_set2);
 
     //BBS: change to json format
-    for (auto &dir_entry : boost::filesystem::directory_iterator(dir))
+    for (auto &dir_entry : std::filesystem::directory_iterator(dir))
     {
         std::string file_name = dir_entry.path().filename().string();
         //if (Slic3r::is_ini_file(dir_entry)) {
@@ -1637,9 +1636,9 @@ void PresetCollection::load_presets(
                 preset.file = dir_entry.path().string();
                 // Load the preset file, apply preset values on top of defaults.
                 try {
-                    fs::path idx_path(preset.file);
+                    std::filesystem::path idx_path(preset.file);
                     idx_path.replace_extension(".info");
-                    if (fs::exists(idx_path)) {
+                    if (std::filesystem::exists(idx_path)) {
                         preset.load_info(idx_path.string());
                     }
                     DynamicPrintConfig config;
@@ -1651,12 +1650,12 @@ void PresetCollection::load_presets(
                     if (! config_substitutions.empty())
                         substitutions.push_back({ preset.name, m_type, PresetConfigSubstitutions::Source::UserFile, preset.file, std::move(config_substitutions) });
                     if (!reason.empty()) {
-                        fs::path file_path(preset.file);
-                        if (fs::exists(file_path))
-                            fs::remove(file_path);
+                        std::filesystem::path file_path(preset.file);
+                        if (std::filesystem::exists(file_path))
+                            std::filesystem::remove(file_path);
                         file_path.replace_extension(".info");
-                        if (fs::exists(file_path))
-                            fs::remove(file_path);
+                        if (std::filesystem::exists(file_path))
+                            std::filesystem::remove(file_path);
                         BOOST_LOG_TRIVIAL(error) << boost::format("parse config %1% failed")%preset.file;
                         ++m_errors;
                         continue;
@@ -1743,23 +1742,23 @@ void PresetCollection::load_presets(
                 } catch (const std::ifstream::failure &err) {
                     ++m_errors;
                     BOOST_LOG_TRIVIAL(error) << boost::format("The user-config cannot be loaded: %1%. Reason: %2%")%preset.file %err.what();
-                    fs::path file_path(preset.file);
-                    if (fs::exists(file_path))
-                        fs::remove(file_path);
+                    std::filesystem::path file_path(preset.file);
+                    if (std::filesystem::exists(file_path))
+                        std::filesystem::remove(file_path);
                     file_path.replace_extension(".info");
-                    if (fs::exists(file_path))
-                        fs::remove(file_path);
+                    if (std::filesystem::exists(file_path))
+                        std::filesystem::remove(file_path);
                     //throw Slic3r::RuntimeError(std::string("The selected preset cannot be loaded: ") + preset.file + "\n\tReason: " + err.what());
                 } catch (const std::runtime_error &err) {
                     ++m_errors;
                     BOOST_LOG_TRIVIAL(error) << boost::format("Failed loading the user-config file: %1%. Reason: %2%")%preset.file %err.what();
                     //throw Slic3r::RuntimeError(std::string("Failed loading the preset file: ") + preset.file + "\n\tReason: " + err.what());
-                    fs::path file_path(preset.file);
-                    if (fs::exists(file_path))
-                        fs::remove(file_path);
+                    std::filesystem::path file_path(preset.file);
+                    if (std::filesystem::exists(file_path))
+                        std::filesystem::remove(file_path);
                     file_path.replace_extension(".info");
-                    if (fs::exists(file_path))
-                        fs::remove(file_path);
+                    if (std::filesystem::exists(file_path))
+                        std::filesystem::remove(file_path);
                 }
 
                 if (preset_loaded_fn != nullptr)
@@ -2117,10 +2116,10 @@ int PresetCollection::get_user_presets(PresetBundle *preset_bundle, std::vector<
 //BBS: update user presets directory
 void PresetCollection::update_user_presets_directory(const std::string& dir_path, const std::string& type)
 {
-    boost::filesystem::path dir = boost::filesystem::absolute(boost::filesystem::path(dir_path) / type).make_preferred();
+    std::filesystem::path dir = std::filesystem::absolute(std::filesystem::path(dir_path) / type).make_preferred();
 
-    if (!fs::exists(dir))
-        fs::create_directory(dir);
+    if (!std::filesystem::exists(dir))
+        std::filesystem::create_directory(dir);
 
     m_dir_path = dir.string();
 }
@@ -2128,10 +2127,10 @@ void PresetCollection::update_user_presets_directory(const std::string& dir_path
 //BBS: save user presets to local
 void PresetCollection::save_user_presets(const std::string& dir_path, const std::string& type, std::map<std::string, std::string>& need_to_delete_list)
 {
-    boost::filesystem::path dir = boost::filesystem::absolute(boost::filesystem::path(dir_path) / type).make_preferred();
+    std::filesystem::path dir = std::filesystem::absolute(std::filesystem::path(dir_path) / type).make_preferred();
 
-    if (!fs::exists(dir))
-        fs::create_directory(dir);
+    if (!std::filesystem::exists(dir))
+        std::filesystem::create_directory(dir);
 
     m_dir_path = dir.string();
 
@@ -2242,7 +2241,7 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
                 iter->sync_info.clear();
             // Fixup possible data lost
             iter->setting_id = cloud_setting_id;
-            fs::path idx_file(iter->file);
+            std::filesystem::path idx_file(iter->file);
             idx_file.replace_extension(".info");
             iter->save_info(idx_file.string());
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("preset %1%'s update_time is eqaul or newer, cloud  update_time %2%, local update_time %3%")%canonical_name %cloud_update_time %iter->updated_time;
@@ -3879,9 +3878,9 @@ std::string PresetCollection::path_from_name(const std::string &new_name, bool d
     //std::string file_name = boost::iends_with(new_name, ".ini") ? new_name : (new_name + ".ini");
     std::string file_name = boost::iends_with(new_name, ".json") ? new_name : (new_name + ".json");
     if (detach)
-        return (boost::filesystem::path(m_dir_path) / "base" / file_name).make_preferred().string();
+        return (std::filesystem::path(m_dir_path) / "base" / file_name).make_preferred().string();
     else
-        return (boost::filesystem::path(m_dir_path) / file_name).make_preferred().string();
+        return (std::filesystem::path(m_dir_path) / file_name).make_preferred().string();
 }
 
 std::string PresetCollection::path_for_preset(const Preset &preset) const
@@ -4121,15 +4120,15 @@ void PhysicalPrinterCollection::load_printers(
 {
     // Don't use boost::filesystem::canonical() on Windows, it is broken in regard to reparse points,
     // see https://github.com/prusa3d/PrusaSlicer/issues/732
-    boost::filesystem::path dir = boost::filesystem::absolute(boost::filesystem::path(dir_path) / subdir).make_preferred();
+    std::filesystem::path dir = std::filesystem::absolute(std::filesystem::path(dir_path) / subdir).make_preferred();
     m_dir_path = dir.string();
-    if(!boost::filesystem::exists(dir))
+    if(!std::filesystem::exists(dir))
         return;
     std::string errors_cummulative;
     // Store the loaded printers into a new vector, otherwise the binary search for already existing presets would be broken.
     std::deque<PhysicalPrinter> printers_loaded;
     //BBS: change to json format
-    for (auto& dir_entry : boost::filesystem::directory_iterator(dir))
+    for (auto& dir_entry : std::filesystem::directory_iterator(dir))
     {
         std::string file_name = dir_entry.path().filename().string();
         //if (Slic3r::is_ini_file(dir_entry)) {
@@ -4284,7 +4283,7 @@ std::string PhysicalPrinterCollection::path_from_name(const std::string& new_nam
     //BBS: change to json format
     //std::string file_name = boost::iends_with(new_name, ".ini") ? new_name : (new_name + ".ini");
     std::string file_name = boost::iends_with(new_name, ".json") ? new_name : (new_name + ".json");
-    return (boost::filesystem::path(m_dir_path) / file_name).make_preferred().string();
+    return (std::filesystem::path(m_dir_path) / file_name).make_preferred().string();
 }
 
 void PhysicalPrinterCollection::save_printer(PhysicalPrinter& edited_printer, const std::string& renamed_from/* = ""*/)
@@ -4477,7 +4476,7 @@ namespace PresetUtils {
         const VendorProfile::PrinterModel* pm = PresetUtils::system_printer_model(preset);
         if (pm != nullptr && !pm->bed_model.empty()) {
             out = Slic3r::data_dir() + "/vendor/" + preset.vendor->id + "/" + pm->bed_model;
-            if (!boost::filesystem::exists(boost::filesystem::path(out)))
+            if (!std::filesystem::exists(std::filesystem::path(out)))
                 out = Slic3r::resources_dir() + "/profiles/" + preset.vendor->id + "/" + pm->bed_model;
         }
         return out;
@@ -4489,7 +4488,7 @@ namespace PresetUtils {
         const VendorProfile::PrinterModel* pm = PresetUtils::system_printer_model(preset);
         if (pm != nullptr && !pm->bed_texture.empty()) {
             out = Slic3r::data_dir() + "/vendor/" + preset.vendor->id + "/" + pm->bed_texture;
-            if (!boost::filesystem::exists(boost::filesystem::path(out)))
+            if (!std::filesystem::exists(std::filesystem::path(out)))
                 out = Slic3r::resources_dir() + "/profiles/" + preset.vendor->id + "/" + pm->bed_texture;
         }
         return out;
@@ -4501,11 +4500,11 @@ namespace PresetUtils {
         const VendorProfile::PrinterModel* pm = PresetUtils::system_printer_model(preset);
         if (pm != nullptr && !pm->hotend_model.empty()) {
             out = Slic3r::data_dir() + "/vendor/" + preset.vendor->id + "/" + pm->hotend_model;
-            if (!boost::filesystem::exists(boost::filesystem::path(out)))
+            if (!std::filesystem::exists(std::filesystem::path(out)))
                 out = Slic3r::resources_dir() + "/profiles/" + preset.vendor->id + "/" + pm->hotend_model;
         }
         
-        if (out.empty() ||!boost::filesystem::exists(boost::filesystem::path(out)))
+        if (out.empty() ||!std::filesystem::exists(std::filesystem::path(out)))
             out = Slic3r::resources_dir() + "/profiles/hotend.stl";
         return out;
     }

@@ -17,7 +17,7 @@
 #include "Http.hpp"
 
 
-namespace fs = boost::filesystem;
+
 namespace pt = boost::property_tree;
 
 

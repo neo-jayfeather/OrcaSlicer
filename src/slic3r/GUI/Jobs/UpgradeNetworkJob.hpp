@@ -7,7 +7,7 @@
 #include "Job.hpp"
 #include <wx/window.h>
 
-namespace fs = boost::filesystem;
+
 
 namespace Slic3r {
 namespace GUI {

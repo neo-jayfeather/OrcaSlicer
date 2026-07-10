@@ -15,10 +15,11 @@
 #include "Plater.hpp"
 #include "Camera.hpp"
 
+#include <filesystem>
+
 #include <glad/gl.h>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem/operations.hpp>
 #include <boost/log/trivial.hpp>
 
 #if BOOST_VERSION >= 107800
@@ -253,12 +254,12 @@ bool Bed3D::set_shape(const Pointfs& printable_area, const double printable_heig
 {
     /*auto check_texture = [](const std::string& texture) {
         boost::system::error_code ec; // so the exists call does not throw (e.g. after a permission problem)
-        return !texture.empty() && (boost::algorithm::iends_with(texture, ".png") || boost::algorithm::iends_with(texture, ".svg")) && boost::filesystem::exists(texture, ec);
+        return !texture.empty() && (boost::algorithm::iends_with(texture, ".png") || boost::algorithm::iends_with(texture, ".svg")) && std::filesystem::exists(texture, ec);
     };*/
 
     auto check_model = [](const std::string& model) {
         boost::system::error_code ec;
-        return !model.empty() && boost::algorithm::iends_with(model, ".stl") && boost::filesystem::exists(model, ec);
+        return !model.empty() && boost::algorithm::iends_with(model, ".stl") && std::filesystem::exists(model, ec);
     };
 
     Type type;

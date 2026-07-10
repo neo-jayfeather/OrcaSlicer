@@ -609,10 +609,10 @@ wxMenu* MenuFactory::append_submenu_add_handy_model(wxMenu* menu, ModelVolumeTyp
         append_menu_item(
             sub_menu, wxID_ANY, _(model.label), "",
             [&model](wxCommandEvent&) {
-                std::vector<boost::filesystem::path> input_files;
+                std::vector<std::filesystem::path> input_files;
                 input_files.reserve(model.file_names.size());
                 for (const auto& file_name : model.file_names)
-                    input_files.push_back((boost::filesystem::path(Slic3r::resources_dir()) / "handy_models" / file_name));
+                    input_files.push_back((std::filesystem::path(Slic3r::resources_dir()) / "handy_models" / file_name));
 
                 plater()->load_files(input_files, LoadStrategy::LoadModel);
                 if (model.arrange_after_import) {

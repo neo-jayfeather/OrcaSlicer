@@ -15,9 +15,9 @@
 #include "libslic3r/PrintConfig.hpp"
 
 #include <map>
+#include <filesystem>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/nowide/fstream.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -67,7 +67,7 @@ namespace {
 
 	void write_used_binary(const std::vector<std::string>& ids)
 	{
-		boost::nowide::ofstream file((boost::filesystem::path(data_dir()) / "user" / "hints.cereal").string(), std::ios::binary);
+		boost::nowide::ofstream file((std::filesystem::path(data_dir()) / "user" / "hints.cereal").string(), std::ios::binary);
 		cereal::BinaryOutputArchive archive(file);
 		HintsCerealData cd{ ids };
 		try
@@ -81,8 +81,8 @@ namespace {
 	}
 	void read_used_binary(std::vector<std::string>& ids)
 	{
-		boost::filesystem::path path(boost::filesystem::path(data_dir()) / "user" / "hints.cereal");
-		if (!boost::filesystem::exists(path)) {
+		std::filesystem::path path(std::filesystem::path(data_dir()) / "user" / "hints.cereal");
+		if (!std::filesystem::exists(path)) {
 			BOOST_LOG_TRIVIAL(warning) << "Failed to load to hints.cereal. File does not exists. " << path.string();
 			return;
 		}
@@ -312,7 +312,7 @@ void HintDatabase::reinit()
 }
 void HintDatabase::init()
 {
-	load_hints_from_file(std::move(boost::filesystem::path(resources_dir()) / "data" / "hints.ini"));
+	load_hints_from_file(std::move(std::filesystem::path(resources_dir()) / "data" / "hints.ini"));
 	m_initialized = true;
 	init_random_hint_id();
 }
@@ -321,7 +321,7 @@ void HintDatabase::init_random_hint_id()
 	srand(time(NULL));
 	m_hint_id = rand() % m_loaded_hints.size();
 }
-void HintDatabase::load_hints_from_file(const boost::filesystem::path& path)
+void HintDatabase::load_hints_from_file(const std::filesystem::path& path)
 {
 	namespace pt = boost::property_tree;
 	pt::ptree tree;

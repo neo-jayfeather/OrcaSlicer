@@ -10,11 +10,10 @@
 #include <string>
 #include <regex>
 #include <future>
+#include <filesystem>
 #include <boost/algorithm/string.hpp>
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/optional.hpp>
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/operations.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -175,7 +174,6 @@
 #include "DeviceCore/DevDefs.h"
 
 using boost::optional;
-namespace fs = boost::filesystem;
 using Slic3r::_3DScene;
 using Slic3r::Preset;
 using Slic3r::GUI::format_wxstr;
@@ -4172,10 +4170,10 @@ void Sidebar::update_printer_thumbnail()
             for (auto vendor_model : vendor_profile.second.models) {
                 if (vendor_model.name == model_name) {
                     // Try to find the printer cover
-                    boost::filesystem::path cover_path = boost::filesystem::absolute(boost::filesystem::path(resources_dir()) /
+                    std::filesystem::path cover_path = std::filesystem::absolute(std::filesystem::path(resources_dir()) /
                                                                                      "/profiles/" / vendor_profile.second.id / cover_file)
                                                              .make_preferred();
-                    if (boost::filesystem::exists(cover_path)) {
+                    if (std::filesystem::exists(cover_path)) {
                         try {
                             p->image_printer->SetBitmap(create_scaled_bitmap(cover_path.string(), this, PRINTER_THUMBNAIL_SIZE.GetHeight()));
                             printer_thumbnails[printer_type] = cover_path.string(); // Cache the path so we don't look up again
@@ -4533,7 +4531,7 @@ struct Plater::priv
                 wxString suggested_project_name;
                 wxString project_name = suggested_project_name = get_project_filename(".3mf");
                 if (suggested_project_name.IsEmpty()) {
-                    fs::path output_file = get_export_file_path(FT_3MF);
+                    std::filesystem::path output_file = get_export_file_path(FT_3MF);
                     suggested_project_name = output_file.empty() ? _L("Untitled") : from_u8(output_file.stem().string());
                 }
                 res = MessageDialog(mainframe, reason + "\n" + format_wxstr(_L("Do you want to save changes to \"%1%\"?"), suggested_project_name),
@@ -4633,10 +4631,10 @@ struct Plater::priv
     BoundingBox scaled_bed_shape_bb() const;
 
     // BBS: backup & restore
-    std::vector<size_t> load_files(const std::vector<fs::path>& input_files, LoadStrategy strategy, bool ask_multi = false);
+    std::vector<size_t> load_files(const std::vector<std::filesystem::path>& input_files, LoadStrategy strategy, bool ask_multi = false);
     std::vector<size_t> load_model_objects(const ModelObjectPtrs& model_objects, bool allow_negative_z = false, bool split_object = false, bool auto_drop = true);
 
-    fs::path get_export_file_path(GUI::FileType file_type);
+    std::filesystem::path get_export_file_path(GUI::FileType file_type);
     wxString get_export_file(GUI::FileType file_type);
 
     // BBS
@@ -4745,11 +4743,11 @@ struct Plater::priv
             GUI::show_error(this->q, msg);
         }
     }
-    void export_gcode(fs::path output_path, bool output_path_on_removable_media);
-    void export_gcode(fs::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job);
+    void export_gcode(std::filesystem::path output_path, bool output_path_on_removable_media);
+    void export_gcode(std::filesystem::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job);
 
     void reload_from_disk();
-    bool replace_volume_with_stl(int object_idx, int volume_idx, const fs::path& new_path, const std::string& snapshot = "");
+    bool replace_volume_with_stl(int object_idx, int volume_idx, const std::filesystem::path& new_path, const std::string& snapshot = "");
     void replace_with_stl();
     void replace_all_with_stl();
     void reload_all_from_disk();
@@ -4932,7 +4930,7 @@ private:
     void on_action_export_to_sdcard_all(SimpleEvent&);
     void update_plugin_when_launch(wxCommandEvent& event);
     // path to project folder stored with no extension
-    boost::filesystem::path     m_project_folder;
+    std::filesystem::path     m_project_folder;
 
     /* display project name */
     wxString                    m_project_name;
@@ -5495,7 +5493,7 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
 
             try {
                 if (originfile != "<lock>") // see bbs_3mf.cpp for lock detail
-                    boost::filesystem::remove_all(last);
+                    std::filesystem::remove_all(last);
             }
 
             catch (...) {}
@@ -5543,11 +5541,20 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
 
 Plater::priv::~priv()
 {
-    if (config != nullptr)
+    if (config != nullptr) {
         delete config;
-    // Saves the database of visited (already shown) hints into hints.ini.
-    notification_manager->deactivate_loaded_hints();
-    main_frame->m_tabpanel->Unbind(wxEVT_NOTEBOOK_PAGE_CHANGING, &priv::on_tab_selection_changing, this);
+        config = nullptr;
+    }
+
+    // Only interact with notification_manager if it exists
+    if (notification_manager) {
+        notification_manager->deactivate_loaded_hints();
+    }
+
+    // Only unbind if main_frame is still valid
+    if (main_frame) {
+        main_frame->m_tabpanel->Unbind(wxEVT_NOTEBOOK_PAGE_CHANGING, &priv::on_tab_selection_changing, this);
+    }
 }
 
 void Plater::priv::update(unsigned int flags)
@@ -5937,7 +5944,7 @@ void read_binary_stl(const std::string& filename, std::string& model_id, std::st
 }
 
 // BBS: backup & restore
-std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_files, LoadStrategy strategy, bool ask_multi)
+std::vector<size_t> Plater::priv::load_files(const std::vector<std::filesystem::path>& input_files, LoadStrategy strategy, bool ask_multi)
 {
     std::vector<size_t> empty_result;
     bool dlg_cont = true;
@@ -6712,7 +6719,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
 
                 for (auto obj : model.objects) {
                     if (obj->name.empty()) {
-                        obj->name = fs::path(obj->input_file).filename().string();
+                        obj->name = std::filesystem::path(obj->input_file).filename().string();
                     }
                     obj->rotate(Geometry::deg2rad(config->opt_float("preferred_orientation")), Axis::Z);
                 }
@@ -7123,7 +7130,7 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& mode
     for (ModelObject *model_object : model_objects) {
         auto *object = model.add_object(*model_object);
         object->sort_volumes(true);
-        std::string object_name = object->name.empty() ? fs::path(object->input_file).filename().string() : object->name;
+        std::string object_name = object->name.empty() ? std::filesystem::path(object->input_file).filename().string() : object->name;
         obj_idxs.push_back(obj_count++);
 
         if (model_object->instances.empty()) {
@@ -7277,7 +7284,7 @@ void Plater::priv::load_auxiliary_files()
     //wxGetApp().mainframe->m_project->Reload(auxiliary_path);
 }
 
-fs::path Plater::priv::get_export_file_path(GUI::FileType file_type)
+std::filesystem::path Plater::priv::get_export_file_path(GUI::FileType file_type)
 {
     // Update printbility state of each of the ModelInstances.
     this->update_print_volume_state();
@@ -7285,7 +7292,7 @@ fs::path Plater::priv::get_export_file_path(GUI::FileType file_type)
     const Selection& selection = get_selection();
     int obj_idx = selection.get_object_idx();
 
-    fs::path output_file;
+    std::filesystem::path output_file;
     if (file_type == FT_3MF)
         // for 3mf take the path from the project filename, if any
         output_file = into_path(get_project_filename(".3mf"));
@@ -7342,7 +7349,7 @@ wxString Plater::priv::get_export_file(GUI::FileType file_type)
         break;
     }
 
-    fs::path output_file = get_export_file_path(file_type);
+    std::filesystem::path output_file = get_export_file_path(file_type);
 
     wxString dlg_title;
     switch (file_type) {
@@ -7380,7 +7387,7 @@ wxString Plater::priv::get_export_file(GUI::FileType file_type)
         default: break;
     }
 
-    std::string out_dir = (boost::filesystem::path(output_file).parent_path()).string();
+    std::string out_dir = (std::filesystem::path(output_file).parent_path()).string();
 
     wxFileDialog dlg(q, dlg_title,
         is_shapes_dir(out_dir) ? from_u8(wxGetApp().app_config->get_last_dir()) : from_path(output_file.parent_path()), from_path(output_file.filename()),
@@ -7393,12 +7400,12 @@ wxString Plater::priv::get_export_file(GUI::FileType file_type)
         return wxEmptyString;
 
     wxString out_path = dlg.GetPath();
-    fs::path path(into_path(out_path));
+    std::filesystem::path path(into_path(out_path));
 #ifdef __WXMSW__
     if (boost::iequals(path.extension().string(), output_file.extension().string()) == false) {
         out_path += output_file.extension().string();
         boost::system::error_code ec;
-        if (boost::filesystem::exists(into_u8(out_path), ec)) {
+        if (std::filesystem::exists(into_u8(out_path), ec)) {
             auto result = MessageBox(q->GetHandle(),
                 wxString::Format(_L("The file %s already exists.\nDo you want to replace it\?"), out_path),
                 _L("Confirm Save As"),
@@ -8285,7 +8292,7 @@ bool Plater::priv::restart_background_process(unsigned int state)
     return false;
 }
 
-void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_removable_media)
+void Plater::priv::export_gcode(std::filesystem::path output_path, bool output_path_on_removable_media)
 {
     wxCHECK_RET(!(output_path.empty()), "export_gcode: output_path and upload_job empty");
 
@@ -8318,7 +8325,7 @@ void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_remova
     this->background_process.set_task(PrintBase::TaskParams());
     this->restart_background_process(priv::UPDATE_BACKGROUND_PROCESS_FORCE_EXPORT);
 }
-void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job)
+void Plater::priv::export_gcode(std::filesystem::path output_path, bool output_path_on_removable_media, PrintHostJob upload_job)
 {
     wxCHECK_RET(!(output_path.empty() && upload_job.empty()), "export_gcode: output_path and upload_job empty");
 
@@ -8408,7 +8415,7 @@ void Plater::priv::update_sla_scene()
     this->update_restart_background_process(true, true);
 }
 
-bool Plater::priv::replace_volume_with_stl(int object_idx, int volume_idx, const fs::path& new_path, const std::string& snapshot)
+bool Plater::priv::replace_volume_with_stl(int object_idx, int volume_idx, const std::filesystem::path& new_path, const std::string& snapshot)
 {
     const std::string path = new_path.string();
     wxBusyCursor wait;
@@ -8538,8 +8545,8 @@ void Plater::priv::replace_with_stl()
     const ModelObject* object = model.objects[object_idx];
     const ModelVolume* volume = object->volumes[volume_idx];
 
-    fs::path input_path;
-    if (!volume->source.input_file.empty() && fs::exists(volume->source.input_file))
+    std::filesystem::path input_path;
+    if (!volume->source.input_file.empty() && std::filesystem::exists(volume->source.input_file))
         input_path = volume->source.input_file;
 
     wxString title = _L("Select a new file");
@@ -8548,7 +8555,7 @@ void Plater::priv::replace_with_stl()
     if (dialog.ShowModal() != wxID_OK)
         return;
 
-    fs::path out_path = dialog.GetPath().ToUTF8().data();
+    std::filesystem::path out_path = dialog.GetPath().ToUTF8().data();
     if (out_path.empty()) {
         MessageDialog dlg(q, _L("File for the replacement wasn\'t selected"), _L("Error during replacement"), wxOK | wxOK_DEFAULT | wxICON_WARNING);
         dlg.ShowModal();
@@ -8577,7 +8584,7 @@ void Plater::priv::replace_all_with_stl()
     if (selection.is_wipe_tower())
         return;
 
-    fs::path input_path;
+    std::filesystem::path input_path;
     Selection::IndicesList volume_idxs = selection.get_volume_idxs();
 
     // when plates are selected instead of volumes
@@ -8620,7 +8627,7 @@ void Plater::priv::replace_all_with_stl()
         const ModelObject* object = model.objects[object_idx];
         const ModelVolume* volume = object->volumes[volume_idx];
 
-        if (!volume->source.input_file.empty() && fs::exists(volume->source.input_file)) {
+        if (!volume->source.input_file.empty() && std::filesystem::exists(volume->source.input_file)) {
             input_path = volume->source.input_file;
             break;
         }
@@ -8632,7 +8639,7 @@ void Plater::priv::replace_all_with_stl()
     if (dialog.ShowModal() != wxID_OK)
         return;
 
-    fs::path out_path = dialog.GetPath().ToUTF8().data();
+    std::filesystem::path out_path = dialog.GetPath().ToUTF8().data();
     if (out_path.empty()) {
         MessageDialog dlg(q, _L("Directory for the replace wasn't selected"), _L("Error during replacement"), wxOK | wxOK_DEFAULT | wxICON_WARNING);
         dlg.ShowModal();
@@ -8654,7 +8661,7 @@ void Plater::priv::replace_all_with_stl()
 
         input_path = volume->source.input_file;
 
-        fs::path new_path = out_path / input_path.filename();
+        std::filesystem::path new_path = out_path / input_path.filename();
 
         std::string volume_name = volume->name;
 
@@ -8664,7 +8671,7 @@ void Plater::priv::replace_all_with_stl()
             continue;
         }
 
-        if (!fs::exists(new_path)) {
+        if (!std::filesystem::exists(new_path)) {
             status += boost::str(boost::format(_L("✖ Skipped %1%: file does not exist.\n").ToStdString()) % volume_name);
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " cannot replace volume : filen does not exist " << new_path;
             continue;
@@ -8706,7 +8713,7 @@ static std::vector<std::pair<int, int>> reloadable_volumes(const Model &model, c
             const int          v_idx = v.volume_idx();
             if (0 <= v_idx && v_idx < int(obj->volumes.size())) {
                 const ModelVolume *vol = obj->volumes[v_idx];
-                if (!vol->source.is_from_builtin_objects && !vol->source.input_file.empty() && !fs::path(vol->source.input_file).extension().string().empty())
+                if (!vol->source.is_from_builtin_objects && !vol->source.input_file.empty() && !std::filesystem::path(vol->source.input_file).extension().string().empty())
                     ret.push_back({o_idx, v_idx});
             }
         }
@@ -8767,23 +8774,23 @@ void Plater::priv::reload_from_disk()
 #endif // ENABLE_RELOAD_FROM_DISK_REWORK
 
     // collects paths of files to load
-    std::vector<fs::path> input_paths;
-    std::vector<fs::path> missing_input_paths;
+    std::vector<std::filesystem::path> input_paths;
+    std::vector<std::filesystem::path> missing_input_paths;
 #if ENABLE_RELOAD_FROM_DISK_REWORK
-    std::vector<std::pair<fs::path, fs::path>> replace_paths;
+    std::vector<std::pair<std::filesystem::path, std::filesystem::path>> replace_paths;
     for (auto [obj_idx, vol_idx] : selected_volumes) {
         const ModelObject *object = model.objects[obj_idx];
         const ModelVolume *volume = object->volumes[vol_idx];
-        if (fs::exists(volume->source.input_file))
+        if (std::filesystem::exists(volume->source.input_file))
             input_paths.push_back(volume->source.input_file);
         else {
             // searches the source in the same folder containing the object
             bool found = false;
             if (!object->input_file.empty()) {
-                fs::path object_path = fs::path(object->input_file).remove_filename();
+                std::filesystem::path object_path = std::filesystem::path(object->input_file).remove_filename();
                 if (!object_path.empty()) {
-                    object_path /= fs::path(volume->source.input_file).filename();
-                    if (fs::exists(object_path)) {
+                    object_path /= std::filesystem::path(volume->source.input_file).filename();
+                    if (std::filesystem::exists(object_path)) {
                         input_paths.push_back(object_path);
                         found = true;
                     }
@@ -8794,23 +8801,23 @@ void Plater::priv::reload_from_disk()
         }
     }
 #else
-    std::vector<fs::path> replace_paths;
+    std::vector<std::filesystem::path> replace_paths;
     for (const SelectedVolume& v : selected_volumes) {
         const ModelObject* object = model.objects[v.object_idx];
         const ModelVolume* volume = object->volumes[v.volume_idx];
 
         if (!volume->source.input_file.empty()) {
-            if (fs::exists(volume->source.input_file))
+            if (std::filesystem::exists(volume->source.input_file))
                 input_paths.push_back(volume->source.input_file);
             else {
                 // searches the source in the same folder containing the object
                 bool found = false;
                 if (!object->input_file.empty()) {
-                    fs::path object_path = fs::path(object->input_file).remove_filename();
+                    std::filesystem::path object_path = std::filesystem::path(object->input_file).remove_filename();
                     if (!object_path.empty()) {
-                        object_path /= fs::path(volume->source.input_file).filename();
+                        object_path /= std::filesystem::path(volume->source.input_file).filename();
                         const std::string source_input_file = object_path.string();
-                        if (fs::exists(source_input_file)) {
+                        if (std::filesystem::exists(source_input_file)) {
                             input_paths.push_back(source_input_file);
                             found = true;
                         }
@@ -8830,7 +8837,7 @@ void Plater::priv::reload_from_disk()
 
     while (!missing_input_paths.empty()) {
         // ask user to select the missing file
-        fs::path search = missing_input_paths.back();
+        std::filesystem::path search = missing_input_paths.back();
         wxString title = _L("Please select a file");
 #if defined(__APPLE__)
         title += " (" + from_u8(search.filename().string()) + ")";
@@ -8841,19 +8848,19 @@ void Plater::priv::reload_from_disk()
             return;
 
         std::string sel_filename_path = dialog.GetPath().ToUTF8().data();
-        std::string sel_filename = fs::path(sel_filename_path).filename().string();
+        std::string sel_filename = std::filesystem::path(sel_filename_path).filename().string();
         if (boost::algorithm::iequals(search.filename().string(), sel_filename)) {
             input_paths.push_back(sel_filename_path);
             missing_input_paths.pop_back();
 
-            fs::path sel_path = fs::path(sel_filename_path).remove_filename().string();
+            std::filesystem::path sel_path = std::filesystem::path(sel_filename_path).remove_filename().string();
 
-            std::vector<fs::path>::iterator it = missing_input_paths.begin();
+            std::vector<std::filesystem::path>::iterator it = missing_input_paths.begin();
             while (it != missing_input_paths.end()) {
                 // try to use the path of the selected file with all remaining missing files
-                fs::path repathed_filename = sel_path;
+                std::filesystem::path repathed_filename = sel_path;
                 repathed_filename /= it->filename();
-                if (fs::exists(repathed_filename)) {
+                if (std::filesystem::exists(repathed_filename)) {
                     input_paths.push_back(repathed_filename.string());
                     it = missing_input_paths.erase(it);
                 }
@@ -8949,8 +8956,8 @@ void Plater::priv::reload_from_disk()
             bool sinking = old_model_object->min_z() < SINKING_Z_THRESHOLD;
 
             bool has_source = !old_volume->source.input_file.empty() &&
-                              boost::algorithm::iequals(fs::path(old_volume->source.input_file).filename().string(), fs::path(path).filename().string());
-            bool has_name = !old_volume->name.empty() && boost::algorithm::iequals(old_volume->name, fs::path(path).filename().string());
+                              boost::algorithm::iequals(std::filesystem::path(old_volume->source.input_file).filename().string(), std::filesystem::path(path).filename().string());
+            bool has_name = !old_volume->name.empty() && boost::algorithm::iequals(old_volume->name, std::filesystem::path(path).filename().string());
             if (has_source || has_name) {
                 int  new_volume_idx = -1;
                 int  new_object_idx = -1;
@@ -8965,8 +8972,8 @@ void Plater::priv::reload_from_disk()
                         // still matches when the project stored a bare filename and the file was found next to
                         // the project (same-folder fallback) or picked via the locate dialog (#12992).
                         if (new_input_file == old_input_file ||
-                            boost::algorithm::iequals(fs::path(new_input_file).filename().string(),
-                                                      fs::path(old_input_file).filename().string())) {
+                            boost::algorithm::iequals(std::filesystem::path(new_input_file).filename().string(),
+                                                      std::filesystem::path(old_input_file).filename().string())) {
                             new_volume_idx = old_volume->source.volume_idx;
                             new_object_idx = old_volume->source.object_idx;
                             match_found    = true;
@@ -9062,8 +9069,8 @@ void Plater::priv::reload_from_disk()
 
             bool sinking = old_model_object->bounding_box().min.z() < SINKING_Z_THRESHOLD;
 
-            bool has_source = !old_volume->source.input_file.empty() && boost::algorithm::iequals(fs::path(old_volume->source.input_file).filename().string(), fs::path(path).filename().string());
-            bool has_name = !old_volume->name.empty() && boost::algorithm::iequals(old_volume->name, fs::path(path).filename().string());
+            bool has_source = !old_volume->source.input_file.empty() && boost::algorithm::iequals(std::filesystem::path(old_volume->source.input_file).filename().string(), std::filesystem::path(path).filename().string());
+            bool has_name = !old_volume->name.empty() && boost::algorithm::iequals(old_volume->name, std::filesystem::path(path).filename().string());
             if (has_source || has_name) {
                 int new_volume_idx = -1;
                 int new_object_idx = -1;
@@ -9141,7 +9148,7 @@ void Plater::priv::reload_from_disk()
         for (const SelectedVolume& sel_v : selected_volumes) {
             ModelObject* old_model_object = model.objects[sel_v.object_idx];
             ModelVolume* old_volume = old_model_object->volumes[sel_v.volume_idx];
-            bool has_source = !old_volume->source.input_file.empty() && boost::algorithm::iequals(fs::path(old_volume->source.input_file).filename().string(), fs::path(path).filename().string());
+            bool has_source = !old_volume->source.input_file.empty() && boost::algorithm::iequals(std::filesystem::path(old_volume->source.input_file).filename().string(), std::filesystem::path(path).filename().string());
             if (!replace_volume_with_stl(sel_v.object_idx, sel_v.volume_idx, path, "")) {
                 fail_list.push_back(from_u8(has_source ? old_volume->source.input_file : old_volume->name));
             }
@@ -9889,7 +9896,7 @@ void Plater::priv::on_export_finished(wxCommandEvent& evt)
 #if 0
     //BBS: also export 3mf to the same directory for debugging
     std::string gcode_path_str(evt.GetString().ToUTF8().data());
-    fs::path gcode_path(gcode_path_str);
+    std::filesystem::path gcode_path(gcode_path_str);
 
     if (q) {
         q->export_3mf(gcode_path.replace_extension(".3mf"), SaveStrategy::Silence); // BBS: silence
@@ -10553,7 +10560,7 @@ void Plater::priv::install_network_plugin(wxCommandEvent &event)
 void Plater::priv::update_plugin_when_launch(wxCommandEvent &event)
 {
     std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
+    std::filesystem::path data_dir_path(data_dir_str);
     auto cache_folder = data_dir_path / "ota";
     std::string changelog_file = cache_folder.string() + "/plugins/network_plugins.json";
 
@@ -10869,7 +10876,7 @@ wxString Plater::priv::get_export_gcode_filename(const wxString& extension, bool
     } else {
         if (only_filename) {
             if(!model.objects.empty() && m_project_name == _L("Untitled"))
-                return wxString(fs::path(model.objects.front()->name).replace_extension().c_str()) + from_u8(plate_index_str) + extension;
+                return wxString(std::filesystem::path(model.objects.front()->name).replace_extension().c_str()) + from_u8(plate_index_str) + extension;
 
             if (export_all)
                 return m_project_name + extension;
@@ -10924,8 +10931,8 @@ void Plater::priv::update_title_dirty_status()
 
 void Plater::priv::set_project_filename(const wxString& filename)
 {
-    boost::filesystem::path full_path = into_path(filename);
-    boost::filesystem::path ext = full_path.extension();
+    std::filesystem::path full_path = into_path(filename);
+    std::filesystem::path ext = full_path.extension();
     //if (boost::iequals(ext.string(), ".amf")) {
     //    // Remove the first extension.
     //    full_path.replace_extension("");
@@ -11377,7 +11384,7 @@ bool Plater::priv::can_reload_from_disk() const
         }), selected_volumes.end());
 
     // collects paths of files to load
-    std::vector<fs::path> paths;
+    std::vector<std::filesystem::path> paths;
     for (auto [obj_idx, vol_idx] : selected_volumes) {
         paths.push_back(model.objects[obj_idx]->volumes[vol_idx]->source.input_file);
     }
@@ -11386,7 +11393,7 @@ bool Plater::priv::can_reload_from_disk() const
     selected_volumes.erase(std::unique(selected_volumes.begin(), selected_volumes.end()), selected_volumes.end());
 
     // collects paths of files to load
-    std::vector<fs::path> paths;
+    std::vector<std::filesystem::path> paths;
     for (const SelectedVolume& v : selected_volumes) {
         const ModelObject* object = model.objects[v.object_idx];
         const ModelVolume* volume = object->volumes[v.volume_idx];
@@ -12249,7 +12256,7 @@ void Plater::load_project(wxString const& filename2,
 
     Plater::TakeSnapshot snapshot(this, "Load Project", UndoRedo::SnapshotType::ProjectSeparator);
 
-    std::vector<fs::path> input_paths;
+    std::vector<std::filesystem::path> input_paths;
     input_paths.push_back(path);
     if (strategy & LoadStrategy::Restore)
         input_paths.push_back(into_u8(originfile));
@@ -12349,7 +12356,7 @@ int Plater::save_project(bool saveAs)
     reset_project_dirty_after_save();
     try {
         json j;
-        boost::uintmax_t size = boost::filesystem::file_size(into_path(filename));
+        boost::uintmax_t size = std::filesystem::file_size(into_path(filename));
         j["file_size"] = size;
         j["file_name"] = std::string(filename.mb_str());
 
@@ -12380,7 +12387,7 @@ void Plater::import_model_id(wxString download_info)
 
         }
         else {
-            fs::path download_path = fs::path(download_origin_url.wx_str());
+            std::filesystem::path download_path = std::filesystem::path(download_origin_url.wx_str());
             download_url = download_origin_url;
             filename = download_path.filename().string();
         }
@@ -12415,7 +12422,7 @@ void Plater::import_model_id(wxString download_info)
         wxPD_AUTO_HIDE |
         wxPD_SMOOTH);
 
-    boost::filesystem::path target_path;
+    std::filesystem::path target_path;
 
     //reset params
     p->project.reset();
@@ -12437,12 +12444,12 @@ void Plater::import_model_id(wxString download_info)
         bool                    is_already_exist = false;
 
 
-        target_path = fs::path(wxGetApp().app_config->get("download_path"));
+        target_path = std::filesystem::path(wxGetApp().app_config->get("download_path"));
 
         try
         {
             vecFiles.clear();
-            wxString extension = fs::path(filename.wx_str()).extension().c_str();
+            wxString extension = std::filesystem::path(filename.wx_str()).extension().c_str();
 
 
             //check file suffix
@@ -12453,9 +12460,9 @@ void Plater::import_model_id(wxString download_info)
 
             auto name = filename.substr(0, filename.length() - extension.length() - 1);
 
-            for (const auto& iter : boost::filesystem::directory_iterator(target_path))
+            for (const auto& iter : std::filesystem::directory_iterator(target_path))
             {
-                if (boost::filesystem::is_directory(iter.path()))
+                if (std::filesystem::is_directory(iter.path()))
                     continue;
 
                 wxString sFile = iter.path().filename().string().c_str();
@@ -12473,7 +12480,7 @@ void Plater::import_model_id(wxString download_info)
 
         //update filename
         if (is_already_exist && vecFiles.size() >= 1) {
-            wxString extension = fs::path(filename.wx_str()).extension().c_str();
+            wxString extension = std::filesystem::path(filename.wx_str()).extension().c_str();
             wxString name = filename.substr(0, filename.length() - extension.length());
             filename = wxString::Format("%s(%d)%s", name, vecFiles.size() + 1, extension).ToStdString();
         }
@@ -12493,9 +12500,9 @@ void Plater::import_model_id(wxString download_info)
         }
 
         //target_path /= (boost::format("%1%_%2%.3mf") % filename % unique).str();
-        target_path /= fs::path(filename.wc_str());
+        target_path /= std::filesystem::path(filename.wc_str());
 
-        fs::path tmp_path = target_path;
+        std::filesystem::path tmp_path = target_path;
         tmp_path += format(".%1%", ".download");
 
         auto filesize = 0;
@@ -12541,10 +12548,10 @@ void Plater::import_model_id(wxString download_info)
                     }
                 })
                 .on_complete([&cont, &download_ok, tmp_path, target_path](std::string body, unsigned /* http_status */) {
-                        fs::fstream file(tmp_path, std::ios::out | std::ios::binary | std::ios::trunc);
+                        std::ofstream file(tmp_path, std::ios::out | std::ios::binary | std::ios::trunc);
                         file.write(body.c_str(), body.size());
                         file.close();
-                        fs::rename(tmp_path, target_path);
+                        std::filesystem::rename(tmp_path, target_path);
                         cont = false;
                         download_ok = true;
                 }).perform_sync();
@@ -12640,7 +12647,7 @@ void Plater::add_model(bool imperial_units, std::string fname)
 {
     wxArrayString input_files;
 
-    std::vector<fs::path> paths;
+    std::vector<std::filesystem::path> paths;
     if (fname.empty()) {
         wxGetApp().import_model(this, input_files);
         if (input_files.empty())
@@ -12691,7 +12698,7 @@ void Plater::add_model(bool imperial_units, std::string fname)
     if (!load_files(paths, strategy, ask_multi).empty()) {
 
         if (get_project_name() == _L("Untitled") && paths.size() > 0) {
-            boost::filesystem::path full_path(paths[0].string());
+            std::filesystem::path full_path(paths[0].string());
             p->set_project_name(from_u8(full_path.stem().string()));
         }
 
@@ -13183,17 +13190,17 @@ void Plater::calib_flowrate(bool is_linear, int pass, InfillPattern pattern) {
     if (is_linear) {
         if (pass == 1)
             add_model(false,
-                      (boost::filesystem::path(Slic3r::resources_dir()) / "calib" / "filament_flow" / "Orca-LinearFlow.3mf").string());
+                      (std::filesystem::path(Slic3r::resources_dir()) / "calib" / "filament_flow" / "Orca-LinearFlow.3mf").string());
         else
             add_model(false,
-                      (boost::filesystem::path(Slic3r::resources_dir()) / "calib" / "filament_flow" / "Orca-LinearFlow_fine.3mf").string());
+                      (std::filesystem::path(Slic3r::resources_dir()) / "calib" / "filament_flow" / "Orca-LinearFlow_fine.3mf").string());
     } else {
         if (pass == 1)
             add_model(false,
-                      (boost::filesystem::path(Slic3r::resources_dir()) / "calib" / "filament_flow" / "flowrate-test-pass1.3mf").string());
+                      (std::filesystem::path(Slic3r::resources_dir()) / "calib" / "filament_flow" / "flowrate-test-pass1.3mf").string());
         else
             add_model(false,
-                      (boost::filesystem::path(Slic3r::resources_dir()) / "calib" / "filament_flow" / "flowrate-test-pass2.3mf").string());
+                      (std::filesystem::path(Slic3r::resources_dir()) / "calib" / "filament_flow" / "flowrate-test-pass2.3mf").string());
     }
 
     // ORCA: pass the pattern
@@ -13695,7 +13702,7 @@ void Plater::extract_config_from_project()
     wxGetApp().load_project(this, input_file);
 
     if (! input_file.empty())
-        load_files({ into_path(input_file) }, LoadStrategy::LoadConfig);
+        load_files(std::vector<std::filesystem::path>{ into_path(input_file) }, LoadStrategy::LoadConfig);
 }
 
 void Plater::load_gcode()
@@ -13874,7 +13881,7 @@ void Plater::force_update_all_plate_thumbnails()
 }
 
 // BBS: backup
-std::vector<size_t> Plater::load_files(const std::vector<fs::path>& input_files, LoadStrategy strategy, bool ask_multi) {
+std::vector<size_t> Plater::load_files(const std::vector<std::filesystem::path>& input_files, LoadStrategy strategy, bool ask_multi) {
     //BBS: wish to reset state when load a new file
     p->m_slice_all_only_has_gcode = false;
     //BBS: wish to reset all plates stats item selected state when load a new file
@@ -13885,18 +13892,18 @@ std::vector<size_t> Plater::load_files(const std::vector<fs::path>& input_files,
 // To be called when providing a list of files to the GUI slic3r on command line.
 std::vector<size_t> Plater::load_files(const std::vector<std::string>& input_files, LoadStrategy strategy,  bool ask_multi)
 {
-    std::vector<fs::path> paths;
+    std::vector<std::filesystem::path> paths;
     paths.reserve(input_files.size());
     for (const std::string& path : input_files)
         paths.emplace_back(path);
     return p->load_files(paths, strategy, ask_multi);
 }
 
-bool Plater::preview_zip_archive(const boost::filesystem::path& archive_path)
+bool Plater::preview_zip_archive(const std::filesystem::path& archive_path)
 {
-    //std::vector<fs::path> unzipped_paths;
-    std::vector<fs::path> non_project_paths;
-    std::vector<fs::path> project_paths;
+    //std::vector<std::filesystem::path> unzipped_paths;
+    std::vector<std::filesystem::path> non_project_paths;
+    std::vector<std::filesystem::path> project_paths;
     try
     {
         mz_zip_archive archive;
@@ -13910,16 +13917,16 @@ bool Plater::preview_zip_archive(const boost::filesystem::path& archive_path)
         mz_uint num_entries = mz_zip_reader_get_num_files(&archive);
         mz_zip_archive_file_stat stat;
         // selected_paths contains paths and its uncompressed size. The size is used to distinguish between files with same path.
-        std::vector<std::pair<fs::path, size_t>> selected_paths;
+        std::vector<std::pair<std::filesystem::path, size_t>> selected_paths;
         FileArchiveDialog dlg(static_cast<wxWindow*>(wxGetApp().mainframe), &archive, selected_paths);
         if (dlg.ShowModal() == wxID_OK)
         {
             std::string archive_path_string = archive_path.string();
             archive_path_string = archive_path_string.substr(0, archive_path_string.size() - 4);
-            fs::path archive_dir(wxStandardPaths::Get().GetTempDir().utf8_str().data());
+            std::filesystem::path archive_dir(wxStandardPaths::Get().GetTempDir().utf8_str().data());
 
             for (auto& path_w_size : selected_paths) {
-                const fs::path& path = path_w_size.first;
+                const std::filesystem::path& path = path_w_size.first;
                 size_t size = path_w_size.second;
                 // find path in zip archive
                 for (mz_uint i = 0; i < num_entries; ++i) {
@@ -13927,7 +13934,7 @@ bool Plater::preview_zip_archive(const boost::filesystem::path& archive_path)
                         if (size != stat.m_uncomp_size) // size must fit
                             continue;
                         std::string name = Slic3r::decode_archive_entry_path(&archive, stat);
-                        fs::path archive_path(name);
+                        std::filesystem::path archive_path(name);
 
                         if (archive_path.empty())
                             continue;
@@ -13944,13 +13951,13 @@ bool Plater::preview_zip_archive(const boost::filesystem::path& archive_path)
                             std::string final_filename = just_filename;
 
                             size_t version = 0;
-                            while (fs::exists(archive_dir / (final_filename + extension)))
+                            while (std::filesystem::exists(archive_dir / (final_filename + extension)))
                             {
                                 ++version;
                                 final_filename = just_filename + "(" + std::to_string(version) + ")";
                             }
                             filename = final_filename + extension;
-                            fs::path final_path = archive_dir / filename;
+                            std::filesystem::path final_path = archive_dir / filename;
                             std::string buffer((size_t)stat.m_uncomp_size, 0);
                             // Decompress action. We already has correct file index in stat structure.
                             mz_bool res = mz_zip_reader_extract_to_mem(&archive, stat.m_file_index, (void*)buffer.data(), (size_t)stat.m_uncomp_size, 0);
@@ -13962,10 +13969,10 @@ bool Plater::preview_zip_archive(const boost::filesystem::path& archive_path)
                                 break;
                             }
                             // write buffer to file
-                            fs::fstream file(final_path, std::ios::out | std::ios::binary | std::ios::trunc);
+                            std::ofstream file(final_path, std::ios::out | std::ios::binary | std::ios::trunc);
                             file.write(buffer.c_str(), buffer.size());
                             file.close();
-                            if (!fs::exists(final_path)) {
+                            if (!std::filesystem::exists(final_path)) {
                                 wxString error_log = GUI::format_wxstr(_L("Failed to find unzipped file at %1%. Unzipping of file has failed."), final_path.string());
                                 BOOST_LOG_TRIVIAL(error) << error_log;
                                 show_error(nullptr, error_log);
@@ -14027,14 +14034,14 @@ bool Plater::preview_zip_archive(const boost::filesystem::path& archive_path)
         load_files(non_project_paths, LoadStrategy::LoadModel);
         boost::system::error_code ec;
         if (loaded3mf) {
-            fs::remove(project_paths.front(), ec);
+            std::filesystem::remove(project_paths.front(), ec);
             if (ec)
                 BOOST_LOG_TRIVIAL(error) << ec.message();
         }
-        for (const fs::path& path : non_project_paths) {
+        for (const std::filesystem::path& path : non_project_paths) {
             // Delete file from temp file (path variable), it will stay only in app memory.
             boost::system::error_code ec;
-            fs::remove(path, ec);
+            std::filesystem::remove(path, ec);
             if (ec)
                 BOOST_LOG_TRIVIAL(error) << ec.message();
         }
@@ -14046,17 +14053,17 @@ bool Plater::preview_zip_archive(const boost::filesystem::path& archive_path)
     load_files(non_project_paths, LoadStrategy::LoadModel);
 
 
-    for (const fs::path& path : project_paths) {
+    for (const std::filesystem::path& path : project_paths) {
         // Delete file from temp file (path variable), it will stay only in app memory.
         boost::system::error_code ec;
-        fs::remove(path, ec);
+        std::filesystem::remove(path, ec);
         if (ec)
             BOOST_LOG_TRIVIAL(error) << ec.message();
     }
-    for (const fs::path& path : non_project_paths) {
+    for (const std::filesystem::path& path : non_project_paths) {
         // Delete file from temp file (path variable), it will stay only in app memory.
         boost::system::error_code ec;
-        fs::remove(path, ec);
+        std::filesystem::remove(path, ec);
         if (ec)
             BOOST_LOG_TRIVIAL(error) << ec.message();
     }
@@ -14230,11 +14237,11 @@ bool Plater::load_files(const wxArrayString& filenames)
     const std::regex pattern_drop(".*[.](stp|step|stl|oltp|obj|amf|3mf|svg|zip|drc)", std::regex::icase);
     const std::regex pattern_gcode_drop(".*[.](gcode|g)", std::regex::icase);
 
-    std::vector<fs::path> normal_paths;
-    std::vector<fs::path> gcode_paths;
+    std::vector<std::filesystem::path> normal_paths;
+    std::vector<std::filesystem::path> gcode_paths;
 
     for (const auto& filename : filenames) {
-        fs::path path(into_path(filename));
+        std::filesystem::path path(into_path(filename));
         if (std::regex_match(path.string(), pattern_drop))
             normal_paths.push_back(std::move(path));
         else if (std::regex_match(path.string(), pattern_gcode_drop))
@@ -14265,7 +14272,7 @@ bool Plater::load_files(const wxArrayString& filenames)
     }
 
     //// searches for project files
-    //for (std::vector<fs::path>::const_reverse_iterator it = normal_paths.rbegin(); it != normal_paths.rend(); ++it) {
+    //for (std::vector<std::filesystem::path>::const_reverse_iterator it = normal_paths.rbegin(); it != normal_paths.rend(); ++it) {
     //    std::string filename = (*it).filename().string();
     //    ////BBS: only 3mf will be treated as project file
     //    if (open_3mf_file((*it)))
@@ -14293,7 +14300,7 @@ bool Plater::load_files(const wxArrayString& filenames)
     //load_files(normal_paths, LoadStrategy::LoadModel);
 
     // BBS: check file types
-    std::sort(normal_paths.begin(), normal_paths.end(), [](fs::path obj1, fs::path obj2) { return obj1.filename().string() < obj2.filename().string(); });
+    std::sort(normal_paths.begin(), normal_paths.end(), [](std::filesystem::path obj1, std::filesystem::path obj2) { return obj1.filename().string() < obj2.filename().string(); });
 
     auto loadfiles_type  = LoadFilesType::NoFile;
     auto amf_files_count = get_3mf_file_count(normal_paths);
@@ -14304,9 +14311,9 @@ bool Plater::load_files(const wxArrayString& filenames)
     if (normal_paths.size() == 1 && amf_files_count == 1) { loadfiles_type = LoadFilesType::Single3MF; };
     if (normal_paths.size() == 1 && amf_files_count == 0) { loadfiles_type = LoadFilesType::SingleOther; };
 
-    auto first_file = std::vector<fs::path>{};
-    auto tmf_file   = std::vector<fs::path>{};
-    auto other_file = std::vector<fs::path>{};
+    auto first_file = std::vector<std::filesystem::path>{};
+    auto tmf_file   = std::vector<std::filesystem::path>{};
+    auto other_file = std::vector<std::filesystem::path>{};
     auto res        = true;
 
     if (this->m_only_gcode || this->m_exported_file) {
@@ -14319,7 +14326,7 @@ bool Plater::load_files(const wxArrayString& filenames)
 
     // Orca: Iters through given paths and imports files from zip then remove zip from paths
     // returns true if zip files were found
-    auto handle_zips = [this](vector<fs::path>& paths) { // NOLINT(*-no-recursion) - Recursion is intended and should be managed properly
+    auto handle_zips = [this](vector<std::filesystem::path>& paths) { // NOLINT(*-no-recursion) - Recursion is intended and should be managed properly
         bool res = false;
         for (auto it = paths.begin(); it != paths.end();) {
             if (boost::algorithm::iends_with(it->string(), ".zip")) {
@@ -14344,7 +14351,7 @@ bool Plater::load_files(const wxArrayString& filenames)
         break;
     }
     case LoadFilesType::Multiple3MF:
-        first_file = std::vector<fs::path>{normal_paths[0]};
+        first_file = std::vector<std::filesystem::path>{normal_paths[0]};
         for (auto i = 0; i < normal_paths.size(); i++) {
             if (i > 0) { other_file.push_back(normal_paths[i]); }
         };
@@ -14417,7 +14424,7 @@ LoadType determine_load_type(std::string filename, std::string override_setting)
     }
 }
 
-bool Plater::open_3mf_file(const fs::path &file_path)
+bool Plater::open_3mf_file(const std::filesystem::path &file_path)
 {
     std::string filename = encode_path(file_path.filename().string().c_str());
     if (!boost::algorithm::iends_with(filename, ".3mf")) {
@@ -14438,11 +14445,11 @@ bool Plater::open_3mf_file(const fs::path &file_path)
         }
         case LoadType::LoadGeometry: {
             Plater::TakeSnapshot snapshot(this, "Import Object");
-            load_files({file_path}, LoadStrategy::LoadModel);
+            load_files(std::vector<std::filesystem::path>{file_path}, LoadStrategy::LoadModel);
             break;
         }
         case LoadType::LoadConfig: {
-            load_files({file_path}, LoadStrategy::LoadConfig);
+            load_files(std::vector<std::filesystem::path>{file_path}, LoadStrategy::LoadConfig);
             break;
         }
         case LoadType::Unknown: {
@@ -14454,7 +14461,7 @@ bool Plater::open_3mf_file(const fs::path &file_path)
     return true;
 }
 
-int Plater::get_3mf_file_count(std::vector<fs::path> paths)
+int Plater::get_3mf_file_count(std::vector<std::filesystem::path> paths)
 {
     auto count = 0;
     for (const auto &path : paths) {
@@ -14472,7 +14479,7 @@ void Plater::add_file()
     wxGetApp().import_model(this, input_files);
     if (input_files.empty()) return;
 
-    std::vector<fs::path> paths;
+    std::vector<std::filesystem::path> paths;
     for (const auto &file : input_files) paths.emplace_back(into_path(file));
 
     std::string snapshot_label;
@@ -14496,9 +14503,9 @@ void Plater::add_file()
     if (paths.size() == 1 && amf_files_count == 1) { loadfiles_type = LoadFilesType::Single3MF; };
     if (paths.size() == 1 && amf_files_count == 0) { loadfiles_type = LoadFilesType::SingleOther; };
 
-    auto first_file = std::vector<fs::path>{};
-    auto tmf_file   = std::vector<fs::path>{};
-    auto other_file = std::vector<fs::path>{};
+    auto first_file = std::vector<std::filesystem::path>{};
+    auto tmf_file   = std::vector<std::filesystem::path>{};
+    auto other_file = std::vector<std::filesystem::path>{};
 
     switch (loadfiles_type)
     {
@@ -14510,7 +14517,7 @@ void Plater::add_file()
         Plater::TakeSnapshot snapshot(this, snapshot_label);
         if (!load_files(paths, LoadStrategy::LoadModel, false).empty()) {
             if (get_project_name() == _L("Untitled") && paths.size() > 0) {
-                boost::filesystem::path full_path(paths[0].string());
+                std::filesystem::path full_path(paths[0].string());
                 p->set_project_name(from_u8(full_path.stem().string()));
             }
             wxGetApp().mainframe->update_title();
@@ -14520,7 +14527,7 @@ void Plater::add_file()
         break;
     }
     case LoadFilesType::Multiple3MF:
-        first_file = std::vector<fs::path>{paths[0]};
+        first_file = std::vector<std::filesystem::path>{paths[0]};
         for (auto i = 0; i < paths.size(); i++) {
             if (i > 0) { other_file.push_back(paths[i]); }
         };
@@ -14533,7 +14540,7 @@ void Plater::add_file()
         Plater::TakeSnapshot snapshot(this, snapshot_label);
         if (!load_files(paths, LoadStrategy::LoadModel, true).empty()) {
             if (get_project_name() == _L("Untitled") && paths.size() > 0) {
-                boost::filesystem::path full_path(paths[0].string());
+                std::filesystem::path full_path(paths[0].string());
                 p->set_project_name(from_u8(full_path.stem().string()));
             }
             wxGetApp().mainframe->update_title();
@@ -14942,7 +14949,7 @@ void Plater::export_gcode(bool prefer_removable)
 
     // If possible, remove accents from accented latin characters.
     // This function is useful for generating file names to be processed by legacy firmwares.
-    fs::path default_output_file;
+    std::filesystem::path default_output_file;
     try {
         // Update the background processing, so that the placeholder parser will get the correct values for the ouput file template.
         // Also if there is something wrong with the current configuration, a pop-up dialog will be shown and the export will not be performed.
@@ -14959,7 +14966,7 @@ void Plater::export_gcode(bool prefer_removable)
         show_error(this, ex.what(), false);
         return;
     }
-    default_output_file = fs::path(Slic3r::fold_utf8_to_ascii(default_output_file.string()));
+    default_output_file = std::filesystem::path(Slic3r::fold_utf8_to_ascii(default_output_file.string()));
     AppConfig 				&appconfig 				 = *wxGetApp().app_config;
     RemovableDriveManager 	&removable_drive_manager = *wxGetApp().removable_drive_manager();
     // Get a last save path, either to removable media or to an internal media.
@@ -14972,7 +14979,7 @@ void Plater::export_gcode(bool prefer_removable)
             start_dir = appconfig.get_last_output_dir(default_output_file.parent_path().string(), false);
     }
 
-    fs::path output_path;
+    std::filesystem::path output_path;
     {
         std::string ext = default_output_file.extension().string();
         wxFileDialog dlg(this, (printer_technology() == ptFFF) ? _L("Save G-code file as:") : _L("Save SLA file as:"),
@@ -15044,7 +15051,7 @@ void Plater::export_gcode_3mf(bool export_all)
         return;
 
     //calc default_output_file, get default output file from background process
-    fs::path default_output_file;
+    std::filesystem::path default_output_file;
     AppConfig& appconfig = *wxGetApp().app_config;
     std::string start_dir;
     try {
@@ -15066,12 +15073,12 @@ void Plater::export_gcode_3mf(bool export_all)
         return;
     }
     default_output_file.replace_extension(".gcode.3mf");
-    default_output_file = fs::path(Slic3r::fold_utf8_to_ascii(default_output_file.string()));
+    default_output_file = std::filesystem::path(Slic3r::fold_utf8_to_ascii(default_output_file.string()));
 
     //Get a last save path
     start_dir = appconfig.get_last_output_dir(default_output_file.parent_path().string(), false);
 
-    fs::path output_path;
+    std::filesystem::path output_path;
     {
         std::string ext = default_output_file.extension().string();
         wxFileDialog dlg(this, _L("Save Sliced file as:"),
@@ -15447,7 +15454,7 @@ void Plater::export_stl(bool extended, bool selection_only, bool multi_stls, Fil
 
         auto path = dir + name + ext;
         int n = 1;
-        while (boost::filesystem::exists(path))
+        while (std::filesystem::exists(path))
             path = dir + name + "(" + std::to_string(n++) + ")"+ext;
         return path;
     };
@@ -15623,7 +15630,7 @@ void publish(Model &model, SaveStrategy strategy) {
 }
 
 // BBS: backup
-int Plater::export_3mf(const boost::filesystem::path& output_path, SaveStrategy strategy, int export_plate_idx, Export3mfProgressFn proFn)
+int Plater::export_3mf(const std::filesystem::path& output_path, SaveStrategy strategy, int export_plate_idx, Export3mfProgressFn proFn)
 {
     int ret = 0;
     //if (p->model.objects.empty()) {
@@ -16200,7 +16207,7 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
     const int resolved_plate_idx = plate_idx == PLATE_CURRENT_IDX ? get_partplate_list().get_curr_plate_index() : plate_idx;
 
     // Obtain default output path
-    fs::path default_output_file;
+    std::filesystem::path default_output_file;
     try {
         // Update the background processing, so that the placeholder parser will get the correct values for the ouput file template.
         // Also if there is something wrong with the current configuration, a pop-up dialog will be shown and the export will not be performed.
@@ -16217,7 +16224,7 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
         show_error(this, ex.what(), false);
         return;
     }
-    default_output_file = fs::path(Slic3r::fold_utf8_to_ascii(default_output_file.string()));
+    default_output_file = std::filesystem::path(Slic3r::fold_utf8_to_ascii(default_output_file.string()));
     if (use_3mf) {
         // Orca: a gcode-in-3mf bundle is named ".gcode.3mf" (matching "Export plate sliced file")
         default_output_file.replace_extension(".gcode.3mf");
@@ -16383,7 +16390,7 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
         upload_job.upload_data.source_path = p->m_print_job_data._3mf_path;
     }
 
-    p->export_gcode(fs::path(), false, std::move(upload_job));
+    p->export_gcode(std::filesystem::path(), false, std::move(upload_job));
 }
 int Plater::send_gcode(int plate_idx, Export3mfProgressFn proFn)
 {
@@ -16393,7 +16400,7 @@ int Plater::send_gcode(int plate_idx, Export3mfProgressFn proFn)
 
     PartPlate* plate = get_partplate_list().get_curr_plate();
     try {
-        p->m_print_job_data._3mf_path = fs::path(plate->get_tmp_gcode_path());
+        p->m_print_job_data._3mf_path = std::filesystem::path(plate->get_tmp_gcode_path());
         p->m_print_job_data._3mf_path.replace_extension("3mf");
     }
     catch (std::exception&) {
@@ -16422,7 +16429,7 @@ int Plater::export_config_3mf(int plate_idx, Export3mfProgressFn proFn)
 
     PartPlate* plate = get_partplate_list().get_curr_plate();
     try {
-        p->m_print_job_data._3mf_config_path = fs::path(plate->get_temp_config_3mf_path());
+        p->m_print_job_data._3mf_config_path = std::filesystem::path(plate->get_temp_config_3mf_path());
     }
     catch (std::exception&) {
         BOOST_LOG_TRIVIAL(error) << "generate 3mf path failed";

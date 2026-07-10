@@ -62,8 +62,6 @@
 #include <boost/shared_ptr.hpp>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/nowide/fstream.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/nowide/cstdio.hpp>
@@ -225,12 +223,11 @@ const std::string& var_dir()
 
 std::string var(const std::string &file_name)
 {
-    boost::system::error_code ec;
-    if (boost::filesystem::exists(file_name, ec)) {
+    if (std::filesystem::exists(file_name)) {
        return file_name;
     }
 
-    auto file = (boost::filesystem::path(g_var_dir) / file_name).make_preferred();
+    std::filesystem::path file = (std::filesystem::path(g_var_dir) / file_name).make_preferred();
     return file.string();
 }
 
@@ -301,8 +298,8 @@ static std::string g_data_dir;
 void set_data_dir(const std::string &dir)
 {
     g_data_dir = dir;
-    if (!g_data_dir.empty() && !boost::filesystem::exists(g_data_dir)) {
-       boost::filesystem::create_directory(g_data_dir);
+    if (!g_data_dir.empty() && !std::filesystem::exists(g_data_dir)) {
+       std::filesystem::create_directory(g_data_dir);
     }
 }
 
@@ -313,12 +310,12 @@ const std::string& data_dir()
 
 std::string custom_shapes_dir()
 {
-    return (boost::filesystem::path(g_data_dir) / "shapes").string();
+    return (std::filesystem::path(g_data_dir) / "shapes").string();
 }
 
 std::string handy_models_dir()
 {
-    return (boost::filesystem::path(resources_dir()) / "handy_models").string();
+    return (std::filesystem::path(resources_dir()) / "handy_models").string();
 }
 
 static std::atomic<bool> debug_out_path_called(false);
@@ -326,12 +323,12 @@ static std::atomic<bool> debug_out_path_called(false);
 std::string debug_out_path(const char *name, ...)
 {
 	//static constexpr const char *SLIC3R_DEBUG_OUT_PATH_PREFIX = "out/";
-	auto svg_folder = boost::filesystem::path(g_data_dir) / "SVG/";
+	auto svg_folder = std::filesystem::path(g_data_dir) / "SVG/";
     if (! debug_out_path_called.exchange(true)) {
-		if (!boost::filesystem::exists(svg_folder)) {
-			boost::filesystem::create_directory(svg_folder);
+		if (!std::filesystem::exists(svg_folder)) {
+			std::filesystem::create_directory(svg_folder);
 		}
-		std::string path = boost::filesystem::system_complete(svg_folder).string();
+		std::string path = std::filesystem::absolute(svg_folder).string();
         printf("Debugging output files will be written to %s\n", path.c_str());
     }
 	char buffer[2048];
@@ -377,9 +374,9 @@ void set_log_path_and_level(const std::string& file, unsigned int level)
 #endif
 
 	//BBS log file at C:\\Users\\[yourname]\\AppData\\Roaming\\OrcaSlicer\\log\\[log_filename].log
-	auto log_folder = boost::filesystem::path(g_data_dir) / "log";
-	if (!boost::filesystem::exists(log_folder)) {
-		boost::filesystem::create_directory(log_folder);
+	auto log_folder = std::filesystem::path(g_data_dir) / "log";
+	if (!std::filesystem::exists(log_folder)) {
+		std::filesystem::create_directory(log_folder);
 	}
 	auto full_path = (log_folder / file).make_preferred();
 
@@ -431,10 +428,10 @@ void flush_logs()
 }
 
 // ORCA
-boost::filesystem::path get_log_file_name()
+std::filesystem::path get_log_file_name()
 {
     if (g_log_sink)
-        return g_log_sink->locked_backend()->get_current_file_name();
+        return g_log_sink->locked_backend()->get_current_file_name().string();
     return {};
 }
 
@@ -749,7 +746,7 @@ int copy_file_linux_read_write(int infile, int outfile, uintmax_t file_size)
 // for example ChromeOS Linux integration or FlashAIR WebDAV.
 // Copied and simplified from boost::filesystem::detail::copy_file() with option = overwrite_if_exists and with just the Linux path kept,
 // and only features supported by Linux 3.10 (on our build server with CentOS 7) are kept, namely sendfile with ranges and statx() are not supported.
-bool copy_file_linux(const boost::filesystem::path &from, const boost::filesystem::path &to, boost::system::error_code &ec)
+bool copy_file_linux(const std::filesystem::path &from, const std::filesystem::path &to, std::error_code &ec)
 {
 	using namespace boost::filesystem;
 
@@ -893,9 +890,10 @@ bool copy_file_linux(const boost::filesystem::path &from, const boost::filesyste
 
 CopyFileResult copy_file_inner(const std::string& from, const std::string& to, std::string& error_message)
 {
-	const boost::filesystem::path source(from);
-	const boost::filesystem::path target(to);
-	static const auto perms = boost::filesystem::owner_read | boost::filesystem::owner_write | boost::filesystem::group_read | boost::filesystem::others_read;   // aka 644
+	const std::filesystem::path source(from);
+	const std::filesystem::path target(to);
+	static const auto perms = 	std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | 
+								std::filesystem::perms::group_read | std::filesystem::perms::others_read;   // aka 644
 
 	// Make sure the file has correct permission both before and after we copy over it.
 	// NOTE: error_code variants are used here to supress expception throwing.
@@ -903,17 +901,17 @@ CopyFileResult copy_file_inner(const std::string& from, const std::string& to, s
 	// the copy_file() function will fail appropriately and we don't want the permission()
 	// calls to cause needless failures on permissionless filesystems (ie. FATs on SD cards etc.)
 	// or when the target file doesn't exist.
-	boost::system::error_code ec;
-	boost::filesystem::permissions(target, perms, ec);
+	std::error_code ec;
+	std::filesystem::permissions(target, perms, ec);
 	if (ec)
-		BOOST_LOG_TRIVIAL(debug) << "boost::filesystem::permisions before copy error message (this could be irrelevant message based on file system): " << ec.message();
+		BOOST_LOG_TRIVIAL(debug) << "std::filesystem::permisions before copy error message (this could be irrelevant message based on file system): " << ec.message();
 	ec.clear();
 #ifdef __linux__
 	// We want to allow copying files on Linux to succeed even if changing the file attributes fails.
 	// That may happen when copying on some exotic file system, for example Linux on Chrome.
-	copy_file_linux(source, target, ec);
+	copy_file_linux(source.string(), target.string(), ec);
 #else // __linux__
-	boost::filesystem::copy_file(source, target, boost::filesystem::copy_option::overwrite_if_exists, ec);
+	std::filesystem::copy_file(source, target, std::filesystem::copy_option::overwrite_if_exists, ec);
 #endif // __linux__
 	if (ec) {
 		error_message = ec.message();
@@ -922,9 +920,9 @@ CopyFileResult copy_file_inner(const std::string& from, const std::string& to, s
 		return FAIL_COPY_FILE;
 	}
 	ec.clear();
-	boost::filesystem::permissions(target, perms, ec);
+	std::filesystem::permissions(target, perms, ec);
 	if (ec)
-		BOOST_LOG_TRIVIAL(debug) << "boost::filesystem::permisions after copy error message (this could be irrelevant message based on file system): " << ec.message();
+		BOOST_LOG_TRIVIAL(debug) << "std::filesystem::permisions after copy error message (this could be irrelevant message based on file system): " << ec.message();
 	return SUCCESS;
 }
 
@@ -978,27 +976,27 @@ __finished:
 
 bool copy_framework(const std::string &from, const std::string &to)
 {
-    boost::filesystem::path src(from), dst(to);
+    std::filesystem::path src(from), dst(to);
     try {
-        if (!boost::filesystem::is_directory(src)) {
-            std::cerr << "Error: Source is not a directory: " << src << std::endl;
+        if (!std::filesystem::is_directory(src)) {
+            std::cerr << "Error: Source is not a directory: " << src.string() << std::endl;
             return false;
         }
-        boost::filesystem::create_directories(dst);
-        for (boost::filesystem::directory_iterator it(src); it != boost::filesystem::directory_iterator(); ++it) {
+        std::filesystem::create_directories(dst);
+        for (std::filesystem::directory_iterator it(src); it != std::filesystem::directory_iterator(); ++it) {
             const auto &entry     = it->path();
             const auto  dest_path = dst / entry.filename();
 
-            if (boost::filesystem::is_symlink(entry)) {
-                boost::filesystem::copy_symlink(entry, dest_path);
-            } else if (boost::filesystem::is_directory(entry)) {
+            if (std::filesystem::is_symlink(entry)) {
+                std::filesystem::copy_symlink(entry, dest_path);
+            } else if (std::filesystem::is_directory(entry)) {
                 copy_framework(it->path().string(), dest_path.string());
             } else {
-                boost::filesystem::copy(entry, dest_path, boost::filesystem::copy_options::overwrite_existing);
+                std::filesystem::copy(entry, dest_path, std::filesystem::copy_options::overwrite_existing);
             }
         }
         return true;
-    } catch (const boost::filesystem::filesystem_error &e) {
+    } catch (const std::filesystem::filesystem_error &e) {
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << "Filesystem error: " << e.what();
     }
     return false;
@@ -1042,9 +1040,9 @@ CopyFileResult check_copy(const std::string &origin, const std::string &copy)
 }
 
 // Ignore system and hidden files, which may be created by the DropBox synchronisation process.
-bool is_plain_file(const boost::filesystem::directory_entry &dir_entry)
+bool is_plain_file(const std::filesystem::directory_entry &dir_entry)
 {
-    if (! boost::filesystem::is_regular_file(dir_entry.status()))
+    if (! std::filesystem::is_regular_file(dir_entry.status()))
         return false;
 #ifdef _MSC_VER
     DWORD attributes = GetFileAttributesW(boost::nowide::widen(dir_entry.path().string()).c_str());
@@ -1054,12 +1052,12 @@ bool is_plain_file(const boost::filesystem::directory_entry &dir_entry)
 #endif
 }
 
-bool is_ini_file(const boost::filesystem::directory_entry &dir_entry)
+bool is_ini_file(const std::filesystem::directory_entry &dir_entry)
 {
     return is_plain_file(dir_entry) && strcasecmp(dir_entry.path().extension().string().c_str(), ".ini") == 0;
 }
 
-bool is_idx_file(const boost::filesystem::directory_entry &dir_entry)
+bool is_idx_file(const std::filesystem::directory_entry &dir_entry)
 {
 	return is_plain_file(dir_entry) && strcasecmp(dir_entry.path().extension().string().c_str(), ".idx") == 0;
 }
@@ -1081,7 +1079,7 @@ bool is_img_file(const std::string &path)
 	return boost::iends_with(path, ".png") || boost::iends_with(path, ".svg");
 }
 
-bool is_gallery_file(const boost::filesystem::directory_entry& dir_entry, char const* type)
+bool is_gallery_file(const std::filesystem::directory_entry& dir_entry, char const* type)
 {
 	return is_plain_file(dir_entry) && strcasecmp(dir_entry.path().extension().string().c_str(), type) == 0;
 }
@@ -1234,13 +1232,13 @@ std::vector<std::string> split_string(const std::string &str, char delimiter)
 
 namespace PerlUtils {
     // Get a file name including the extension.
-    std::string path_to_filename(const char *src)       { return boost::filesystem::path(src).filename().string(); }
+    std::string path_to_filename(const char *src)       { return std::filesystem::path(src).filename().string(); }
     // Get a file name without the extension.
-    std::string path_to_stem(const char *src)           { return boost::filesystem::path(src).stem().string(); }
+    std::string path_to_stem(const char *src)           { return std::filesystem::path(src).stem().string(); }
     // Get just the extension.
-    std::string path_to_extension(const char *src)      { return boost::filesystem::path(src).extension().string(); }
+    std::string path_to_extension(const char *src)      { return std::filesystem::path(src).extension().string(); }
     // Get a directory without the trailing slash.
-    std::string path_to_parent_path(const char *src)    { return boost::filesystem::path(src).parent_path().string(); }
+    std::string path_to_parent_path(const char *src)    { return std::filesystem::path(src).parent_path().string(); }
 };
 
 
@@ -1660,7 +1658,7 @@ bool bbl_calc_md5(std::string &filename, std::string &md5_out)
     MD5_Init(&ctx);
     boost::nowide::ifstream ifs(filename, std::ios::binary);
     std::string                 buf(64 * 1024, 0);
-    const std::size_t &         size      = boost::filesystem::file_size(filename);
+    const std::size_t &         size      = std::filesystem::file_size(filename);
     std::size_t                 left_size = size;
     while (ifs) {
         ifs.read(buf.data(), buf.size());
@@ -1675,24 +1673,24 @@ bool bbl_calc_md5(std::string &filename, std::string &md5_out)
 }
 
 // SoftFever: copy directory recursively
-void copy_directory_recursively(const boost::filesystem::path& source,
-                                const boost::filesystem::path& target,
+void copy_directory_recursively(const std::filesystem::path& source,
+                                const std::filesystem::path& target,
                                 std::function<bool(const std::string)> filter,
                                 bool merge_mode)
 {
     BOOST_LOG_TRIVIAL(info) << Slic3r::format("copy_directory_recursively %1% -> %2%", source, target);
     std::string error_message;
 
-    if (!merge_mode && boost::filesystem::exists(target))
-        boost::filesystem::remove_all(target);
-    boost::filesystem::create_directories(target);
-    for (auto &dir_entry : boost::filesystem::directory_iterator(source))
+    if (!merge_mode && std::filesystem::exists(target))
+        std::filesystem::remove_all(target);
+    std::filesystem::create_directories(target);
+    for (auto &dir_entry : std::filesystem::directory_iterator(source))
     {
         std::string source_file = dir_entry.path().string();
         std::string name = dir_entry.path().filename().string();
         std::string target_file = target.string() + "/" + name;
 
-        if (boost::filesystem::is_directory(dir_entry)) {
+        if (std::filesystem::is_directory(dir_entry)) {
             const auto target_path = target / name;
             copy_directory_recursively(dir_entry, target_path, filter, merge_mode);
         }
@@ -1716,10 +1714,8 @@ bool install_vendor_bundles_from_resources(
     const std::string& resource_subdir,
     const std::string& data_subdir)
 {
-    namespace fs = boost::filesystem;
-
-    fs::path rsrc_path = fs::path(Slic3r::resources_dir()) / resource_subdir;
-    fs::path vendor_path = fs::path(Slic3r::data_dir()) / data_subdir;
+    std::filesystem::path rsrc_path = std::filesystem::path(Slic3r::resources_dir()) / resource_subdir;
+    std::filesystem::path vendor_path = std::filesystem::path(Slic3r::data_dir()) / data_subdir;
 
     BOOST_LOG_TRIVIAL(info) << "Installing " << bundle_names.size() << " bundles from resources...";
 
@@ -1729,14 +1725,14 @@ bool install_vendor_bundles_from_resources(
             auto path_in_rsrc = (rsrc_path / bundle).replace_extension(".json");
             auto path_in_vendors = (vendor_path / bundle).replace_extension(".json");
 
-            if (!fs::exists(path_in_rsrc)) {
+            if (!std::filesystem::exists(path_in_rsrc)) {
                 BOOST_LOG_TRIVIAL(warning) << "Bundle not found in resources: " << bundle;
                 return false;
             }
 
             // Create target directory if needed
-            if (!fs::exists(vendor_path))
-                fs::create_directories(vendor_path);
+            if (!std::filesystem::exists(vendor_path))
+                std::filesystem::create_directories(vendor_path);
 
             // Copy JSON file
             std::string error_message;
@@ -1750,11 +1746,11 @@ bool install_vendor_bundles_from_resources(
             auto dir_in_rsrc = rsrc_path / bundle;
             auto dir_in_vendors = vendor_path / bundle;
 
-            if (fs::exists(dir_in_rsrc) && fs::is_directory(dir_in_rsrc)) {
+            if (std::filesystem::exists(dir_in_rsrc) && std::filesystem::is_directory(dir_in_rsrc)) {
                 // Remove existing directory
-                if (fs::exists(dir_in_vendors))
-                    fs::remove_all(dir_in_vendors);
-                fs::create_directories(dir_in_vendors);
+                if (std::filesystem::exists(dir_in_vendors))
+                    std::filesystem::remove_all(dir_in_vendors);
+                std::filesystem::create_directories(dir_in_vendors);
 
                 // Copy with file filter (same as PresetUpdater::install_bundles_rsrc)
                 // Filter out certain file types: .stl, .png, .svg, .jpeg, .jpg, .3mf
@@ -1781,7 +1777,7 @@ bool install_vendor_bundles_from_resources(
     return true;
 }
 
-void save_string_file(const boost::filesystem::path& p, const std::string& str)
+void save_string_file(const std::filesystem::path& p, const std::string& str)
 {
     boost::nowide::ofstream file;
     file.exceptions(std::ios_base::failbit | std::ios_base::badbit);
@@ -1789,12 +1785,12 @@ void save_string_file(const boost::filesystem::path& p, const std::string& str)
     file.write(str.c_str(), str.size());
 }
 
-void load_string_file(const boost::filesystem::path& p, std::string& str)
+void load_string_file(const std::filesystem::path& p, std::string& str)
 {
     boost::nowide::ifstream file;
     file.exceptions(std::ios_base::failbit | std::ios_base::badbit);
     file.open(p.generic_string(), std::ios_base::binary);
-    std::size_t sz = static_cast<std::size_t>(boost::filesystem::file_size(p));
+    std::size_t sz = static_cast<std::size_t>(std::filesystem::file_size(p));
     str.resize(sz, '\0');
     file.read(&str[0], sz);
 }

@@ -4,7 +4,6 @@
 #include <ctime>
 #include <chrono>
 #include <thread>
-#include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -28,7 +27,7 @@
 #include "SerialMessage.hpp"
 #include "SerialMessageType.hpp"
 
-namespace fs = boost::filesystem;
+
 namespace pt = boost::property_tree;
 
 namespace Slic3r {

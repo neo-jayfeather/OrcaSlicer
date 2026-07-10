@@ -169,7 +169,7 @@ ArchiveViewCtrl::~ArchiveViewCtrl()
     }
 }
 
-FileArchiveDialog::FileArchiveDialog(wxWindow* parent_window, mz_zip_archive* archive, std::vector<std::pair<boost::filesystem::path, size_t>>& selected_paths_w_size)
+FileArchiveDialog::FileArchiveDialog(wxWindow* parent_window, mz_zip_archive* archive, std::vector<std::pair<std::filesystem::path, size_t>>& selected_paths_w_size)
     : DPIDialog(parent_window, wxID_ANY, _(L("Archive preview")), wxDefaultPosition,
         wxSize(45 * wxGetApp().em_unit(), 40 * wxGetApp().em_unit()),
         wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER | wxMAXIMIZE_BOX)
@@ -202,8 +202,8 @@ FileArchiveDialog::FileArchiveDialog(wxWindow* parent_window, mz_zip_archive* ar
             stack.pop_back();
     };
     // recursively stores whole structure of file onto function stack and synchoronize with stack object.
-    std::function<size_t(const boost::filesystem::path&, std::vector<std::shared_ptr<ArchiveViewNode>>&)> adjust_stack = [&adjust_stack, &reduce_stack, &avc = m_avc](const boost::filesystem::path& const_file, std::vector<std::shared_ptr<ArchiveViewNode>>& stack)->size_t {
-        boost::filesystem::path file(const_file);
+    std::function<size_t(const std::filesystem::path&, std::vector<std::shared_ptr<ArchiveViewNode>>&)> adjust_stack = [&adjust_stack, &reduce_stack, &avc = m_avc](const std::filesystem::path& const_file, std::vector<std::shared_ptr<ArchiveViewNode>>& stack)->size_t {
+        std::filesystem::path file(const_file);
         size_t struct_size = file.has_parent_path() ? adjust_stack(file.parent_path(), stack) : 0;
 
         if (stack.size() > struct_size && (file.has_extension() || file.filename().string() != stack[struct_size]->get_name()))
@@ -218,10 +218,10 @@ FileArchiveDialog::FileArchiveDialog(wxWindow* parent_window, mz_zip_archive* ar
     const std::regex pattern_drop(".*[.](stl|obj|amf|3mf|step|stp)", std::regex::icase);
     mz_uint num_entries = mz_zip_reader_get_num_files(archive);
     mz_zip_archive_file_stat stat;
-    std::vector<std::pair<boost::filesystem::path, size_t>> filtered_entries; // second is unzipped size
+    std::vector<std::pair<std::filesystem::path, size_t>> filtered_entries; // second is unzipped size
     for (mz_uint i = 0; i < num_entries; ++i) {
         if (mz_zip_reader_file_stat(archive, i, &stat)) {
-            boost::filesystem::path path = Slic3r::decode_archive_entry_path(archive, stat);
+            std::filesystem::path path(Slic3r::decode_archive_entry_path(archive, stat));
             assert(!path.empty());
             if (!path.has_extension())
                 continue;
@@ -232,12 +232,12 @@ FileArchiveDialog::FileArchiveDialog(wxWindow* parent_window, mz_zip_archive* ar
         }
     }
     // sorting files will help adjust_stack function to not create multiple same folders
-    std::sort(filtered_entries.begin(), filtered_entries.end(), [](const std::pair<boost::filesystem::path, size_t>& p1, const std::pair<boost::filesystem::path, size_t>& p2){ return p1.first.string() < p2.first.string(); });
+    std::sort(filtered_entries.begin(), filtered_entries.end(), [](const std::pair<std::filesystem::path, size_t>& p1, const std::pair<std::filesystem::path, size_t>& p2){ return p1.first.string() < p2.first.string(); });
     size_t entry_count = 0;
     size_t depth = 1;
     for (const auto& entry : filtered_entries)
     {
-        const boost::filesystem::path& path = entry.first;
+        const std::filesystem::path& path = entry.first;
         std::shared_ptr<ArchiveViewNode> parent(nullptr);
 
         depth = std::max(depth, adjust_stack(path, stack));

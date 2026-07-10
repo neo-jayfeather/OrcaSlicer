@@ -2,8 +2,7 @@
 #define slic3r_Hex_hpp_
 
 #include <string>
-#include <boost/filesystem/path.hpp>
-
+#include <filesystem>
 
 namespace Slic3r {
 namespace Utils {
@@ -20,12 +19,12 @@ struct HexFile
 		DEV_CW1S,
 	};
 
-	boost::filesystem::path path;
+	std::filesystem::path path;
 	DeviceKind device = DEV_GENERIC;
 	std::string model_id;
 
 	HexFile() {}
-	HexFile(boost::filesystem::path path);
+	HexFile(std::filesystem::path path);
 };
 
 

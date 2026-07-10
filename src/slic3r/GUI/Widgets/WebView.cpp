@@ -57,14 +57,14 @@ DWORD DownloadAndInstallWV2RT() {
   // (e.g., https://developer.microsoft.com/microsoft-edge/webview2/).
   // HRESULT hr = URLDownloadToFileW(NULL, L"https://go.microsoft.com/fwlink/p/?LinkId=2124703",
   //                               L".\\plugin\\MicrosoftEdgeWebview2Setup.exe", 0, 0);
-  fs::path target_file_path = (fs::temp_directory_path() / "MicrosoftEdgeWebview2Setup.exe");
+  std::filesystem::path target_file_path = (std::filesystem::temp_directory_path() / "MicrosoftEdgeWebview2Setup.exe");
   bool downloaded = false;
   Slic3r::Http::get("https://go.microsoft.com/fwlink/p/?LinkId=2124703")
       .on_error([](std::string body, std::string error, unsigned http_status) {
 
       })
       .on_complete([&downloaded, target_file_path](std::string body, unsigned http_status) {
-        fs::fstream file(target_file_path, std::ios::out | std::ios::binary | std::ios::trunc);
+        std::filesystem::fstream file(target_file_path, std::ios::out | std::ios::binary | std::ios::trunc);
         file.write(body.c_str(), body.size());
         file.flush();
         file.close();

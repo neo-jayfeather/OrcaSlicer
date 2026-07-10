@@ -2,7 +2,7 @@
 #include <cmath>
 #include <numeric>
 #include <boost/log/trivial.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/nowide/cstdio.hpp>
 #include "nanosvg/nanosvg.h"
 #include "nanosvg/nanosvgrast.h"
@@ -153,8 +153,8 @@ IconManager::Icons IconManager::init(const InitTypes &input)
         const InitType &i = input[j];
         if (i.filepath.empty())
             continue; // no file path only reservation of space for texture
-        assert(boost::filesystem::exists(i.filepath));
-        if (!boost::filesystem::exists(i.filepath))
+        assert(std::filesystem::exists(i.filepath));
+        if (!std::filesystem::exists(i.filepath))
             continue;
         assert(boost::algorithm::iends_with(i.filepath, ".svg"));
         if (!boost::algorithm::iends_with(i.filepath, ".svg"))

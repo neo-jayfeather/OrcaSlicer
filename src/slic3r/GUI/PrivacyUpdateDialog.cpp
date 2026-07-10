@@ -54,7 +54,7 @@ PrivacyUpdateDialog::PrivacyUpdateDialog(wxWindow* parent, wxWindowID id, const 
     m_vebview_release_note->SetSize(wxSize(FromDIP(540), FromDIP(340)));
     m_vebview_release_note->SetMinSize(wxSize(FromDIP(540), FromDIP(340)));
 
-    fs::path ph(resources_dir());
+    std::filesystem::path ph(resources_dir());
     ph /= "tooltip/privacyupdate.html";
     m_host_url = ph.string();
     std::replace(m_host_url.begin(), m_host_url.end(), '\\', '/');

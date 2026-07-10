@@ -5,24 +5,23 @@
 
 #ifdef _WIN32
   #include "MainFrame.hpp"
-#endif
+  #include <strsafe.h>
+#endif // _WIN32
 
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Config.hpp"
 
 #include "boost/nowide/convert.hpp"
 #include <boost/log/trivial.hpp>
-#include <boost/filesystem/operations.hpp>
 #include <iostream>
 #include <unordered_map>
 #include <fcntl.h>
 #include <errno.h>
 #include <optional>
 #include <cstdint>
-
-#ifdef _WIN32
-#include <strsafe.h>
-#endif //WIN32
+#include <functional>
+#include <cstdlib>
+#include <system_error>
 
 #if __linux__
 #include <dbus/dbus.h> /* Pull in all of D-Bus headers. */
@@ -158,9 +157,9 @@ namespace instance_check_internal
 		fl.l_start = 0;
 		fl.l_len = 1;
 
-        if (! boost::filesystem::is_directory(path)) {
+        if (! std::filesystem::is_directory(path)) {
             BOOST_LOG_TRIVIAL(debug) << "get_lock(): datadir does not exist yet, creating...";
-            if (! boost::filesystem::create_directories(path))
+            if (! std::filesystem::create_directories(path))
                 BOOST_LOG_TRIVIAL(debug) << "get_lock(): unable to create datadir !!!";
         }
 
@@ -293,13 +292,15 @@ namespace instance_check_internal
 #endif //__APPLE__/__linux__
 } //namespace instance_check_internal
 
+// NTODO: Check logic
 bool instance_check(int argc, char** argv, bool app_config_single_instance)
 {
-	std::size_t hashed_path;
+    std::size_t hashed_path = 0;
+    
 #ifdef _WIN32
-	hashed_path = std::hash<std::string>{}(boost::filesystem::system_complete(argv[0]).string());
+    hashed_path = std::hash<std::string>{}(std::filesystem::absolute(argv[0]).string());
 #else
-	boost::system::error_code ec;
+    std::error_code ec;
 #ifdef __linux__
 	// If executed by an AppImage, start the AppImage, not the main process.
 	// see https://docs.appimage.org/packaging-guide/environment-variables.html#id2
@@ -307,8 +308,8 @@ bool instance_check(int argc, char** argv, bool app_config_single_instance)
 	bool appimage_env_valid = false;
 	if (appimage_env) {
 		try {
-			auto appimage_path = boost::filesystem::canonical(boost::filesystem::path(appimage_env));
-			if (boost::filesystem::exists(appimage_path)) {
+			auto appimage_path = std::filesystem::canonical(std::filesystem::path(appimage_env));
+			if (std::filesystem::exists(appimage_path)) {
 				hashed_path = std::hash<std::string>{}(appimage_path.string());
 				appimage_env_valid = true;
 			}
@@ -319,16 +320,19 @@ bool instance_check(int argc, char** argv, bool app_config_single_instance)
 	}
 	if (! appimage_env_valid)
 #endif // __linux__
-		hashed_path = std::hash<std::string>{}(boost::filesystem::canonical(boost::filesystem::system_complete(argv[0]), ec).string());
-	if (ec.value() > 0) { // canonical was not able to find the executable (can happen with appimage on some systems. Does it fail on Fuse file systems?)
-		ec.clear();
-		// Compose path with boost canonical of folder and filename
-		hashed_path = std::hash<std::string>{}(boost::filesystem::canonical(boost::filesystem::system_complete(argv[0]).parent_path(), ec).string() + "/" + boost::filesystem::system_complete(argv[0]).filename().string());
-		if (ec.value() > 0) {
-			// Still not valid, process without canonical
-			hashed_path = std::hash<std::string>{}(boost::filesystem::system_complete(argv[0]).string());
-		}
-	}
+	hashed_path = std::hash<std::string>{}(std::filesystem::canonical(std::filesystem::absolute(argv[0]), ec).string());
+
+    if (ec) { 
+        ec.clear();
+
+		auto abs_path = std::filesystem::absolute(argv[0]);
+        std::string backup_path_str = std::filesystem::canonical(abs_path.parent_path(), ec).string() + "/" + abs_path.filename().string();
+        hashed_path = std::hash<std::string>{}(backup_path_str);
+        
+        if (ec) {
+            hashed_path = std::hash<std::string>{}(std::filesystem::absolute(argv[0]).string());
+        }
+    }
 #endif // _WIN32
 
 	std::string lock_name 	= std::to_string(hashed_path);
@@ -457,25 +461,25 @@ void OtherInstanceMessageHandler::print_window_info(HWND hwnd)
 namespace MessageHandlerInternal
 {
    // returns ::path to possible model or empty ::path if input string is not existing path
-	static boost::filesystem::path get_path(const std::string& possible_path)
+	static std::filesystem::path get_path(const std::string& possible_path)
 	{
 		BOOST_LOG_TRIVIAL(debug) << "message part:" << possible_path;
 
 		if (possible_path.empty() || possible_path.size() < 3) {
 			BOOST_LOG_TRIVIAL(debug) << "empty";
-			return boost::filesystem::path();
+			return std::filesystem::path();
 		}
-		if (boost::filesystem::exists(possible_path)) {
+		if (std::filesystem::exists(possible_path)) {
 			BOOST_LOG_TRIVIAL(debug) << "is path";
-			return boost::filesystem::path(possible_path);
+			return std::filesystem::path(possible_path);
 		} else if (possible_path[0] == '\"') {
-			if(boost::filesystem::exists(possible_path.substr(1, possible_path.size() - 2))) {
+			if(std::filesystem::exists(possible_path.substr(1, possible_path.size() - 2))) {
 				BOOST_LOG_TRIVIAL(debug) << "is path in quotes";
-				return boost::filesystem::path(possible_path.substr(1, possible_path.size() - 2));
+				return std::filesystem::path(possible_path.substr(1, possible_path.size() - 2));
 			}
 		}
 		BOOST_LOG_TRIVIAL(debug) << "is NOT path";
-		return boost::filesystem::path();
+		return std::filesystem::path();
 	}
 } //namespace MessageHandlerInternal
 
@@ -491,7 +495,7 @@ void OtherInstanceMessageHandler::handle_message(const std::string& message)
 		return;
 	}
 
-	std::vector<boost::filesystem::path> paths;
+	std::vector<std::filesystem::path> paths;
 	std::vector<std::string> downloads;
 	boost::regex re(R"(^(orcaslicer|prusaslicer|cura|bambustudio):\/\/open[\/]?\?file=)", boost::regbase::icase);
 	boost::regex re2(R"(^(bambustudioopen):\/\/)", boost::regex::icase);
@@ -500,7 +504,7 @@ void OtherInstanceMessageHandler::handle_message(const std::string& message)
 	// Skip the first argument, it is the path to the slicer executable.
 	auto it = args.begin();
 	for (++ it; it != args.end(); ++ it) {
-		boost::filesystem::path p = MessageHandlerInternal::get_path(*it);
+		std::filesystem::path p = MessageHandlerInternal::get_path(*it);
 		if (! p.string().empty())
 			paths.emplace_back(p);
 		else if (boost::regex_search(*it, results, re) || boost::regex_search(*it, results, re2))
@@ -509,7 +513,7 @@ void OtherInstanceMessageHandler::handle_message(const std::string& message)
 	if (! paths.empty()) {
 		//wxEvtHandler* evt_handler = wxGetApp().plater(); //assert here?
 		//if (evt_handler) {
-			wxPostEvent(m_callback_evt_handler, LoadFromOtherInstanceEvent(GUI::EVT_LOAD_MODEL_OTHER_INSTANCE, std::vector<boost::filesystem::path>(std::move(paths))));
+			wxPostEvent(m_callback_evt_handler, LoadFromOtherInstanceEvent(GUI::EVT_LOAD_MODEL_OTHER_INSTANCE, std::vector<std::filesystem::path>(std::move(paths))));
 		//}
 	}
 	if (!downloads.empty())

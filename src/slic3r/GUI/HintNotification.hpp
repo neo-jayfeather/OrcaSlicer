@@ -62,7 +62,7 @@ public:
 private:
 	void	init();
 	void	init_random_hint_id();
-	void	load_hints_from_file(const boost::filesystem::path& path);
+	void	load_hints_from_file(const std::filesystem::path& path);
 	bool    is_used(const std::string& id);
 	void    set_used(const std::string& id);
 	void    clear_used();

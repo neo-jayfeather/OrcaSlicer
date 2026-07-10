@@ -39,7 +39,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/find.hpp>
 #include <boost/foreach.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/beast/core/detail/base64.hpp>
 
@@ -2040,7 +2039,7 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* resu
     CNumericLocalesSetter locales_setter;
 
     // Does the file exist? If so, we hope that it is still valid.
-    if (print->is_step_done(psGCodeExport) && boost::filesystem::exists(boost::filesystem::path(path)))
+    if (print->is_step_done(psGCodeExport) && std::filesystem::exists(path))
         return;
 
     BOOST_LOG_TRIVIAL(info) << boost::format("Will export G-code to %1% soon")%path;
@@ -2070,10 +2069,10 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* resu
     // Remove the old g-code if it exists.
     boost::nowide::remove(path);
 
-    fs::path file_path(path);
-    fs::path folder = file_path.parent_path();
-    if (!fs::exists(folder)) {
-        fs::create_directory(folder);
+    std::filesystem::path file_path(path);
+    std::filesystem::path folder = file_path.parent_path();
+    if (!std::filesystem::exists(folder)) {
+        std::filesystem::create_directory(folder);
         BOOST_LOG_TRIVIAL(error) << "[WARNING]: the parent path " + folder.string() +" is not there, create it!" << std::endl;
     }
 
@@ -2085,8 +2084,8 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* resu
     GCodeOutputStream file(boost::nowide::fopen(path_tmp.c_str(), "wb"), m_processor);
     if (! file.is_open()) {
         BOOST_LOG_TRIVIAL(error) << std::string("G-code export to ") + path + " failed.\nCannot open the file for writing.\n" << std::endl;
-        if (!fs::exists(folder)) {
-            //fs::create_directory(folder);
+        if (!std::filesystem::exists(folder)) {
+            //std::filesystem::create_directory(folder);
             BOOST_LOG_TRIVIAL(error) << "the parent path " + folder.string() +" is not there!!!" << std::endl;
         }
         throw Slic3r::RuntimeError(std::string("G-code export to ") + path + " failed.\nCannot open the file for writing.\n");

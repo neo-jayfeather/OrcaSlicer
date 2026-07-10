@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
 #include "libslic3r/Utils.hpp"
 #include "slic3r/Utils/FileTransferUtils.hpp"
 
@@ -60,7 +59,7 @@ int BBLNetworkPlugin::initialize(bool using_backup, const std::string& version)
 
     std::string library;
     std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
+    std::filesystem::path data_dir_path(data_dir_str);
     auto plugin_folder = data_dir_path / "plugins";
 
     if (using_backup) {
@@ -80,8 +79,8 @@ int BBLNetworkPlugin::initialize(bool using_backup, const std::string& version)
     // Auto-migration: If loading legacy version and versioned library doesn't exist,
     // but unversioned legacy library does exist, copy it to versioned format
     if (is_legacy_version(version)) {
-        boost::filesystem::path versioned_path;
-        boost::filesystem::path legacy_path;
+        std::filesystem::path versioned_path;
+        std::filesystem::path legacy_path;
 #if defined(_MSC_VER) || defined(_WIN32)
         versioned_path = plugin_folder / (std::string(BAMBU_NETWORK_LIBRARY) + "_" + version + ".dll");
         legacy_path = plugin_folder / (std::string(BAMBU_NETWORK_LIBRARY) + ".dll");
@@ -92,9 +91,9 @@ int BBLNetworkPlugin::initialize(bool using_backup, const std::string& version)
         versioned_path = plugin_folder / (std::string("lib") + std::string(BAMBU_NETWORK_LIBRARY) + "_" + version + ".so");
         legacy_path = plugin_folder / (std::string("lib") + std::string(BAMBU_NETWORK_LIBRARY) + ".so");
 #endif
-        if (!boost::filesystem::exists(versioned_path) && boost::filesystem::exists(legacy_path)) {
+        if (!std::filesystem::exists(versioned_path) && std::filesystem::exists(legacy_path)) {
             try {
-                boost::filesystem::copy(legacy_path, versioned_path);
+                std::filesystem::copy(legacy_path, versioned_path);
             } catch (const std::exception& e) {
                 BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to copy legacy library: " << e.what();
             }
@@ -285,7 +284,7 @@ void* BBLNetworkPlugin::get_source_module()
 
     std::string library;
     std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
+    std::filesystem::path data_dir_path(data_dir_str);
     auto plugin_folder = data_dir_path / "plugins";
 
 #if defined(_MSC_VER) || defined(_WIN32)
@@ -363,7 +362,7 @@ std::string BBLNetworkPlugin::get_libpath_in_current_directory(const std::string
 std::string BBLNetworkPlugin::get_versioned_library_path(const std::string& version)
 {
     std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
+    std::filesystem::path data_dir_path(data_dir_str);
     auto plugin_folder = data_dir_path / "plugins";
 
 #if defined(_MSC_VER) || defined(_WIN32)
@@ -380,7 +379,7 @@ bool BBLNetworkPlugin::versioned_library_exists(const std::string& version)
     if (version.empty()) return false;
     std::string path = get_versioned_library_path(version);
 
-    if (boost::filesystem::exists(path)) return true;
+    if (std::filesystem::exists(path)) return true;
 
     if (is_legacy_version(version)) {
         return legacy_library_exists();
@@ -392,7 +391,7 @@ bool BBLNetworkPlugin::versioned_library_exists(const std::string& version)
 bool BBLNetworkPlugin::legacy_library_exists()
 {
     std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
+    std::filesystem::path data_dir_path(data_dir_str);
     auto plugin_folder = data_dir_path / "plugins";
 
 #if defined(_MSC_VER) || defined(_WIN32)
@@ -402,13 +401,13 @@ bool BBLNetworkPlugin::legacy_library_exists()
 #else
     auto legacy_path = plugin_folder / (std::string("lib") + std::string(BAMBU_NETWORK_LIBRARY) + ".so");
 #endif
-    return boost::filesystem::exists(legacy_path);
+    return std::filesystem::exists(legacy_path);
 }
 
 void BBLNetworkPlugin::remove_legacy_library()
 {
     std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
+    std::filesystem::path data_dir_path(data_dir_str);
     auto plugin_folder = data_dir_path / "plugins";
 
 #if defined(_MSC_VER) || defined(_WIN32)
@@ -419,9 +418,9 @@ void BBLNetworkPlugin::remove_legacy_library()
     auto legacy_path = plugin_folder / (std::string("lib") + std::string(BAMBU_NETWORK_LIBRARY) + ".so");
 #endif
 
-    if (boost::filesystem::exists(legacy_path)) {
+    if (std::filesystem::exists(legacy_path)) {
         boost::system::error_code ec;
-        boost::filesystem::remove(legacy_path, ec);
+        std::filesystem::remove(legacy_path, ec);
     }
 }
 
@@ -429,9 +428,9 @@ std::vector<std::string> BBLNetworkPlugin::scan_plugin_versions()
 {
     std::vector<std::string> discovered_versions;
     std::string data_dir_str = data_dir();
-    boost::filesystem::path plugin_folder = boost::filesystem::path(data_dir_str) / "plugins";
+    std::filesystem::path plugin_folder = std::filesystem::path(data_dir_str) / "plugins";
 
-    if (!boost::filesystem::is_directory(plugin_folder)) {
+    if (!std::filesystem::is_directory(plugin_folder)) {
         return discovered_versions;
     }
 
@@ -447,12 +446,12 @@ std::vector<std::string> BBLNetworkPlugin::scan_plugin_versions()
 #endif
 
     boost::system::error_code ec;
-    for (auto& entry : boost::filesystem::directory_iterator(plugin_folder, ec)) {
+    for (auto& entry : std::filesystem::directory_iterator(plugin_folder, ec)) {
         if (ec) {
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": error iterating directory: " << ec.message();
             break;
         }
-        if (!boost::filesystem::is_regular_file(entry.status()))
+        if (!std::filesystem::is_regular_file(entry.status()))
             continue;
 
         std::string filename = entry.path().filename().string();

@@ -3,12 +3,9 @@
 #include "XCAFDoc_DocumentTool.hxx"
 #include "XCAFApp_Application.hxx"
 #include "XCAFDoc_ShapeTool.hxx"
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <Message_ProgressIndicator.hxx>
 #include <atomic>
-
-namespace fs = boost::filesystem;
 
 namespace Slic3r {
 
@@ -94,7 +91,7 @@ public:
         MESH_SUCCESS,
         MESH_ERROR
     };
-    Step(fs::path path, ImportStepProgressFn stepFn = nullptr, StepIsUtf8Fn isUtf8Fn = nullptr);
+    Step(std::filesystem::path path, ImportStepProgressFn stepFn = nullptr, StepIsUtf8Fn isUtf8Fn = nullptr);
     Step(std::string path, ImportStepProgressFn stepFn = nullptr, StepIsUtf8Fn isUtf8Fn = nullptr);
     ~Step();
     Step_Status load();

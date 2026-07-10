@@ -8,8 +8,6 @@
 #include <glad/gl.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/operations.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/nowide/cstdio.hpp>
@@ -43,7 +41,6 @@
 #include <imgui/imgui_internal.h>
 #include <wx/dcgraph.h>
 using boost::optional;
-namespace fs = boost::filesystem;
 
 static const float GROUND_Z = -0.03f;
 static const float GROUND_Z_GRIDLINE = -0.26f;
@@ -2535,8 +2532,8 @@ bool PartPlate::is_valid_gcode_file()
 {
 	if (get_gcode_filename().empty())
 		return false;
-	boost::filesystem::path gcode_file(m_gcode_result->filename);
-	if (!boost::filesystem::exists(gcode_file)) {
+	std::filesystem::path gcode_file(m_gcode_result->filename);
+	if (!std::filesystem::exists(gcode_file)) {
 		BOOST_LOG_TRIVIAL(info) << "invalid gcode file, file is missing, file = " << m_gcode_result->filename;
 		return false;
 	}
@@ -3476,7 +3473,7 @@ void PartPlate::update_slice_context(BackgroundSlicingProcess & process)
 std::string PartPlate::get_tmp_gcode_path()
 {
     if (m_tmp_gcode_path.empty()) {
-        boost::filesystem::path temp_path(m_model->get_backup_path("Metadata"));
+        std::filesystem::path temp_path(m_model->get_backup_path("Metadata"));
         temp_path /= (boost::format(".%1%.%2%.gcode") % get_current_pid() %
                       GLOBAL_PLATE_INDEX++).str();
         m_tmp_gcode_path = temp_path.string();
@@ -3487,7 +3484,7 @@ std::string PartPlate::get_tmp_gcode_path()
 std::string PartPlate::get_temp_config_3mf_path()
 {
 	if (m_temp_config_3mf_path.empty()) {
-		boost::filesystem::path temp_path(m_model->get_backup_path("Metadata"));
+		std::filesystem::path temp_path(m_model->get_backup_path("Metadata"));
 		temp_path /= (boost::format(".%1%.%2%_config.3mf") % get_current_pid() %
 			GLOBAL_PLATE_INDEX++).str();
 		m_temp_config_3mf_path = temp_path.string();
@@ -3512,7 +3509,7 @@ int PartPlate::load_gcode_from_file(const std::string& filename)
 
 	// BBS: use backup path to save temp gcode
     // auto path = get_tmp_gcode_path();
-    // if (boost::filesystem::exists(boost::filesystem::path(path))) {
+    // if (std::filesystem::exists(std::filesystem::path(path))) {
     //	BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": file %1% exists, delete it firstly") % filename.c_str();
     //	boost::nowide::remove(path.c_str());
     //}
@@ -3522,7 +3519,7 @@ int PartPlate::load_gcode_from_file(const std::string& filename)
     //	BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("Failed to rename the output G-code file from %1% to %2%, error code %3%") % filename.c_str() % path.c_str() %
     //error.message(); 	return -1;
     //}
-	if (boost::filesystem::exists(filename)) {
+	if (std::filesystem::exists(filename)) {
 		assert(m_tmp_gcode_path.empty());
 		m_tmp_gcode_path = filename;
 		m_gcode_result->filename = filename;
@@ -5833,7 +5830,7 @@ void PartPlateList::update_logo_texture_filename(const std::string &texture_file
 {
     auto check_texture = [](const std::string &texture) {
         boost::system::error_code ec; // so the exists call does not throw (e.g. after a permission problem)
-        return !texture.empty() && (boost::algorithm::iends_with(texture, ".png") || boost::algorithm::iends_with(texture, ".svg")) && boost::filesystem::exists(texture, ec);
+        return !texture.empty() && (boost::algorithm::iends_with(texture, ".png") || boost::algorithm::iends_with(texture, ".svg")) && std::filesystem::exists(texture, ec);
     };
     if (!texture_filename.empty() && !check_texture(texture_filename)) {
 		m_logo_texture_filename = "";
@@ -6012,7 +6009,7 @@ int PartPlateList::rebuild_plates_after_deserialize(std::vector<bool>& previous_
 		if ((i < previous_gcode_paths.size())
 			&& !previous_gcode_paths[i].empty()
 			&& (m_plate_list[i]->m_tmp_gcode_path != previous_gcode_paths[i])) {
-			if (boost::filesystem::exists(previous_gcode_paths[i])) {
+			if (std::filesystem::exists(previous_gcode_paths[i])) {
 				boost::nowide::remove(previous_gcode_paths[i].c_str());
 				need_reset_print = true;
 			}
@@ -6281,7 +6278,7 @@ int PartPlateList::load_from_3mf_structure(PlateDataPtrs& plate_data_list, int f
         gcode_result->filament_maps = plate_data_list[i]->filament_maps;
 		if (m_plater && !plate_data_list[i]->thumbnail_file.empty()) {
 			BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": plate %1%, load thumbnail from %2%.")%(i+1) %plate_data_list[i]->thumbnail_file;
-			if (boost::filesystem::exists(plate_data_list[i]->thumbnail_file)) {
+			if (std::filesystem::exists(plate_data_list[i]->thumbnail_file)) {
 				m_plate_list[index]->load_thumbnail_data(plate_data_list[i]->thumbnail_file, m_plate_list[index]->thumbnail_data);
 				BOOST_LOG_TRIVIAL(info) << __FUNCTION__ <<boost::format(": plate %1% after load, width %2%, height %3%, size %4%!")
 					%(i+1) %m_plate_list[index]->thumbnail_data.width %m_plate_list[index]->thumbnail_data.height %m_plate_list[index]->thumbnail_data.pixels.size();
@@ -6289,32 +6286,32 @@ int PartPlateList::load_from_3mf_structure(PlateDataPtrs& plate_data_list, int f
 		}
 
 		if (m_plater && !plate_data_list[i]->no_light_thumbnail_file.empty()) {
-			if (boost::filesystem::exists(plate_data_list[i]->no_light_thumbnail_file)) {
+			if (std::filesystem::exists(plate_data_list[i]->no_light_thumbnail_file)) {
 				BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": plate %1%, load no_light_thumbnail_file from %2%.")%(i+1) %plate_data_list[i]->no_light_thumbnail_file;
 				m_plate_list[index]->load_thumbnail_data(plate_data_list[i]->no_light_thumbnail_file, m_plate_list[index]->no_light_thumbnail_data);
 			}
 		}
 
 		/*if (m_plater && !plate_data_list[i]->pattern_file.empty()) {
-			if (boost::filesystem::exists(plate_data_list[i]->pattern_file)) {
+			if (std::filesystem::exists(plate_data_list[i]->pattern_file)) {
 				//no need to load pattern data currently
 				//m_plate_list[index]->load_pattern_thumbnail_data(plate_data_list[i]->pattern_file);
 			}
 		}*/
 		if (m_plater && !plate_data_list[i]->top_file.empty()) {
-			if (boost::filesystem::exists(plate_data_list[i]->top_file)) {
+			if (std::filesystem::exists(plate_data_list[i]->top_file)) {
 				BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": plate %1%, load top_thumbnail from %2%.")%(i+1) %plate_data_list[i]->top_file;
 				m_plate_list[index]->load_thumbnail_data(plate_data_list[i]->top_file, m_plate_list[index]->top_thumbnail_data);
 			}
 		}
 		if (m_plater && !plate_data_list[i]->pick_file.empty()) {
-			if (boost::filesystem::exists(plate_data_list[i]->pick_file)) {
+			if (std::filesystem::exists(plate_data_list[i]->pick_file)) {
 				BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": plate %1%, load pick_thumbnail from %2%.")%(i+1) %plate_data_list[i]->pick_file;
 				m_plate_list[index]->load_thumbnail_data(plate_data_list[i]->pick_file, m_plate_list[index]->pick_thumbnail_data);
 			}
 		}
 		if (m_plater && !plate_data_list[i]->pattern_bbox_file.empty()) {
-			if (boost::filesystem::exists(plate_data_list[i]->pattern_bbox_file)) {
+			if (std::filesystem::exists(plate_data_list[i]->pattern_bbox_file)) {
 				m_plate_list[index]->load_pattern_box_data(plate_data_list[i]->pattern_bbox_file);
 			}
 		}
@@ -6667,7 +6664,7 @@ void PartPlateList::load_bedtype_textures()
 	for (int i = 0; i < (unsigned int)btCount; ++i) {
 		for (int j = 0; j < bed_texture_info[i].parts.size(); j++) {
 			std::string filename = resources_dir() + "/images/" + bed_texture_info[i].parts[j].filename;
-			if (boost::filesystem::exists(filename)) {
+			if (std::filesystem::exists(filename)) {
 				PartPlateList::bed_texture_info[i].parts[j].texture = new GLTexture();
 				if (!PartPlateList::bed_texture_info[i].parts[j].texture->load_from_svg_file(filename, true, true, true, logo_tex_size)) {
 					BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": load logo texture from %1% failed!") % filename;
@@ -6693,7 +6690,7 @@ void PartPlateList::load_extruder_only_area_textures() {
     for (int i = 0; i < (unsigned int) ExtruderOnlyAreaType::btAreaCount; ++i) {
         for (int j = 0; j < extruder_only_area_info[i].parts.size(); j++) {
             std::string filename = resources_dir() + "/images/" + extruder_only_area_info[i].parts[j].filename;
-            if (boost::filesystem::exists(filename)) {
+            if (std::filesystem::exists(filename)) {
                 PartPlateList::extruder_only_area_info[i].parts[j].texture = new GLTexture();
                 if (!PartPlateList::extruder_only_area_info[i].parts[j].texture->load_from_svg_file(filename, true, false, false, logo_tex_size)) {
                     BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": load logo texture from %1% failed!") % filename;
@@ -6726,7 +6723,7 @@ void PartPlateList::load_cali_textures()
 	for (int i = 0; i < (unsigned int)btCount; ++i) {
 		for (int j = 0; j < cali_texture_info.parts.size(); j++) {
 			std::string filename = resources_dir() + "/images/" + cali_texture_info.parts[j].filename;
-			if (boost::filesystem::exists(filename)) {
+			if (std::filesystem::exists(filename)) {
 				PartPlateList::cali_texture_info.parts[j].texture = new GLTexture();
 				if (!PartPlateList::cali_texture_info.parts[j].texture->load_from_svg_file(filename, true, true, true, logo_tex_size)) {
 					BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": load cali texture from %1% failed!") % filename;

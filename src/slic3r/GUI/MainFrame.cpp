@@ -50,6 +50,7 @@
 
 #include <fstream>
 #include <string_view>
+#include <filesystem>
 
 #include "GUI_App.hpp"
 #include "UnsavedChangesDialog.hpp"
@@ -4144,7 +4145,9 @@ void MainFrame::get_recent_projects(boost::property_tree::wptree &tree, int imag
         item.put(L"project_name", proj.substr(proj.find_last_of(L"/\\") + 1));
         item.put(L"path", proj);
         boost::system::error_code ec;
-        std::time_t t = boost::filesystem::last_write_time(proj, ec);
+        auto ftime = std::filesystem::last_write_time(proj);
+        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+        std::time_t t = std::chrono::system_clock::to_time_t(sctp);
         if (!ec) {
             std::wstring time = wxDateTime(t).FormatISOCombined(' ').ToStdWstring();
             item.put(L"time", time);
@@ -4338,7 +4341,7 @@ void MainFrame::on_select_default_preset(SimpleEvent& evt)
 
 std::string MainFrame::get_base_name(const wxString &full_name, const char *extension) const
 {
-    boost::filesystem::path filename = boost::filesystem::path(full_name.wx_str()).filename();
+    std::filesystem::path filename = std::filesystem::path(full_name.wx_str()).filename();
     if (extension != nullptr)
 		filename = filename.replace_extension(extension);
     return filename.string();
@@ -4346,7 +4349,7 @@ std::string MainFrame::get_base_name(const wxString &full_name, const char *exte
 
 std::string MainFrame::get_dir_name(const wxString &full_name) const
 {
-    return boost::filesystem::path(into_u8(full_name)).parent_path().string();
+    return std::filesystem::path(into_u8(full_name)).parent_path().string();
 }
 
 

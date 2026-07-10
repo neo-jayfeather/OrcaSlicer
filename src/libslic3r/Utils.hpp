@@ -8,10 +8,10 @@
 #include <type_traits>
 #include <system_error>
 #include <regex>
+#include <filesystem>
 
 #include <boost/system/error_code.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/date_time.hpp>
 #include "boost/date_time/posix_time/ptime.hpp"
 
@@ -72,9 +72,6 @@
 #define CLI_SLICING_ERROR                  -100
 #define CLI_GCODE_PATH_CONFLICTS           -101
 #define CLI_GCODE_PATH_IN_UNPRINTABLE_AREA -102
-
-
-namespace boost { namespace filesystem { class directory_entry; }}
 
 namespace Slic3r {
 
@@ -195,7 +192,7 @@ std::string debug_out_path(const char *name, ...);
 void set_log_path_and_level(const std::string& file, unsigned int level);
 void flush_logs();
 void shutdown_console_logging();
-boost::filesystem::path get_log_file_name();
+std::filesystem::path get_log_file_name();
 
 // A special type for strings encoded in the local Windows 8-bit code page.
 // This type is only needed for Perl bindings to relay to Perl that the string is raw, not UTF-8 encoded.
@@ -240,12 +237,12 @@ extern CopyFileResult check_copy(const std::string& origin, const std::string& c
 
 // Ignore system and hidden files, which may be created by the DropBox synchronisation process.
 // https://github.com/prusa3d/PrusaSlicer/issues/1298
-extern bool is_plain_file(const boost::filesystem::directory_entry &path);
-extern bool is_ini_file(const boost::filesystem::directory_entry &path);
-extern bool is_idx_file(const boost::filesystem::directory_entry &path);
+extern bool is_plain_file(const std::filesystem::directory_entry &path);
+extern bool is_ini_file(const std::filesystem::directory_entry &path);
+extern bool is_idx_file(const std::filesystem::directory_entry &path);
 extern bool is_gcode_file(const std::string &path);
 extern bool is_img_file(const std::string& path);
-extern bool is_gallery_file(const boost::filesystem::directory_entry& path, char const* type);
+extern bool is_gallery_file(const std::filesystem::directory_entry& path, char const* type);
 extern bool is_gallery_file(const std::string& path, char const* type);
 extern bool is_shapes_dir(const std::string& dir);
 //BBS: add json support
@@ -714,8 +711,8 @@ inline std::string filter_characters(const std::string& str, const std::string& 
     return filteredStr;
 }
 
-void copy_directory_recursively(const boost::filesystem::path& source,
-                                const boost::filesystem::path& target,
+void copy_directory_recursively(const std::filesystem::path& source,
+                                const std::filesystem::path& target,
                                 std::function<bool(const std::string)> filter = nullptr,
                                 bool merge_mode                               = false);
 
@@ -729,8 +726,8 @@ bool install_vendor_bundles_from_resources(const std::vector<std::string>& bundl
                                            const std::string& data_subdir     = "system");
 
 // Orca: Since 1.7.9 Boost deprecated save_string_file and load_string_file, copy and modified from boost 1.7.8
-void save_string_file(const boost::filesystem::path& p, const std::string& str);
-void load_string_file(const boost::filesystem::path& p, std::string& str);
+void save_string_file(const std::filesystem::path& p, const std::string& str);
+void load_string_file(const std::filesystem::path& p, std::string& str);
 
 bool check_layer_id_pattern(const std::string& pattern, int layer_id);
 

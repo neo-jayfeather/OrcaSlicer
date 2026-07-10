@@ -464,7 +464,7 @@ static void cut_model(Model &model, double z, ModelObjectCutAttributes attribute
     for (ModelObject *model_object : new_objects) {
         auto *object = model.add_object(*model_object);
         object->sort_volumes(true);
-        std::string object_name = object->name.empty() ? fs::path(object->input_file).filename().string() : object->name;
+        std::string object_name = object->name.empty() ? std::filesystem::path(object->input_file).filename().string() : object->name;
         object->ensure_on_bed();
     }
 }
@@ -486,7 +486,7 @@ static void read_model_from_file(const std::string& input_file, Model& model)
 
     model.add_default_instances();
 
-    const std::string extension      = fs::path(input_file).extension().string();
+    const std::string extension      = std::filesystem::path(input_file).extension().string();
     const bool        is_project_file = extension == ".3mf" || extension == ".3MF" || extension == ".amf" || extension == ".AMF";
     for (auto object : model.objects) {
         if (!is_project_file)

@@ -9,7 +9,6 @@
 
 #include <nlohmann/json.hpp>
 #include <atomic>
-#include <boost/filesystem/path.hpp>
 #include <thread>
 #include <wx/filedlg.h>
 #include <wx/string.h>
@@ -65,17 +64,17 @@ std::string dump_json(const json& node)
     return node.dump(-1, ' ', false, json::error_handler_t::replace);
 }
 
-boost::filesystem::path path_from_utf8(const std::string& utf8_path)
+std::filesystem::path path_from_utf8(const std::string& utf8_path)
 {
 #ifdef _WIN32
     const wxString wide_path = wxString::FromUTF8(utf8_path.c_str());
-    return boost::filesystem::path(wide_path.ToStdWstring());
+    return std::filesystem::path(wide_path.ToStdWstring());
 #else
-    return boost::filesystem::path(utf8_path);
+    return std::filesystem::path(utf8_path);
 #endif
 }
 
-std::string filename_to_utf8(const boost::filesystem::path& path)
+std::string filename_to_utf8(const std::filesystem::path& path)
 {
 #ifdef _WIN32
     const wxString wx_filename(path.filename().c_str());
@@ -201,7 +200,7 @@ private:
         }
 
         // HTML IPC passes UTF-8 strings; decode explicitly to avoid Windows codepage issues.
-        boost::filesystem::path source_path = path_from_utf8(file_path);
+        std::filesystem::path source_path = path_from_utf8(file_path);
         if (file_name.empty())
             file_name = filename_to_utf8(source_path);
 

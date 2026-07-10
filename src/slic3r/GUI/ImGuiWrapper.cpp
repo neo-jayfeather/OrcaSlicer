@@ -7,7 +7,6 @@
 
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/filesystem.hpp>
 #if ENABLE_ENHANCED_IMGUI_SLIDER_FLOAT
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/nowide/convert.hpp>
@@ -2922,8 +2921,8 @@ void ImGuiWrapper::load_fonts_texture()
     //    im_fonts_map.clear();                                                     // map<font name, ImFont*>
     //    BOOST_LOG_TRIVIAL(info) << "init_im_font start";
     //    for (auto sys_font : sys_fonts_map) {
-    //        boost::filesystem::path font_path(sys_font.second);
-    //        if (!boost::filesystem::exists(font_path)) {
+    //        std::filesystem::path font_path(sys_font.second);
+    //        if (!std::filesystem::exists(font_path)) {
     //            BOOST_LOG_TRIVIAL(trace) << "load font = " << sys_font.first << ", path = " << font_path << " is not exists";
     //            continue;
     //        }

@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <ctime>
-#include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -22,7 +21,7 @@
 #include "slic3r/GUI/MsgDialog.hpp"
 #include "Http.hpp"
 
-namespace fs = boost::filesystem;
+
 namespace pt = boost::property_tree;
 
 namespace Slic3r {

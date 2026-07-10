@@ -13,7 +13,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <algorithm>
 #include <chrono>
@@ -342,9 +341,9 @@ int MoonrakerPrinterAgent::start_local_print(PrintParams params, OnUpdateStatusF
     }
 
     // Check if file exists and has .gcode extension
-    namespace fs = boost::filesystem;
-    fs::path source_path(gcode_path);
-    if (!fs::exists(source_path)) {
+    
+    std::filesystem::path source_path(gcode_path);
+    if (!std::filesystem::exists(source_path)) {
         BOOST_LOG_TRIVIAL(error) << "MoonrakerPrinterAgent: G-code file does not exist: " << gcode_path;
         return BAMBU_NETWORK_ERR_FILE_NOT_EXIST;
     }
@@ -1933,17 +1932,17 @@ bool MoonrakerPrinterAgent::upload_gcode(const std::string& local_path,
                                          OnUpdateStatusFn   update_fn,
                                          WasCancelledFn     cancel_fn)
 {
-    namespace fs = boost::filesystem;
+    
 
     // Validate file exists
-    fs::path source_path(local_path);
-    if (!fs::exists(source_path)) {
+    std::filesystem::path source_path(local_path);
+    if (!std::filesystem::exists(source_path)) {
         BOOST_LOG_TRIVIAL(error) << "MoonrakerPrinterAgent: File does not exist: " << local_path;
         return false;
     }
 
     // Check file size
-    std::uintmax_t file_size = fs::file_size(source_path);
+    std::uintmax_t file_size = std::filesystem::file_size(source_path);
     if (file_size > 1024 * 1024 * 1024) { // 1GB limit
         BOOST_LOG_TRIVIAL(error) << "MoonrakerPrinterAgent: File too large: " << file_size << " bytes";
         return false;
@@ -2170,8 +2169,8 @@ std::string MoonrakerPrinterAgent::sanitize_filename(const std::string& filename
     if (filename.empty()) {
         return "print.gcode";
     }
-    namespace fs = boost::filesystem;
-    fs::path    p(filename);
+    
+    std::filesystem::path    p(filename);
     std::string basename = p.filename().string();
     if (basename.empty() || basename == "." || basename == "..") {
         return "print.gcode";

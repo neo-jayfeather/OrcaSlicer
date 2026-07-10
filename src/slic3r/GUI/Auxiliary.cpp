@@ -58,7 +58,7 @@ static std::shared_ptr<ModelInfo> ensure_model_info()
     return model.model_info;
 }
 
-AuFile::AuFile(wxWindow *parent, fs::path file_path, wxString file_name, AuxiliaryFolderType type, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
+AuFile::AuFile(wxWindow *parent, std::filesystem::path file_path, wxString file_name, AuxiliaryFolderType type, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
 {
     m_type      = type;
     m_file_path = file_path;
@@ -369,10 +369,10 @@ void AuFile::on_input_enter(wxCommandEvent &evt)
 
     
     wxString new_fullname_path = wxString(dir.wstring()) + "/" + new_fullname;
-    fs::path new_dir_path(new_fullname_path.ToStdWstring());
+    std::filesystem::path new_dir_path(new_fullname_path.ToStdWstring());
     
 
-    if (fs::exists(new_dir_path)) existing = true;
+    if (std::filesystem::exists(new_dir_path)) existing = true;
 
     if (m_valid_type == Valid && existing) {
         info_line    = from_u8((boost::format(_u8L("The name \"%1%\" already exists.")) % new_file_name).str());
@@ -395,9 +395,9 @@ void AuFile::on_input_enter(wxCommandEvent &evt)
     }
 
     if (m_valid_type == Valid) {
-        fs::path oldPath = m_file_path;
-        fs::path newPath(new_dir_path);
-        fs::rename(oldPath, newPath);
+        std::filesystem::path oldPath = m_file_path;
+        std::filesystem::path newPath(new_dir_path);
+        std::filesystem::rename(oldPath, newPath);
     } else {
         /*MessageDialog msg_wingow(nullptr, info_line, "",
                                  wxICON_WARNING | wxOK);
@@ -474,7 +474,7 @@ void AuFile::on_mouse_left_up(wxMouseEvent &evt)
 
 void AuFile::on_set_cover()
 {
-    fs::path path(into_path(m_file_name));
+    std::filesystem::path path(into_path(m_file_name));
     ensure_model_info()->cover_file = path.string();
     //wxGetApp().plater()->model().model_info->cover_file = m_file_name.ToStdString();
 
@@ -483,10 +483,10 @@ void AuFile::on_set_cover()
     auto full_root_path_str = encode_path(full_root_path.string().c_str());
     auto dir       = wxString::Format("%s/.thumbnails", full_root_path_str);
 
-    fs::path dir_path(dir.ToStdWstring());
+    std::filesystem::path dir_path(dir.ToStdWstring());
 
-    if (!fs::exists(dir_path)) {
-        fs::create_directory(dir_path); 
+    if (!std::filesystem::exists(dir_path)) {
+        std::filesystem::create_directory(dir_path); 
     }
 
     bool result = true;
@@ -519,23 +519,23 @@ void AuFile::on_set_cover()
 
 void AuFile::on_set_delete()
 {
-    fs::path bfs_path = m_file_path;
-    auto     is_fine = fs::remove(bfs_path);
+    std::filesystem::path bfs_path = m_file_path;
+    auto     is_fine = std::filesystem::remove(bfs_path);
 
     if (m_cover) {
         auto full_path          = m_file_path.parent_path();
         auto full_root_path     = full_path.parent_path();
         auto full_root_path_str = encode_path(full_root_path.string().c_str());
         auto dir                = wxString::Format("%s/.thumbnails", full_root_path_str);
-        fs::path dir_path(dir.ToStdWstring());
+        std::filesystem::path dir_path(dir.ToStdWstring());
 
         auto cover_img_path = dir_path.string() + "/thumbnail_3mf.png";
         auto small_img_path = dir_path.string() + "/thumbnail_small.png";
         auto middle_img_path = dir_path.string() + "/thumbnail_middle.png";
 
-        if (fs::exists(fs::path(cover_img_path))) { fs::remove(fs::path(cover_img_path));}
-        if (fs::exists(fs::path(small_img_path))) { fs::remove(fs::path(small_img_path)); }
-        if (fs::exists(fs::path(middle_img_path))) { fs::remove(fs::path(middle_img_path)); }
+        if (std::filesystem::exists(std::filesystem::path(cover_img_path))) { std::filesystem::remove(std::filesystem::path(cover_img_path));}
+        if (std::filesystem::exists(std::filesystem::path(small_img_path))) { std::filesystem::remove(std::filesystem::path(small_img_path)); }
+        if (std::filesystem::exists(std::filesystem::path(middle_img_path))) { std::filesystem::remove(std::filesystem::path(middle_img_path)); }
     }
 
     if (wxGetApp().plater()->model().model_info != nullptr) {
@@ -615,14 +615,14 @@ AuFolderPanel::AuFolderPanel(wxWindow *parent, AuxiliaryFolderType type, wxWindo
                             std::pair<wxColour, int>(AMS_CONTROL_WHITE_COLOUR, StateColor::Normal));
 
     StateColor btn_bd_white(std::pair<wxColour, int>(AMS_CONTROL_WHITE_COLOUR, StateColor::Disabled), std::pair<wxColour, int>(wxColour(38, 46, 48), StateColor::Enabled));
-    //m_button_add = new AuFile(m_scrolledWindow, fs::path(), "", AddFileButton, -1);
+    //m_button_add = new AuFile(m_scrolledWindow, std::filesystem::path(), "", AddFileButton, -1);
     /*m_button_add->SetBackgroundColor(btn_bg_white);
     m_button_add->SetBorderColor(btn_bd_white);
     m_button_add->SetMinSize(wxSize(-1, FromDIP(24)));
     m_button_add->SetCornerRadius(FromDIP(12));
     m_button_add->SetFont(Label::Body_14);*/
 
-    m_big_button_add = new AuFile(m_scrolledWindow, fs::path(), "", AddFileButton, -1);
+    m_big_button_add = new AuFile(m_scrolledWindow, std::filesystem::path(), "", AddFileButton, -1);
 
     /*m_button_del = new Button(m_scrolledWindow, _L("Delete"), "auxiliary_delete_file", 12, 12);
     m_button_del->SetBackgroundColor(btn_bg_white);
@@ -674,11 +674,11 @@ void AuFolderPanel::clear()
     Refresh();
 }
 
-void AuFolderPanel::update(std::vector<fs::path> paths)
+void AuFolderPanel::update(std::vector<std::filesystem::path> paths)
 {
     clear();
     for (auto i = 0; i < paths.size(); i++) {
-        std::string temp_name = fs::path(paths[i].c_str()).filename().string();
+        std::string temp_name = std::filesystem::path(paths[i].c_str()).filename().string();
         auto name = encode_path(temp_name.c_str());
 
         auto        aufile = new AuFile(m_scrolledWindow, paths[i], name, m_type, wxID_ANY);
@@ -796,7 +796,7 @@ AuxiliaryPanel::AuxiliaryPanel(wxWindow *parent, wxWindowID id, const wxPoint &p
             auto list = iter->second;
             for (auto i = 0; i < list.size(); i++) {
                 if (list[i].wstring() == old_name) {
-                    list[i] = fs::path(new_name.ToStdWstring());
+                    list[i] = std::filesystem::path(new_name.ToStdWstring());
                     break;
                 }
             }
@@ -936,7 +936,7 @@ void AuxiliaryPanel::on_import_file(wxCommandEvent &event)
 
         for (wxString file_path : file_paths) {
             // Copy imported file to project temp directory
-            fs::path src_bfs_path(file_path.ToStdWstring());
+            std::filesystem::path src_bfs_path(file_path.ToStdWstring());
             wxString dir_path = m_root_dir;
             dir_path += "/" + file_model;
             
@@ -945,7 +945,7 @@ void AuxiliaryPanel::on_import_file(wxCommandEvent &event)
             auto is_exist = false;
             auto iter = m_paths_list.find(file_model.ToStdString());
             if (iter != m_paths_list.end()) {
-                std::vector<fs::path> list = iter->second;
+                std::vector<std::filesystem::path> list = iter->second;
                 for (auto i = 0; i < list.size(); i++) {
                     if (src_bfs_path.filename() == list[i].filename()) { 
                         is_exist = true;
@@ -971,16 +971,16 @@ void AuxiliaryPanel::on_import_file(wxCommandEvent &event)
            
 
             boost::system::error_code ec;
-            if (!fs::copy_file(src_bfs_path, fs::path(dir_path.ToStdWstring()), fs::copy_options::overwrite_existing, ec)) continue;
+            if (!std::filesystem::copy_file(src_bfs_path, std::filesystem::path(dir_path.ToStdWstring()), std::filesystem::copy_options::overwrite_existing, ec)) continue;
             Slic3r::put_other_changes();
 
             // add in file list
             iter = m_paths_list.find(file_model.ToStdString());
-            auto file_fs_path = fs::path(dir_path.ToStdWstring());
+            auto file_fs_path = std::filesystem::path(dir_path.ToStdWstring());
             if (iter != m_paths_list.end()) {
                 m_paths_list[file_model.ToStdString()].push_back(file_fs_path);
             } else {
-                m_paths_list[file_model.ToStdString()] = std::vector<fs::path>{file_fs_path};
+                m_paths_list[file_model.ToStdString()] = std::vector<std::filesystem::path>{file_fs_path};
             }
         }
         update_all_panel();
@@ -993,15 +993,15 @@ void AuxiliaryPanel::create_folder(wxString name)
     wxString folder_name = name;
 
     // Create folder in file system
-    fs::path bfs_path((m_root_dir + "/" + folder_name).ToStdWstring());
-    if (fs::exists(bfs_path)) {
+    std::filesystem::path bfs_path((m_root_dir + "/" + folder_name).ToStdWstring());
+    if (std::filesystem::exists(bfs_path)) {
         try {
-            bool is_done = fs::remove_all(bfs_path);
+            bool is_done = std::filesystem::remove_all(bfs_path);
         } catch (...) {
             BOOST_LOG_TRIVIAL(error) << "Failed  removing the auxiliary directory " << m_root_dir.c_str();
         }
     }
-    fs::create_directory(bfs_path);
+    std::filesystem::create_directory(bfs_path);
 }
 
 std::string AuxiliaryPanel::replaceSpace(std::string s, std::string ts, std::string ns)
@@ -1017,7 +1017,7 @@ void AuxiliaryPanel::Reload(wxString aux_path, std::map<std::string, std::vector
     m_paths_list.clear();
 
     for (const auto & path : paths) {
-        m_paths_list[path.first] = std::vector<fs::path>{};
+        m_paths_list[path.first] = std::vector<std::filesystem::path>{};
         for (const auto & j : path.second) {
             m_paths_list[path.first].push_back(j["_filepath"]);
         }
@@ -1031,7 +1031,7 @@ void AuxiliaryPanel::Reload(wxString aux_path, std::map<std::string, std::vector
 
 void AuxiliaryPanel::update_all_panel()
 {
-    std::map<std::string, std::vector<fs::path>>::iterator mit;
+    std::map<std::string, std::vector<std::filesystem::path>>::iterator mit;
 
     Freeze();
     m_pictures_panel->clear();
@@ -1050,7 +1050,7 @@ void AuxiliaryPanel::update_all_panel()
 
 void AuxiliaryPanel::update_all_cover()
 {
-    std::map<std::string, std::vector<fs::path>>::iterator mit;
+    std::map<std::string, std::vector<std::filesystem::path>>::iterator mit;
     for (mit = m_paths_list.begin(); mit != m_paths_list.end(); mit++) {
         if (mit->first == "Model Pictures") { m_pictures_panel->update_cover(); }
     }

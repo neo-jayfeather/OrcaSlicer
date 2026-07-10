@@ -5,6 +5,7 @@
 #include <libslic3r/Format/OBJ.hpp>
 
 #include <boost/filesystem.hpp>
+#include <filesystem>
 
 #if defined(WIN32) || defined(_WIN32)
 #define PATH_SEPARATOR R"(\)"
@@ -30,18 +31,18 @@ class ScopedTemporaryFile
 {
 public:
     explicit ScopedTemporaryFile(const std::string &extension = ".tmp")
-        : m_path(boost::filesystem::temp_directory_path()
+        : m_path(std::filesystem::temp_directory_path()
                  / boost::filesystem::unique_path("orca-%%%%-%%%%-%%%%" + extension))
     {}
-    ~ScopedTemporaryFile() { boost::system::error_code ec; boost::filesystem::remove(m_path, ec); }
+    ~ScopedTemporaryFile() { boost::system::error_code ec; std::filesystem::remove(m_path, ec); }
     ScopedTemporaryFile(const ScopedTemporaryFile &) = delete;
     ScopedTemporaryFile &operator=(const ScopedTemporaryFile &) = delete;
 
-    const boost::filesystem::path &path() const { return m_path; }
+    const std::filesystem::path &path() const { return m_path; }
     std::string string() const { return m_path.string(); }
 
 private:
-    boost::filesystem::path m_path;
+    std::filesystem::path m_path;
 };
 
 #endif // SLIC3R_TEST_UTILS

@@ -6,6 +6,7 @@
 #include "objparser.hpp"
 
 #include <string>
+#include <filesystem>
 
 #include <boost/log/trivial.hpp>
 
@@ -41,20 +42,20 @@ bool load_obj(const char *path, TriangleMesh *meshptr, ObjInfo& obj_info, std::s
             }
             exist_mtl = true;
             bool                    mtl_name_is_path = false;
-            boost::filesystem::path mtl_abs_path(mtl_name);
-            if (boost::filesystem::exists(mtl_abs_path)) {
+            std::filesystem::path mtl_abs_path(mtl_name);
+            if (std::filesystem::exists(mtl_abs_path)) {
                 mtl_name_is_path = true;
             }
-            boost::filesystem::path mtl_path;
+            std::filesystem::path mtl_path;
             if (!mtl_name_is_path) {
-                boost::filesystem::path full_path(path);
+                std::filesystem::path full_path(path);
                 std::string             dir = full_path.parent_path().string();
                 auto                    mtl_file = dir + "/" + mtl_name;
-                boost::filesystem::path temp_mtl_path(mtl_file);
+                std::filesystem::path temp_mtl_path(mtl_file);
                 mtl_path = temp_mtl_path;
             }
             auto    _mtl_path = mtl_name_is_path ? mtl_abs_path.string().c_str() : mtl_path.string().c_str();
-            if (boost::filesystem::exists(mtl_name_is_path ? mtl_abs_path : mtl_path)) {
+            if (std::filesystem::exists(mtl_name_is_path ? mtl_abs_path : mtl_path)) {
                 if (!ObjParser::mtlparse(_mtl_path, mtl_data)) {
                     BOOST_LOG_TRIVIAL(error) << "load_obj:load_mtl: failed to parse " << _mtl_path;
                     message = _L("load mtl in obj: failed to parse");

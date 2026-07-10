@@ -5,7 +5,7 @@
 #include <set>
 #include <string>
 #include <functional>
-#include <boost/filesystem/path.hpp>
+#include <filesystem>
 
 #include <wx/string.h>
 
@@ -30,8 +30,8 @@ ENABLE_ENUM_BITMASK_OPERATORS(PrintHostPostUploadAction);
 struct PrintHostUpload
 {
     bool use_3mf { false };
-    boost::filesystem::path source_path;
-    boost::filesystem::path upload_path;
+    std::filesystem::path source_path;
+    std::filesystem::path upload_path;
 
     std::string group;
     std::string storage;

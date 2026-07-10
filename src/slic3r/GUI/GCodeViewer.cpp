@@ -750,7 +750,7 @@ void GCodeViewer::SequentialView::GCodeWindow::load_gcode(const std::string& fil
 
     try
     {
-        m_file.open(boost::filesystem::path(m_filename));
+        m_file.open(std::filesystem::path(m_filename));
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": mapping file " << m_filename;
     }
     catch (...)
@@ -1884,7 +1884,7 @@ public:
             return;
         }
 
-        boost::filesystem::path materials_filename(filename);
+        std::filesystem::path materials_filename(filename);
         materials_filename.replace_extension("mtl");
 
         // write header to geometry file

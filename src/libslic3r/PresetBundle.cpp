@@ -15,7 +15,7 @@
 #include <set>
 #include <fstream>
 #include <unordered_set>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/algorithm/clamp.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/range/adaptor/transformed.hpp>
@@ -245,8 +245,8 @@ DynamicPrintConfig PresetBundle::construct_full_config(
 std::string PresetBundle::find_preset_vendor(const std::string &preset_name, Preset::Type type)
 {
     // Get the resources preset directory (contains all bundled vendor profiles)
-    fs::path system_dir = fs::path(Slic3r::resources_dir()) / PRESET_PROFILES_DIR;
-    if (!fs::exists(system_dir) || !fs::is_directory(system_dir)) {
+    std::filesystem::path system_dir = std::filesystem::path(Slic3r::resources_dir()) / PRESET_PROFILES_DIR;
+    if (!std::filesystem::exists(system_dir) || !std::filesystem::is_directory(system_dir)) {
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << " Resources profiles directory does not exist: " << system_dir.string();
         return "";
     }
@@ -265,7 +265,7 @@ std::string PresetBundle::find_preset_vendor(const std::string &preset_name, Pre
     }
 
     // Iterate through vendor JSON files in the system directory
-    for (auto& dir_entry : fs::directory_iterator(system_dir)) {
+    for (auto& dir_entry : std::filesystem::directory_iterator(system_dir)) {
         std::string vendor_file = dir_entry.path().string();
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Checking vendor: " << vendor_file;
         if (!Slic3r::is_json_file(vendor_file))
@@ -443,9 +443,9 @@ void PresetBundle::reset(bool delete_files)
 
 void PresetBundle::setup_directories()
 {
-    boost::filesystem::path data_dir = boost::filesystem::path(Slic3r::data_dir());
+    std::filesystem::path data_dir = std::filesystem::path(Slic3r::data_dir());
     //BBS: change directoties by design
-    std::initializer_list<boost::filesystem::path> paths = {
+    std::initializer_list<std::filesystem::path> paths = {
         data_dir,
         data_dir / "ota",
 		data_dir / PRESET_SYSTEM_DIR,
@@ -455,12 +455,12 @@ void PresetBundle::setup_directories()
         //data_dir / PRESET_SYSTEM_DIR / PRESET_FILAMENT_NAME,
         //data_dir / PRESET_SYSTEM_DIR / PRESET_PRINTER_NAME
     };
-    for (const boost::filesystem::path &path : paths) {
-		boost::filesystem::path subdir = path;
+    for (const std::filesystem::path &path : paths) {
+        std::filesystem::path subdir(path);
         subdir.make_preferred();
-        if (! boost::filesystem::is_directory(subdir) &&
-            ! boost::filesystem::create_directory(subdir)) {
-            if (boost::filesystem::is_directory(subdir)) {
+        if (! std::filesystem::is_directory(subdir) &&
+            ! std::filesystem::create_directory(subdir)) {
+            if (std::filesystem::is_directory(subdir)) {
                 BOOST_LOG_TRIVIAL(warning) << boost::format("creating directory %1% failed, maybe created by other instance, go on!")%subdir.string();
             }
             else
@@ -470,15 +470,14 @@ void PresetBundle::setup_directories()
 }
 
 // recursively copy all files and dirs in from_dir to to_dir
-static void copy_dir(const boost::filesystem::path& from_dir, const boost::filesystem::path& to_dir)
+static void copy_dir(const std::filesystem::path& from_dir, const std::filesystem::path& to_dir)
 {
-    if(!boost::filesystem::is_directory(from_dir))
-        return;
+    if(!std::filesystem::is_directory(from_dir)) return;
     // i assume to_dir.parent surely exists
-    if (!boost::filesystem::is_directory(to_dir))
-        boost::filesystem::create_directory(to_dir);
-    for (auto& dir_entry : boost::filesystem::directory_iterator(from_dir)) {
-        if (!boost::filesystem::is_directory(dir_entry.path())) {
+    if (!std::filesystem::is_directory(to_dir))
+        std::filesystem::create_directory(to_dir);
+    for (auto& dir_entry : std::filesystem::directory_iterator(from_dir)) {
+        if (!std::filesystem::is_directory(dir_entry.path())) {
             std::string em;
             CopyFileResult cfr = copy_file(dir_entry.path().string(), (to_dir / dir_entry.path().filename()).string(), em, false);
             if (cfr != SUCCESS) {
@@ -492,12 +491,12 @@ static void copy_dir(const boost::filesystem::path& from_dir, const boost::files
 
 void PresetBundle::copy_files(const std::string& from)
 {
-    boost::filesystem::path data_dir = boost::filesystem::path(Slic3r::data_dir());
+    std::filesystem::path data_dir = std::filesystem::path(Slic3r::data_dir());
     // list of searched paths based on current directory system in setup_directories()
     // do not copy cache and snapshots
-    boost::filesystem::path from_data_dir = boost::filesystem::path(from);
+    std::filesystem::path from_data_dir(from);
     //BBS: change directoties by design
-    std::initializer_list<boost::filesystem::path> from_dirs= {
+    std::initializer_list<std::filesystem::path> from_dirs= {
         //from_data_dir / "vendor",
         // Store the print/filament/printer presets at the same location as the upstream Slic3r.
         from_data_dir / PRESET_PRINT_NAME,
@@ -506,7 +505,7 @@ void PresetBundle::copy_files(const std::string& from)
     };
     // copy recursively all files
     //BBS: change directoties by design
-    for (const boost::filesystem::path& from_dir : from_dirs) {
+    for (const std::filesystem::path& from_dir : from_dirs) {
         copy_dir(from_dir, data_dir /"old"/from_dir.filename());
     }
 }
@@ -669,20 +668,20 @@ bool PresetBundle::backup_user_folder() const
     const std::string backup_folderpath = data_dir() + "/" + (boost::format("user_backup-v%1%") % SoftFever_VERSION).str();
 
     // Check if backup file already exists
-    if (boost::filesystem::exists(boost::filesystem::path(backup_folderpath)))
+    if (std::filesystem::exists(std::filesystem::path(backup_folderpath)))
         return false;
 
     BOOST_LOG_TRIVIAL(info) << "Backing up user folder to: " << backup_folderpath;
     try {
         // Copy the user folder to the backup folder
-        boost::filesystem::copy(data_dir() + "/" + PRESET_USER_DIR, backup_folderpath, boost::filesystem::copy_options::recursive);
+        std::filesystem::copy(data_dir() + "/" + PRESET_USER_DIR, backup_folderpath, std::filesystem::copy_options::recursive);
         BOOST_LOG_TRIVIAL(info) << "User folder backup completed successfully";
         return true;
     } catch (const std::exception& ex) {
         BOOST_LOG_TRIVIAL(error) << "Exception during user folder backup: " << ex.what();
         // Try to clean up partially copied backup folder
-        if (boost::filesystem::exists(boost::filesystem::path(backup_folderpath)))
-            boost::filesystem::remove_all(boost::filesystem::path(backup_folderpath));
+        if (std::filesystem::exists(std::filesystem::path(backup_folderpath)))
+            std::filesystem::remove_all(std::filesystem::path(backup_folderpath));
         return false;
     }
 }
@@ -873,7 +872,7 @@ std::string PresetBundle::get_texture_for_printer_model(std::string model_name)
     if (!texture_name.empty())
     {
         out = Slic3r::data_dir() + "/vendor/" + vendor_name + "/" + texture_name;
-        if (!boost::filesystem::exists(boost::filesystem::path(out)))
+        if (!std::filesystem::exists(std::filesystem::path(out)))
             out = Slic3r::resources_dir() + "/profiles/" + vendor_name + "/" + texture_name;
     }
 
@@ -901,7 +900,7 @@ std::string PresetBundle::get_stl_model_for_printer_model(std::string model_name
     if (!stl_name.empty())
     {
         out = Slic3r::data_dir() + "/vendor/" + vendor_name + "/" + stl_name;
-        if (!boost::filesystem::exists(boost::filesystem::path(out)))
+        if (!std::filesystem::exists(std::filesystem::path(out)))
             out = Slic3r::resources_dir() + "/profiles/" + vendor_name + "/" + stl_name;
     }
 
@@ -928,11 +927,11 @@ std::string PresetBundle::get_hotend_model_for_printer_model(std::string model_n
     if (!hotend_stl.empty())
     {
         out = Slic3r::data_dir() + "/vendor/" + vendor_name + "/" + hotend_stl;
-        if (!boost::filesystem::exists(boost::filesystem::path(out)))
+        if (!std::filesystem::exists(std::filesystem::path(out)))
             out = Slic3r::resources_dir() + "/profiles/" + vendor_name + "/" + hotend_stl;
     }
 
-    if (out.empty() ||!boost::filesystem::exists(boost::filesystem::path(out)))
+    if (out.empty() ||!std::filesystem::exists(std::filesystem::path(out)))
         out = Slic3r::resources_dir() + "/profiles/hotend.stl";
 
     return out;
@@ -944,28 +943,28 @@ PresetsConfigSubstitutions PresetBundle::load_user_presets(std::string user, For
     PresetsConfigSubstitutions substitutions;
     std::string errors_cummulative;
 
-    fs::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
-    if (!fs::exists(user_folder)) fs::create_directory(user_folder);
+    std::filesystem::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
+    if (!std::filesystem::exists(user_folder)) std::filesystem::create_directory(user_folder);
 
     std::string dir_user_presets = data_dir() + "/" + PRESET_USER_DIR + "/" + user;
-    fs::path    folder(user_folder / user);
-    if (!fs::exists(folder)) fs::create_directory(folder);
+    std::filesystem::path    folder(user_folder / user);
+    if (!std::filesystem::exists(folder)) std::filesystem::create_directory(folder);
 
     bundles.WriteLock();
     bundles.m_bundles.clear();
     bundles.WriteUnlock();
 
     // Load bundle metadata from _local directory first
-    fs::path local_dir(folder / PRESET_LOCAL_DIR);
-    if (fs::exists(local_dir)) {
+    std::filesystem::path local_dir(folder / PRESET_LOCAL_DIR);
+    if (std::filesystem::exists(local_dir)) {
         dir_user_presets_local = local_dir;
-        for (auto& entry : fs::directory_iterator(local_dir)) {
-            if (!fs::is_directory(entry.path())) continue;
+        for (auto& entry : std::filesystem::directory_iterator(local_dir)) {
+            if (!std::filesystem::is_directory(entry.path())) continue;
 
             std::string bundle_dir = entry.path().string();
 
-            fs::path metadata_file = entry.path() / PRESET_BUNDLE_METADATA;
-            if (!fs::exists(metadata_file)) continue;
+            std::filesystem::path metadata_file = entry.path() / PRESET_BUNDLE_METADATA;
+            if (!std::filesystem::exists(metadata_file)) continue;
 
             BundleMetadata metadata;
             if (!metadata.load_from_json(metadata_file.string())) continue;
@@ -993,15 +992,15 @@ PresetsConfigSubstitutions PresetBundle::load_user_presets(std::string user, For
     }
 
     // Load bundle metadata from _subscribed directory
-    fs::path subscribed_dir(folder / PRESET_SUBSCRIBED_DIR);
-    if (fs::exists(subscribed_dir)) {
-        for (auto& entry : fs::directory_iterator(subscribed_dir)) {
-            if (!fs::is_directory(entry.path())) continue;
+    std::filesystem::path subscribed_dir(folder / PRESET_SUBSCRIBED_DIR);
+    if (std::filesystem::exists(subscribed_dir)) {
+        for (auto& entry : std::filesystem::directory_iterator(subscribed_dir)) {
+            if (!std::filesystem::is_directory(entry.path())) continue;
 
             std::string bundle_dir = entry.path().string();
 
-            fs::path metadata_file = entry.path() / PRESET_BUNDLE_METADATA;
-            if (!fs::exists(metadata_file)) continue;
+            std::filesystem::path metadata_file = entry.path() / PRESET_BUNDLE_METADATA;
+            if (!std::filesystem::exists(metadata_file)) continue;
 
             BundleMetadata metadata;
             if (!metadata.load_from_json(metadata_file.string())) continue;
@@ -1155,8 +1154,6 @@ bool PresetBundle::apply_vendor_config(
     const std::string& preferred_printer_variant,
     const std::string& preferred_filament)
 {
-    namespace fs = boost::filesystem;
-
     // Get current configuration from AppConfig
     const auto old_vendors = app_config->vendors();
     const auto old_filaments = app_config->has_section(AppConfig::SECTION_FILAMENTS)
@@ -1164,13 +1161,13 @@ bool PresetBundle::apply_vendor_config(
         : std::map<std::string, std::string>();
 
     // Find vendors that need installation
-    const auto vendor_dir = (fs::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
+    const auto vendor_dir = (std::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
 
     std::vector<std::string> install_bundles;
     for (const auto &it : new_vendors) {
         if (it.second.size() > 0) {
             auto vendor_file = vendor_dir / (it.first + ".json");
-            if (!fs::exists(vendor_file)) {
+            if (!std::filesystem::exists(vendor_file)) {
                 install_bundles.emplace_back(it.first);
             }
         }
@@ -1323,22 +1320,22 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
         if (boost::iends_with(file, ".orca_printer") || boost::iends_with(file, ".orca_bundle") || boost::iends_with(file, ".orca_filament") || boost::iends_with(file, ".zip")) {
             boost::system::error_code ec;
             // create user folder
-            fs::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
-            if (!fs::exists(user_folder)) fs::create_directory(user_folder, ec);
+            std::filesystem::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
+            if (!std::filesystem::exists(user_folder)) std::filesystem::create_directory(user_folder, ec);
             if (ec) BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " create directory failed: " << ec.message();
             // create default folder
-            fs::path configs_folder(user_folder / user_id);
-            if (!fs::exists(configs_folder)) fs::create_directory(configs_folder, ec);
+            std::filesystem::path configs_folder(user_folder / user_id);
+            if (!std::filesystem::exists(configs_folder)) std::filesystem::create_directory(configs_folder, ec);
             if (ec) BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " create directory failed: " << ec.message();
             //create temp folder
             //std::string user_default_temp_dir = data_dir() + "/" + PRESET_USER_DIR + "/" + DEFAULT_USER_FOLDER_NAME + "/" + "temp";
-            fs::path temp_folder(configs_folder / "temp");
+            std::filesystem::path temp_folder(configs_folder / "temp");
             std::string user_default_temp_dir = temp_folder.make_preferred().string();
-            if (fs::exists(temp_folder)) fs::remove_all(temp_folder);
-            fs::create_directory(temp_folder, ec);
+            if (std::filesystem::exists(temp_folder)) std::filesystem::remove_all(temp_folder);
+            std::filesystem::create_directory(temp_folder, ec);
             if (ec) BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " create directory failed: " << ec.message();
 
-            file = boost::filesystem::path(file).make_preferred().string();
+            file = std::filesystem::path(file).make_preferred().string();
             mz_zip_archive zip_archive;
             mz_zip_zero_struct(&zip_archive);
             mz_bool status;
@@ -1356,7 +1353,7 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
             // Track whether bundle_structure.json exists to determine routing
             bool has_bundle_structure = false;
             BundleMetadata metadata;
-            fs::path metadata_path = temp_folder / BUNDLE_STRUCTURE_JSON_NAME;
+            std::filesystem::path metadata_path = temp_folder / BUNDLE_STRUCTURE_JSON_NAME;
             status = mz_zip_reader_extract_file_to_file(&zip_archive, BUNDLE_STRUCTURE_JSON_NAME, encode_path(metadata_path.string().c_str()).c_str(), MZ_ZIP_FLAG_CASE_SENSITIVE);
             if (status) {
                 if (metadata.load_from_json(metadata_path.string())) {
@@ -1372,12 +1369,12 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
             }
 
             // Build bundle directory path based on whether bundle_structure.json was present
-            fs::path bundle_base_dir;
+            std::filesystem::path bundle_base_dir;
             if (has_bundle_structure) {
                 // Use the bundle ID from metadata when bundle_structure.json exists
                 bundle_base_dir = user_folder / user_id / PRESET_LOCAL_DIR / metadata.id;
-                if (!fs::exists(bundle_base_dir))
-                    fs::create_directories(bundle_base_dir, ec);
+                if (!std::filesystem::exists(bundle_base_dir))
+                    std::filesystem::create_directories(bundle_base_dir, ec);
                 if (ec)
                     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " Failed to create bundle directory: " << bundle_base_dir.string() << " error: " << ec.message();
             } else {
@@ -1398,7 +1395,7 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
                     }
                     if (BUNDLE_STRUCTURE_JSON_NAME == file_name) continue;
                     // create target file path
-                    std::string target_file_path = boost::filesystem::path(temp_folder / file_name).make_preferred().string();
+                    std::string target_file_path = std::filesystem::path(temp_folder / file_name).make_preferred().string();
 
                     status = mz_zip_reader_extract_to_file(&zip_archive, i, encode_path(target_file_path.c_str()).c_str(), MZ_ZIP_FLAG_CASE_SENSITIVE);
                     // target file is opened
@@ -1420,7 +1417,7 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
             // Only save bundle_metadata.json for bundles (when bundle_structure.json was present)
             if (has_bundle_structure) {
                 // Save metadata to bundle_metadata.json
-                fs::path metadata_save_path = bundle_base_dir / PRESET_BUNDLE_METADATA;
+                std::filesystem::path metadata_save_path = bundle_base_dir / PRESET_BUNDLE_METADATA;
                 if (metadata.save_to_json(metadata_save_path.string())) {
                     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Saved bundle metadata to: " << metadata_save_path.string();
 
@@ -1438,7 +1435,7 @@ PresetsConfigSubstitutions PresetBundle::import_presets(std::vector<std::string>
             }
 
             fclose(zipFile);
-            if (fs::exists(temp_folder)) fs::remove_all(temp_folder, ec);
+            if (std::filesystem::exists(temp_folder)) std::filesystem::remove_all(temp_folder, ec);
             if (ec) BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " remove directory failed: " << ec.message();
         }
     }
@@ -1485,7 +1482,7 @@ bool PresetBundle::import_json_presets(PresetsConfigSubstitutions &            s
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << " Preset type is unknown, not loading: " << name;
             return false;
         }
-        const PresetOrigin load_origin = detect_origin_from_path(boost::filesystem::path(bundle_dir));
+        const PresetOrigin load_origin = detect_origin_from_path(std::filesystem::path(bundle_dir));
         const std::string      preset_name = get_preset_canonical_name(name, load_origin);
 
         if (overwrite == 0) overwrite = 1;
@@ -1585,13 +1582,13 @@ void PresetBundle::save_user_presets(AppConfig& config, std::map<std::string, st
 
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" enter, save to %1%")%dir_user_presets;
 
-    fs::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
-    if (!fs::exists(user_folder))
-        fs::create_directory(user_folder);
+    std::filesystem::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
+    if (!std::filesystem::exists(user_folder))
+        std::filesystem::create_directory(user_folder);
 
-    fs::path folder(dir_user_presets);
-    if (!fs::exists(folder))
-        fs::create_directory(folder);
+    std::filesystem::path folder(dir_user_presets);
+    if (!std::filesystem::exists(folder))
+        std::filesystem::create_directory(folder);
 
     this->prints.save_user_presets(dir_user_presets, PRESET_PRINT_NAME, need_to_delete_list);
     this->filaments.save_user_presets(dir_user_presets, PRESET_FILAMENT_NAME, need_to_delete_list);
@@ -1708,13 +1705,13 @@ PresetsConfigSubstitutions PresetBundle::update_subscribed_presets(
     if (user_id.empty()) user_id = DEFAULT_USER_FOLDER_NAME;
 
     // Create the subscribed directory base path
-    boost::filesystem::path user_folder(Slic3r::data_dir() + "/" + PRESET_USER_DIR);
-    boost::filesystem::path subscribed_base(user_folder / user_id / PRESET_SUBSCRIBED_DIR);
+    std::filesystem::path user_folder(Slic3r::data_dir() + "/" + PRESET_USER_DIR);
+    std::filesystem::path subscribed_base(user_folder / user_id / PRESET_SUBSCRIBED_DIR);
 
     // Ensure subscribed directory exists
     boost::system::error_code ec;
-    if (!boost::filesystem::exists(subscribed_base))
-        boost::filesystem::create_directories(subscribed_base, ec);
+    if (!std::filesystem::exists(subscribed_base))
+        std::filesystem::create_directories(subscribed_base, ec);
     if (ec) {
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " failed to create subscribed directory: " << subscribed_base.string() << " error: " << ec.message();
         return substitutions;
@@ -1723,9 +1720,9 @@ PresetsConfigSubstitutions PresetBundle::update_subscribed_presets(
     dir_user_presets_subscribed = subscribed_base;
 
     // Create bundle directory
-    boost::filesystem::path bundle_dir(subscribed_base / remote_metadata.id);
-    if (!boost::filesystem::exists(bundle_dir))
-        boost::filesystem::create_directories(bundle_dir, ec);
+    std::filesystem::path bundle_dir(subscribed_base / remote_metadata.id);
+    if (!std::filesystem::exists(bundle_dir))
+        std::filesystem::create_directories(bundle_dir, ec);
     if (ec) {
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " failed to create bundle directory: " << bundle_dir.string() << " error: " << ec.message();
         return substitutions;
@@ -1808,7 +1805,7 @@ PresetsConfigSubstitutions PresetBundle::update_subscribed_presets(
         }
     }
 
-    boost::filesystem::path metadata_save_path = bundle_dir / PRESET_BUNDLE_METADATA;
+    std::filesystem::path metadata_save_path = bundle_dir / PRESET_BUNDLE_METADATA;
     merged_metadata.path = metadata_save_path.string();
     bundles.m_bundles[remote_metadata.id] = merged_metadata;
 
@@ -1849,19 +1846,19 @@ bool PresetBundle::save_preset_to_bundle_dir(Preset& preset, PresetCollection* c
 
     try {
         // Create bundle directory if it doesn't exist
-        boost::filesystem::path bundle_dir(bundle_base_dir);
+        std::filesystem::path bundle_dir(bundle_base_dir);
         boost::system::error_code ec;
-        if (!boost::filesystem::exists(bundle_dir))
-            boost::filesystem::create_directories(bundle_dir, ec);
+        if (!std::filesystem::exists(bundle_dir))
+            std::filesystem::create_directories(bundle_dir, ec);
         if (ec) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " failed to create bundle directory: " << bundle_dir.string() << " error: " << ec.message();
             return false;
         }
 
         // Create bundle type directory
-        boost::filesystem::path type_dir = bundle_dir / type_subdir;
-        if (!boost::filesystem::exists(type_dir)) {
-            boost::filesystem::create_directories(type_dir, ec);
+        std::filesystem::path type_dir = bundle_dir / type_subdir;
+        if (!std::filesystem::exists(type_dir)) {
+            std::filesystem::create_directories(type_dir, ec);
             if (ec) {
                 BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " failed to create type directory: " << type_dir.string() << " error: " << ec.message();
                 return false;
@@ -1872,7 +1869,7 @@ bool PresetBundle::save_preset_to_bundle_dir(Preset& preset, PresetCollection* c
 
         // Bundle preset names may include the subscribed/local prefix path.
         // Persist the file under the type directory using only the base preset name.
-        const std::string preset_filename = boost::filesystem::path(preset.name).filename().string();
+        const std::string preset_filename = std::filesystem::path(preset.name).filename().string();
         const std::string file_name = boost::iends_with(preset_filename, ".json") ? preset_filename : (preset_filename + ".json");
         preset.file = (type_dir / file_name).make_preferred().string();
 
@@ -1917,13 +1914,13 @@ void PresetBundle::update_user_presets_directory(const std::string preset_folder
 
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" enter, update directory to %1%")%dir_user_presets;
 
-    fs::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
-    if (!fs::exists(user_folder))
-        fs::create_directory(user_folder);
+    std::filesystem::path user_folder(data_dir() + "/" + PRESET_USER_DIR);
+    if (!std::filesystem::exists(user_folder))
+        std::filesystem::create_directory(user_folder);
 
-    fs::path folder(dir_user_presets);
-    if (!fs::exists(folder))
-        fs::create_directory(folder);
+    std::filesystem::path folder(dir_user_presets);
+    if (!std::filesystem::exists(folder))
+        std::filesystem::create_directory(folder);
 
     this->prints.update_user_presets_directory(dir_user_presets, PRESET_PRINT_NAME);
     this->filaments.update_user_presets_directory(dir_user_presets, PRESET_FILAMENT_NAME);
@@ -1940,9 +1937,9 @@ void PresetBundle::remove_user_presets_directory(const std::string preset_folder
         return;
     }
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" enter, delete directory : %1%") % dir_user_presets;
-    fs::path folder(dir_user_presets);
-    if (fs::exists(folder)) {
-        fs::remove_all(folder);
+    std::filesystem::path folder(dir_user_presets);
+    if (std::filesystem::exists(folder)) {
+        std::filesystem::remove_all(folder);
     }
 }
 
@@ -2193,16 +2190,16 @@ std::pair<PresetsConfigSubstitutions, std::string> PresetBundle::load_system_pre
 
     // Here the vendor specific read only Config Bundles are stored.
     //BBS: change directory by design
-    boost::filesystem::path     dir = (boost::filesystem::path(data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
+    std::filesystem::path     dir = (std::filesystem::path(data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
     if (validation_mode)
-        dir = (boost::filesystem::path(data_dir())).make_preferred();
+        dir = (std::filesystem::path(data_dir())).make_preferred();
 
     PresetsConfigSubstitutions  substitutions;
     std::string                 errors_cummulative;
     bool                        first = true;
     std::vector<std::string> vendor_names;
     // store all vendor names in vendor_names
-    for (auto& dir_entry : boost::filesystem::directory_iterator(dir)) {
+    for (auto& dir_entry : std::filesystem::directory_iterator(dir)) {
         std::string vendor_file = dir_entry.path().string();
         if (!Slic3r::is_json_file(vendor_file))
             continue;
@@ -2316,10 +2313,10 @@ std::pair<PresetsConfigSubstitutions, std::string> PresetBundle::load_system_mod
         compatibility_rule = ForwardCompatibilitySubstitutionRule::Disable;
 
     // Here the vendor specific read only Config Bundles are stored.
-    boost::filesystem::path    dir = (boost::filesystem::path(resources_dir()) / "profiles").make_preferred();
+    std::filesystem::path    dir = (std::filesystem::path(resources_dir()) / "profiles").make_preferred();
     PresetsConfigSubstitutions substitutions;
     std::string                errors_cummulative;
-    for (auto &dir_entry : boost::filesystem::directory_iterator(dir)) {
+    for (auto &dir_entry : std::filesystem::directory_iterator(dir)) {
         std::string vendor_file = dir_entry.path().string();
         if (Slic3r::is_json_file(vendor_file)) {
             std::string vendor_name = dir_entry.path().filename().string();
@@ -2350,11 +2347,11 @@ std::pair<PresetsConfigSubstitutions, std::string> PresetBundle::load_system_fil
         compatibility_rule = ForwardCompatibilitySubstitutionRule::Disable;
 
     // Here the vendor specific read only Config Bundles are stored.
-    boost::filesystem::path    dir = (boost::filesystem::path(resources_dir()) / "profiles").make_preferred();
+    std::filesystem::path    dir = (std::filesystem::path(resources_dir()) / "profiles").make_preferred();
     PresetsConfigSubstitutions substitutions;
     std::string                errors_cummulative;
     bool                       first = true;
-    for (auto &dir_entry : boost::filesystem::directory_iterator(dir)) {
+    for (auto &dir_entry : std::filesystem::directory_iterator(dir)) {
         std::string vendor_file = dir_entry.path().string();
         if (Slic3r::is_json_file(vendor_file)) {
             std::string vendor_name = dir_entry.path().filename().string();
@@ -4381,7 +4378,7 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
 
     // 1) Create a name from the file name.
     // Keep the suffix (.ini, .gcode, .amf, .3mf etc) to differentiate it from the normal profiles.
-    std::string name = is_external ? boost::filesystem::path(name_or_path).filename().string() : name_or_path;
+    std::string name = is_external ? std::filesystem::path(name_or_path).filename().string() : name_or_path;
 
     // 2) If the loading succeeded, split and load the config into print / filament / printer settings.
     // First load the print and printer presets.
@@ -5046,9 +5043,9 @@ std::pair<PresetsConfigSubstitutions, size_t> PresetBundle::load_vendor_configs_
             return reason;
         }
 
-        auto file_path = (boost::filesystem::path(data_dir())  /PRESET_SYSTEM_DIR/ vendor_name / subfile_iter.second).make_preferred();
+        auto file_path = (std::filesystem::path(data_dir())  /PRESET_SYSTEM_DIR/ vendor_name / subfile_iter.second).make_preferred();
         if(validation_mode)
-            file_path = (boost::filesystem::path(data_dir()) / vendor_name / subfile_iter.second).make_preferred();
+            file_path = (std::filesystem::path(data_dir()) / vendor_name / subfile_iter.second).make_preferred();
 
         // Load the preset into the list of presets, save it to disk.
         Preset &loaded = presets_collection->load_preset(file_path.string(), preset_name, std::move(config), false);
@@ -5497,7 +5494,7 @@ std::vector<std::string> PresetBundle::export_current_configs(const std::string 
             continue;
         std::string file = path + "/" + preset->name + ".json";
         if (overwrite == 0) overwrite = 1;
-        if (boost::filesystem::exists(file) && overwrite < 2) {
+        if (std::filesystem::exists(file) && overwrite < 2) {
             overwrite = override_confirm(preset->name);
             if (overwrite == 0 || overwrite == 2)
                 continue;
@@ -5566,7 +5563,7 @@ static std::string preset_file_uri(const std::string &file)
 {
     std::string path;
     try {
-        path = boost::filesystem::canonical(file).generic_string();
+        path = std::filesystem::canonical(file).generic_string();
     } catch (...) {
         path = file;
     }
@@ -5762,8 +5759,8 @@ bool BundleMetadata::save_to_json(const std::string& path) const
                 json arr = json::array();
                 for (const auto& name : names)
                 {
-                    arr.push_back(boost::filesystem::path(name).filename().string());
-                    std::string test = boost::filesystem::path(name).filename().string();
+                    arr.push_back(std::filesystem::path(name).filename().string());
+                    std::string test = std::filesystem::path(name).filename().string();
                 }
                 return arr;
             };

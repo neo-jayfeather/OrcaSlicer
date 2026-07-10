@@ -7,7 +7,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/nowide/cstdlib.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/nowide/fstream.hpp>
@@ -15,6 +14,7 @@
 // BBS
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #ifdef WIN32
 
@@ -113,7 +113,7 @@ static int run_script(const std::string &script, const std::string &gcode, std::
 
     std::wstring command_line;
     std::wstring command = szArglist[0];
-	if (! boost::filesystem::exists(boost::filesystem::path(command)))
+	if (! std::filesystem::exists(std::filesystem::path(command)))
 		throw Slic3r::RuntimeError(std::string("The configured post-processing script does not exist: ") + boost::nowide::narrow(command));
     if (boost::iends_with(command, L".pl")) {
         // This is a perl script. Run it through the perl interpreter.
@@ -121,9 +121,9 @@ static int run_script(const std::string &script, const std::string &gcode, std::
         // Find the path of the process:
         wchar_t wpath_exe[_MAX_PATH + 1];
         ::GetModuleFileNameW(nullptr, wpath_exe, _MAX_PATH);
-        boost::filesystem::path path_exe(wpath_exe);
-        boost::filesystem::path path_perl = path_exe.parent_path() / "perl" / "perl.exe";
-        if (! boost::filesystem::exists(path_perl)) {
+        std::filesystem::path path_exe(wpath_exe);
+        std::filesystem::path path_perl = path_exe.parent_path() / "perl" / "perl.exe";
+        if (! std::filesystem::exists(path_perl)) {
 			LocalFree(szArglist);
 			throw Slic3r::RuntimeError(std::string("Perl interpreter ") + path_perl.string() + " does not exist.");
         }
@@ -201,8 +201,8 @@ void gcode_add_line_number(const std::string& path, const DynamicPrintConfig& co
     if (!opt->getBool())
         return;
 
-    auto gcode_file = boost::filesystem::path(path);
-    if (!boost::filesystem::exists(gcode_file))
+    auto gcode_file = std::filesystem::path(path);
+    if (!std::filesystem::exists(gcode_file))
         return;
 
     std::fstream fs;
@@ -251,8 +251,8 @@ bool run_post_process_scripts(std::string &src_path, bool make_copy, const std::
         path = src_path + ".pp";
         // First delete an old file if it exists.
         try {
-            if (boost::filesystem::exists(path))
-                boost::filesystem::remove(path);
+            if (std::filesystem::exists(path))
+                std::filesystem::remove(path);
         } catch (const std::exception &err) {
             BOOST_LOG_TRIVIAL(error) << Slic3r::format("Failed deleting an old temporary file %1% before running a post-processing script: %2%", path, err.what());
         }
@@ -268,15 +268,15 @@ bool run_post_process_scripts(std::string &src_path, bool make_copy, const std::
     auto delete_copy = [&path, &src_path, make_copy]() {
         if (make_copy)
             try {
-                if (boost::filesystem::exists(path))
-                    boost::filesystem::remove(path);
+                if (std::filesystem::exists(path))
+                    std::filesystem::remove(path);
             } catch (const std::exception &err) {
                 BOOST_LOG_TRIVIAL(error) << Slic3r::format("Failed deleting a temporary copy %1% of a G-code file %2% : %3%", path, src_path, err.what());
             }
     };
 
-    auto gcode_file = boost::filesystem::path(path);
-    if (! boost::filesystem::exists(gcode_file))
+    auto gcode_file = std::filesystem::path(path);
+    if (! std::filesystem::exists(gcode_file))
         throw Slic3r::RuntimeError(std::string("Post-processor can't find exported gcode file"));
 
     // Store print configuration into environment variables.
@@ -291,8 +291,8 @@ bool run_post_process_scripts(std::string &src_path, bool make_copy, const std::
     std::string path_output_name = path + ".output_name";
     auto remove_output_name_file = [&path_output_name, &src_path]() {
         try {
-            if (boost::filesystem::exists(path_output_name))
-                boost::filesystem::remove(path_output_name);
+            if (std::filesystem::exists(path_output_name))
+                std::filesystem::remove(path_output_name);
         } catch (const std::exception &err) {
             BOOST_LOG_TRIVIAL(error) << Slic3r::format("Failed deleting a file %1% carrying the final name / path of a G-code file %2%: %3%", path_output_name, src_path, err.what());
         }
@@ -319,7 +319,7 @@ bool run_post_process_scripts(std::string &src_path, bool make_copy, const std::
                     delete_copy();
                     throw Slic3r::RuntimeError(msg);
                 }
-                if (! boost::filesystem::exists(gcode_file)) {
+                if (! std::filesystem::exists(gcode_file)) {
                     const std::string msg = (boost::format(_(L(
                         "Post-processing script %1% failed.\n\n"
                         "The post-processing script is expected to change the G-code file %2% in place, but the G-code file was deleted and likely saved under a new name.\n"
@@ -330,7 +330,7 @@ bool run_post_process_scripts(std::string &src_path, bool make_copy, const std::
                 }
             }
         }
-        if (boost::filesystem::exists(path_output_name)) {
+        if (std::filesystem::exists(path_output_name)) {
             try {
                 // Read a single line from path_output_name, which should contain the new output name of the post-processed G-code.
                 boost::nowide::fstream f;
@@ -340,11 +340,10 @@ bool run_post_process_scripts(std::string &src_path, bool make_copy, const std::
                 f.close();
 
                 if (host == "File") {
-                    namespace fs = boost::filesystem;
-                    fs::path op(new_output_name);
+                    std::filesystem::path op(new_output_name);
                     if (op.is_relative() && op.has_filename() && op.parent_path().empty()) {
                         // Is this just a filename? Make it an absolute path.
-                        auto outpath = fs::path(output_name).parent_path();
+                        auto outpath = std::filesystem::path(output_name).parent_path();
                         outpath /= op.string();
                         new_output_name = outpath.string();
                     }
@@ -352,9 +351,9 @@ bool run_post_process_scripts(std::string &src_path, bool make_copy, const std::
                         if (! op.is_absolute() || ! op.has_filename())
                             throw Slic3r::RuntimeError("Unable to parse desired new path from output name file");
                     }
-                    if (! fs::exists(fs::path(new_output_name).parent_path()))
+                    if (! std::filesystem::exists(std::filesystem::path(new_output_name).parent_path()))
                         throw Slic3r::RuntimeError(Slic3r::format("Output directory does not exist: %1%",
-                                                                  fs::path(new_output_name).parent_path().string()));
+                                                                  std::filesystem::path(new_output_name).parent_path().string()));
                 }
 
                 BOOST_LOG_TRIVIAL(trace) << "Post-processing script changed the file name from " << output_name << " to " << new_output_name;

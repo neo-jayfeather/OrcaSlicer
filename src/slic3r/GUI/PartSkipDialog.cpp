@@ -352,7 +352,7 @@ void PartSkipDialog::on_dpi_changed(const wxRect &suggested_rect)
 
 std::string PartSkipDialog::create_tmp_path()
 {
-    boost::filesystem::path parent_path(temporary_dir());
+    std::filesystem::path parent_path(temporary_dir());
 
     std::stringstream buf;
     buf << "/bamboo_task/";
@@ -367,7 +367,7 @@ std::string PartSkipDialog::create_tmp_path()
     }
     std::string tmp_path = (parent_path / buf.str()).string();
 
-    if (!std::filesystem::exists(tmp_path + "Metadata/") && !fs::create_directories(tmp_path + "Metadata/")) { wxMessageBox(_L("Failed to create the temporary folder.")); }
+    if (!std::filesystem::exists(tmp_path + "Metadata/") && !std::filesystem::create_directories(tmp_path + "Metadata/")) { wxMessageBox(_L("Failed to create the temporary folder.")); }
     return tmp_path;
 }
 

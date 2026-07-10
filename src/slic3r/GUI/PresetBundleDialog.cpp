@@ -202,7 +202,7 @@ void PresetBundleDialog::create()
     app_config = get_app_config();
 
     wxString TargetUrl = from_u8(
-        (boost::filesystem::path(resources_dir()) / "web/dialog/PresetBundleDialog/index.html").make_preferred().string());
+        (std::filesystem::path(resources_dir()) / "web/dialog/PresetBundleDialog/index.html").make_preferred().string());
     wxString strlang = wxGetApp().current_language_code_safe();
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", strlang=%1%") % into_u8(strlang);
     if (strlang != "")
@@ -254,7 +254,7 @@ bool PresetBundleDialog::DeleteBundleById(const wxString& id)
     }
 
     const std::string metadata_path          = it->second.path;
-    const boost::filesystem::path bundle_dir = boost::filesystem::path(metadata_path).parent_path();
+    const std::filesystem::path bundle_dir = std::filesystem::path(metadata_path).parent_path();
 
     const BundleType bundle_type = it->second.bundle_type;
     wxGetApp().preset_bundle->bundles.ReadUnlock();
@@ -282,8 +282,8 @@ bool PresetBundleDialog::DeleteBundleById(const wxString& id)
     remove_from_collection(b->printers);
 
     boost::system::error_code ec;
-    if (!bundle_dir.empty() && boost::filesystem::exists(bundle_dir))
-        boost::filesystem::remove_all(bundle_dir, ec);
+    if (!bundle_dir.empty() && std::filesystem::exists(bundle_dir))
+        std::filesystem::remove_all(bundle_dir, ec);
 
     wxGetApp().preset_bundle->update_compatible(PresetSelectCompatibleType::Always);
 
@@ -370,7 +370,7 @@ void PresetBundleDialog::ListBundles()
     auto strip_prefix = [](const std::vector<std::string>& names) {
         json arr = json::array();
         for (const auto& name : names)
-            arr.push_back(boost::filesystem::path(name).filename().string());
+            arr.push_back(std::filesystem::path(name).filename().string());
         return arr;
     };
 

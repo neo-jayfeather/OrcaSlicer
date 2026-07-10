@@ -35,13 +35,13 @@ class SimplyPrint : public PrintHost
      * \param error_fn 
      * \return whether upload succeeded
      */
-    bool do_temp_upload(const boost::filesystem::path& file_path,
+    bool do_temp_upload(const std::filesystem::path& file_path,
                         const std::string&             chunk_id,
                         const std::string&             filename,
                         ProgressFn                     prorgess_fn,
                         ErrorFn                        error_fn) const;
 
-    bool do_chunk_upload(const boost::filesystem::path& file_path,
+    bool do_chunk_upload(const std::filesystem::path& file_path,
                          const std::string&             filename,
                          ProgressFn                     prorgess_fn,
                          ErrorFn                        error_fn) const;

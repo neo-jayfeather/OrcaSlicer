@@ -3,12 +3,12 @@
 #include "libslic3r/Time.hpp"
 
 #include <boost/log/trivial.hpp>
-#include <boost/filesystem.hpp>
 
 #include "libslic3r/Zipper.hpp"
 #include "libslic3r/SLAPrint.hpp"
 
 #include <sstream>
+#include <filesystem>
 
 #include "libslic3r/Exception.hpp"
 #include "libslic3r/SlicesToTriangleMesh.hpp"
@@ -22,7 +22,6 @@
 #include "libslic3r/LocalesUtils.hpp"
 
 #include <boost/property_tree/ini_parser.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/algorithm/string.hpp>
 
 namespace marchsq {
@@ -118,7 +117,7 @@ ArchiveData extract_sla_archive(const std::string &zipfname,
             if (name == CONFIG_FNAME) arch.config = read_ini(entry, zip);
             if (name == PROFILE_FNAME) arch.profile = read_ini(entry, zip);
 
-            if (boost::filesystem::path(name).extension().string() == ".png") {
+            if (std::filesystem::path(name).extension().string() == ".png") {
                 auto it = std::lower_bound(
                     arch.images.begin(), arch.images.end(), PNGBuffer{{}, name},
                     [](const PNGBuffer &r1, const PNGBuffer &r2) {
@@ -484,7 +483,7 @@ void SL1Archive::export_print(Zipper& zipper,
 {
     std::string project =
         prjname.empty() ?
-            boost::filesystem::path(zipper.get_filename()).stem().string() :
+            std::filesystem::path(zipper.get_filename()).stem().string() :
             prjname;
     
     ConfMap iniconf, slicerconf;

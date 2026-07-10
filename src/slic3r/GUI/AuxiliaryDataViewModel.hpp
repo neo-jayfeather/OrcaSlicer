@@ -8,12 +8,10 @@
 
 #include "I18N.hpp"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 class AuxiliaryModelNode;
 WX_DEFINE_ARRAY_PTR(AuxiliaryModelNode*, AuxiliaryModelNodePtrArray);
-
-namespace fs = boost::filesystem;
 
 class AuxiliaryModelNode
 {
@@ -32,7 +30,7 @@ public:
         m_container = is_container;
         m_root = false;
         path = abs_path;
-        boost::filesystem::path path_obj(path.ToStdWstring());
+        std::filesystem::path path_obj(path.ToStdWstring());
         name = path_obj.filename().generic_wstring();
 
         parent->Append(this);

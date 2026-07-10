@@ -26,17 +26,17 @@ void AuxiliaryModel::Init(wxString aux_path)
     m_root_dir = aux_path;
 
     if (wxDirExists(m_root_dir)) {
-        fs::path path_to_del(m_root_dir.ToStdWstring());
+        std::filesystem::path path_to_del(m_root_dir.ToStdWstring());
         try {
-            fs::remove_all(path_to_del);
+            std::filesystem::remove_all(path_to_del);
         }
         catch (...) {
             BOOST_LOG_TRIVIAL(error) << "Failed  removing the auxiliary directory " << m_root_dir.c_str();
         }
     }
 
-    fs::path top_dir_path(m_root_dir.ToStdWstring());
-    fs::create_directory(top_dir_path);
+    std::filesystem::path top_dir_path(m_root_dir.ToStdWstring());
+    std::filesystem::create_directory(top_dir_path);
 
     for (auto folder : s_default_folders)
         CreateFolder(folder);
@@ -45,9 +45,9 @@ void AuxiliaryModel::Init(wxString aux_path)
 AuxiliaryModel::~AuxiliaryModel()
 {
     if (wxDirExists(m_root_dir)) {
-        fs::path path_to_del(m_root_dir.ToStdWstring());
+        std::filesystem::path path_to_del(m_root_dir.ToStdWstring());
         try {
-            fs::remove_all(path_to_del);
+            std::filesystem::remove_all(path_to_del);
         }
         catch (...) {
             BOOST_LOG_TRIVIAL(error) << "Failed  removing the auxiliary directory " << m_root_dir.c_str();
@@ -60,11 +60,11 @@ AuxiliaryModel::~AuxiliaryModel()
 
 void AuxiliaryModel::Reload(wxString aux_path)
 {
-    fs::path new_aux_path(aux_path.ToStdWstring());
+    std::filesystem::path new_aux_path(aux_path.ToStdWstring());
 
     // Clean
     try {
-        fs::remove_all(fs::path(m_root_dir.ToStdWstring()));
+        std::filesystem::remove_all(std::filesystem::path(m_root_dir.ToStdWstring()));
     }
     catch (...) {
         BOOST_LOG_TRIVIAL(error) << "Failed  removing the auxiliary directory " << m_root_dir.c_str();
@@ -81,15 +81,15 @@ void AuxiliaryModel::Reload(wxString aux_path)
     m_root_dir = aux_path;
 
     // Check new path. If not exist, create a new one.
-    if (!fs::exists(new_aux_path)) {
-        fs::create_directory(new_aux_path);
+    if (!std::filesystem::exists(new_aux_path)) {
+        std::filesystem::create_directory(new_aux_path);
         // Create default folders if they are not loaded
         wxDataViewItemArray default_items;
         for (auto folder : s_default_folders) {
             wxString folder_path = aux_path + "\\" + folder;
-            if (fs::exists(folder_path.ToStdWstring())) continue;
+            if (std::filesystem::exists(folder_path.ToStdWstring())) continue;
 
-            fs::create_directory(folder_path.ToStdWstring());
+            std::filesystem::create_directory(folder_path.ToStdWstring());
             AuxiliaryModelNode *node = new AuxiliaryModelNode(m_root,
                                                               folder_path,
                                                               true);
@@ -100,12 +100,12 @@ void AuxiliaryModel::Reload(wxString aux_path)
     }
 
     // Load from new path
-    std::map<fs::path, AuxiliaryModelNode *> dir_cache;
-    fs::directory_iterator iter_end;
+    std::map<std::filesystem::path, AuxiliaryModelNode *> dir_cache;
+    std::filesystem::directory_iterator iter_end;
     wxDataViewItemArray items;
-    for (fs::directory_iterator iter(new_aux_path); iter != iter_end; iter++) {
+    for (std::filesystem::directory_iterator iter(new_aux_path); iter != iter_end; iter++) {
         wxString path = iter->path().generic_wstring();
-        AuxiliaryModelNode* node = new AuxiliaryModelNode(m_root, path, fs::is_directory(iter->path()));
+        AuxiliaryModelNode* node = new AuxiliaryModelNode(m_root, path, std::filesystem::is_directory(iter->path()));
         items.Add(wxDataViewItem(node));
 
         if (node->IsContainer()) {
@@ -116,8 +116,8 @@ void AuxiliaryModel::Reload(wxString aux_path)
 
     items.Clear();
     for (auto dir : dir_cache) {
-        for (fs::directory_iterator iter(dir.first); iter != iter_end; iter++) {
-            if (fs::is_directory(iter->path()))
+        for (std::filesystem::directory_iterator iter(dir.first); iter != iter_end; iter++) {
+            if (std::filesystem::is_directory(iter->path()))
                 continue;
 
             wxString file_path = iter->path().generic_wstring();
@@ -131,10 +131,10 @@ void AuxiliaryModel::Reload(wxString aux_path)
     wxDataViewItemArray default_items;
     for (auto folder : s_default_folders) {
         wxString folder_path = aux_path + "\\" + folder;
-        if (fs::exists(folder_path.ToStdWstring()))
+        if (std::filesystem::exists(folder_path.ToStdWstring()))
             continue;
 
-        fs::create_directory(folder_path.ToStdWstring());
+        std::filesystem::create_directory(folder_path.ToStdWstring());
         AuxiliaryModelNode* node = new AuxiliaryModelNode(m_root, folder_path, true);
         default_items.Add(wxDataViewItem(node));
     }
@@ -287,10 +287,10 @@ wxDataViewItem AuxiliaryModel::CreateFolder(wxString name)
     }
 
     // Create folder in file system
-    fs::path bfs_path((m_root_dir + "\\" + folder_name).ToStdWstring());
-    if (fs::exists(bfs_path)) {
+    std::filesystem::path bfs_path((m_root_dir + "\\" + folder_name).ToStdWstring());
+    if (std::filesystem::exists(bfs_path)) {
         try {
-            bool is_done = fs::remove_all(bfs_path);
+            bool is_done = std::filesystem::remove_all(bfs_path);
             if (!is_done)
                 return wxDataViewItem(nullptr);
         }
@@ -298,7 +298,7 @@ wxDataViewItem AuxiliaryModel::CreateFolder(wxString name)
             BOOST_LOG_TRIVIAL(error) << "Failed  removing the auxiliary directory " << m_root_dir.c_str();
         }
     }
-    fs::create_directory(bfs_path);
+    std::filesystem::create_directory(bfs_path);
 
     // Create model node
     AuxiliaryModelNode* folder = new AuxiliaryModelNode(m_root, bfs_path.generic_wstring(), true);
@@ -330,7 +330,7 @@ wxDataViewItemArray AuxiliaryModel::ImportFile(AuxiliaryModelNode* sel, wxArrayS
             continue;
 
         // Copy imported file to project temp directory
-        fs::path src_bfs_path(file_path.ToStdWstring());
+        std::filesystem::path src_bfs_path(file_path.ToStdWstring());
         wxString dir_path = m_root_dir;
         if (sel != m_root) {
             dir_path += "\\";
@@ -339,8 +339,8 @@ wxDataViewItemArray AuxiliaryModel::ImportFile(AuxiliaryModelNode* sel, wxArrayS
         dir_path += "\\";
         dir_path += src_bfs_path.filename().generic_wstring();
 
-        boost::system::error_code ec;
-        if (!fs::copy_file(src_bfs_path, fs::path(dir_path.ToStdWstring()), fs::copy_options::overwrite_existing, ec))
+        std::error_code ec;
+        if (!std::filesystem::copy_file(src_bfs_path, std::filesystem::path(dir_path.ToStdWstring()), std::filesystem::copy_options::overwrite_existing, ec))
             continue;
 
         // Update model data
@@ -367,17 +367,17 @@ void AuxiliaryModel::Delete(const wxDataViewItem& item)
 
     bool is_done = false;
     if (node->IsContainer()) {
-        fs::path bfs_path((m_root_dir + "\\" + node->name).ToStdWstring());
+        std::filesystem::path bfs_path((m_root_dir + "\\" + node->name).ToStdWstring());
         try {
-            is_done = fs::remove_all(bfs_path);
+            is_done = std::filesystem::remove_all(bfs_path);
         }
         catch (...) {
             BOOST_LOG_TRIVIAL(error) << "Failed  removing the auxiliary directory " << m_root_dir.c_str();
         }
     }
     else {
-        fs::path bfs_path(node->path.ToStdWstring());
-        is_done = fs::remove(bfs_path);
+        std::filesystem::path bfs_path(node->path.ToStdWstring());
+        is_done = std::filesystem::remove(bfs_path);
     }
 
     if (!is_done)
@@ -425,11 +425,11 @@ void AuxiliaryModel::MoveItem(const wxDataViewItem& dropped_item, const wxDataVi
     new_path += "\\" + dragged->name;
 
     // Perform file movement in file system
-    fs::path bfs_new_path(new_path.ToStdWstring());
-    fs::path bfs_old_path(dragged->path.ToStdWstring());
-    boost::system::error_code err;
-    fs::rename(bfs_old_path, bfs_new_path, err);
-    if (err.failed())
+    std::filesystem::path bfs_new_path(new_path.ToStdWstring());
+    std::filesystem::path bfs_old_path(dragged->path.ToStdWstring());
+    std::error_code err;
+    std::filesystem::rename(bfs_old_path, bfs_new_path, err);
+    if (err)
         return;
 
     // Reparent dragged node
@@ -465,11 +465,11 @@ bool AuxiliaryModel::Rename(const wxDataViewItem& item, const wxString& name)
             return false;
     }
 
-    boost::system::error_code err;
-    fs::path old_path((m_root_dir + "\\" + parent->name + "\\" + node->name).ToStdWstring());
-    fs::path new_path((m_root_dir + "\\" + parent->name + "\\" + name).ToStdWstring());
-    fs::rename(old_path, new_path, err);
-    if (err.failed())
+    std::error_code err;
+    std::filesystem::path old_path((m_root_dir + "\\" + parent->name + "\\" + node->name).ToStdWstring());
+    std::filesystem::path new_path((m_root_dir + "\\" + parent->name + "\\" + name).ToStdWstring());
+    std::filesystem::rename(old_path, new_path, err);
+    if (err)
         return false;
 
     Slic3r::put_other_changes();

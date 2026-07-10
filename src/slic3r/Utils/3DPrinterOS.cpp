@@ -30,7 +30,7 @@
 #include <wx/busyinfo.h>
 
 
-namespace fs = boost::filesystem;
+
 namespace pt = boost::property_tree;
 
 namespace {
@@ -304,7 +304,7 @@ C3DPrinterOS::C3DPrinterOS(DynamicPrintConfig *config)
     , m_apikey(config->opt_string("printhost_apikey"))
     , m_preset_name(config->opt_string("printer_model"))
 {
-    m_api_session_file_path = (boost::filesystem::path(Slic3r::data_dir()) / API_CREDENTIALS_PATH)
+    m_api_session_file_path = (std::filesystem::path(Slic3r::data_dir()) / API_CREDENTIALS_PATH)
                                   .make_preferred()
                                   .string();
     load_api_session();
@@ -508,7 +508,7 @@ bool C3DPrinterOS::upload(
 
 void C3DPrinterOS::log_out() const 
 { 
-    boost::filesystem::remove(m_api_session_file_path.c_str());
+    std::filesystem::remove(m_api_session_file_path.c_str());
 }
 
 bool C3DPrinterOS::validate_version_text(const boost::optional<std::string> &version_text) const 
@@ -579,7 +579,7 @@ bool C3DPrinterOS::save_api_session(const std::string &session, const std::strin
     try {
         auto temp_path = m_api_session_file_path + ".tmp";
         pt::write_json(temp_path, j);
-        boost::filesystem::rename(temp_path, m_api_session_file_path);
+        std::filesystem::rename(temp_path, m_api_session_file_path);
     } catch (const std::exception &err) {
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to write json to file. Path = "
                                  << m_api_session_file_path
@@ -592,7 +592,7 @@ bool C3DPrinterOS::save_api_session(const std::string &session, const std::strin
 void C3DPrinterOS::load_api_session() 
 {
     m_apikey.clear();
-    if (boost::filesystem::exists(m_api_session_file_path)) {
+    if (std::filesystem::exists(m_api_session_file_path)) {
         pt::ptree j;
         try {
             pt::read_json(m_api_session_file_path, j);
@@ -602,7 +602,7 @@ void C3DPrinterOS::load_api_session()
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": load_api_session failed, reason = " << err.what();
             // remove corrupted file to avoid repeated failures
             try {
-                boost::filesystem::remove(m_api_session_file_path);
+                std::filesystem::remove(m_api_session_file_path);
             } catch (...) {}
         }
     };

@@ -144,36 +144,36 @@ int HMSQuery::download_hms_related(const std::string& hms_type, const std::strin
 
 
 static void
-_copy_dir(const fs::path& from_dir, const fs::path& to_dir) /* copy and override with local files*/
+_copy_dir(const std::filesystem::path& from_dir, const std::filesystem::path& to_dir) /* copy and override with local files*/
 {
     try
     {
-	    if (!fs::exists(from_dir))
+	    if (!std::filesystem::exists(from_dir))
 	    {
 	        return;
 	    }
 
-	    if (!fs::exists(to_dir))
+	    if (!std::filesystem::exists(to_dir))
 	    {
-	        fs::create_directory(to_dir);
+	        std::filesystem::create_directory(to_dir);
 	    }
 
-	    for (const auto &entry : fs::directory_iterator(from_dir))
+	    for (const auto &entry : std::filesystem::directory_iterator(from_dir))
 	    {
-	        const fs::path &source_path   = entry.path();
-	        const fs::path &relative_path = fs::relative(source_path, from_dir);
-	        const fs::path &dest_path     = to_dir / relative_path;
+	        const std::filesystem::path &source_path   = entry.path();
+	        const std::filesystem::path &relative_path = std::filesystem::relative(source_path, from_dir);
+	        const std::filesystem::path &dest_path     = to_dir / relative_path;
 
-	        if (fs::is_regular_file(source_path))
+	        if (std::filesystem::is_regular_file(source_path))
             {
-                if (fs::exists(dest_path))
+                if (std::filesystem::exists(dest_path))
                 {
-                    fs::remove(dest_path);
+                    std::filesystem::remove(dest_path);
                 }
 
                 copy_file(source_path, dest_path);
             }
-            else if (fs::is_directory(source_path))
+            else if (std::filesystem::is_directory(source_path))
             {
                 _copy_dir(source_path, dest_path);
             }
@@ -187,8 +187,8 @@ _copy_dir(const fs::path& from_dir, const fs::path& to_dir) /* copy and override
 
 void HMSQuery::copy_from_data_dir_to_local()
 {
-    const fs::path& from_dir = fs::path(Slic3r::resources_dir()) / HMS_PATH;
-    const fs::path& to_dir = fs::path(Slic3r::data_dir()) / HMS_PATH;
+    const std::filesystem::path& from_dir = std::filesystem::path(Slic3r::resources_dir()) / HMS_PATH;
+    const std::filesystem::path& to_dir = std::filesystem::path(Slic3r::data_dir()) / HMS_PATH;
     _copy_dir(from_dir, to_dir);
 }
 
@@ -200,9 +200,9 @@ int HMSQuery::load_from_local(const std::string& hms_type, const std::string& de
         return -1;
     }
     std::string filename = get_hms_file(hms_type, HMSQuery::hms_language_code(), dev_id_type);
-    auto hms_folder = (boost::filesystem::path(data_dir()) / "hms");
-    if (!fs::exists(hms_folder))
-        fs::create_directory(hms_folder);
+    auto hms_folder = (std::filesystem::path(data_dir()) / "hms");
+    if (!std::filesystem::exists(hms_folder))
+        std::filesystem::create_directory(hms_folder);
 
     std::string dir_str = (hms_folder / filename).make_preferred().string();
     std::ifstream json_file(encode_path(dir_str.c_str()));
@@ -245,9 +245,9 @@ int HMSQuery::save_to_local(std::string lang, std::string hms_type, std::string 
         return -1;
     }
     std::string filename = get_hms_file(hms_type,lang, dev_id_type);
-    auto hms_folder = (boost::filesystem::path(data_dir()) / "hms");
-    if (!fs::exists(hms_folder))
-        fs::create_directory(hms_folder);
+    auto hms_folder = (std::filesystem::path(data_dir()) / "hms");
+    if (!std::filesystem::exists(hms_folder))
+        std::filesystem::create_directory(hms_folder);
     std::string dir_str = (hms_folder / filename).make_preferred().string();
     std::ofstream json_file(encode_path(dir_str.c_str()));
     if (json_file.is_open()) {
@@ -570,13 +570,13 @@ wxImage HMSQuery::query_image_from_local(const wxString& image_name)
 
     if (m_hms_local_images.empty())
     {
-        const fs::path& local_img_dir = fs::path(Slic3r::data_dir()) / HMS_LOCAL_IMG_PATH;
-        if (fs::exists(local_img_dir))
+        const std::filesystem::path& local_img_dir = std::filesystem::path(Slic3r::data_dir()) / HMS_LOCAL_IMG_PATH;
+        if (std::filesystem::exists(local_img_dir))
         {
-            for (const auto &entry : fs::directory_iterator(local_img_dir))
+            for (const auto &entry : std::filesystem::directory_iterator(local_img_dir))
             {
-                const fs::path& image_path = entry.path();
-                const fs::path& image_name = fs::relative(image_path, local_img_dir);
+                const std::filesystem::path& image_path = entry.path();
+                const std::filesystem::path& image_name = std::filesystem::relative(image_path, local_img_dir);
                 m_hms_local_images[from_path(image_name)] = wxImage(from_path(image_path));
             }
         }

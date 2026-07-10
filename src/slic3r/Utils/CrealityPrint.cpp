@@ -45,7 +45,7 @@ namespace websocket = beast::websocket;
 namespace net = boost::asio;
 using tcp = boost::asio::ip::tcp;
 
-namespace fs = boost::filesystem;
+
 namespace pt = boost::property_tree;
 
 namespace Slic3r {

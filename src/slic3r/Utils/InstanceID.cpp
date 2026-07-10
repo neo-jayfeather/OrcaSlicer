@@ -15,8 +15,6 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/nowide/fstream.hpp>
 
 #include "libslic3r/AppConfig.hpp"
@@ -94,18 +92,18 @@ void prune_config_value(AppConfig& config)
         config.erase("app", LEGACY_KEY);
 }
 
-boost::filesystem::path storage_path()
+std::filesystem::path storage_path()
 {
     const std::string& base_dir = Slic3r::data_dir();
     if (base_dir.empty())
         return {};
-    return boost::filesystem::path(base_dir) / ".orcaslicer_machine_id";
+    return std::filesystem::path(base_dir) / ".orcaslicer_machine_id";
 }
 
 std::optional<std::string> read_storage_file()
 {
     const auto path = storage_path();
-    if (path.empty() || !boost::filesystem::exists(path))
+    if (path.empty() || !std::filesystem::exists(path))
         return std::nullopt;
 
     boost::nowide::ifstream file(path.string());
@@ -130,8 +128,8 @@ bool write_storage_file(const std::string& value)
 
     const auto parent = path.parent_path();
     boost::system::error_code ec;
-    if (!parent.empty() && !boost::filesystem::exists(parent))
-        boost::filesystem::create_directories(parent, ec);
+    if (!parent.empty() && !std::filesystem::exists(parent))
+        std::filesystem::create_directories(parent, ec);
 
     if (ec)
         return false;

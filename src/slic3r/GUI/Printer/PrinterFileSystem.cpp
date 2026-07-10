@@ -18,6 +18,8 @@
 #include "nlohmann/json.hpp"
 
 #include <cstring>
+#include <fstream>
+#include <ostream>
 
 #ifndef NDEBUG
 //#define PRINTER_FILE_SYSTEM_TEST
@@ -260,7 +262,7 @@ struct PrinterFileSystem::Download : Progress
     std::string                 path;
     std::string                 local_path;
     std::string                 error;
-    boost::filesystem::ofstream ofs;
+    std::ofstream ofs;
     boost::uuids::detail::md5   boost_md5;
 };
 
@@ -269,7 +271,7 @@ struct PrinterFileSystem::Upload : Progress
     std::string                 error;
     boost::uint32_t             frag_id{0};
     MD5_CTX                     ctx;
-    boost::filesystem::ifstream ifs;
+    std::ifstream ifs;
 };
 
 
@@ -370,7 +372,7 @@ void PrinterFileSystem::DownloadRamFile(int index, const std::string &local_path
             if (!boost::iequals(str_md5, md5)) {
                 wxLogWarning("DownloadImageFromRam checksum error: %s != %s\n", str_md5, md5);
                 boost::system::error_code ec;
-                boost::filesystem::rename(download->local_path, download->local_path + ".tmp", ec);
+                std::filesystem::rename(download->local_path, download->local_path + ".tmp", ec);
                 return FILE_CHECK_ERR;
             }
             return SUCCESS;
@@ -426,7 +428,7 @@ void PrinterFileSystem::DownloadFiles(size_t index, std::string const &path)
             file.flags |= FF_DOWNLOAD;
             std::shared_ptr<Download> download(new Download);
             download->progress = -1;
-            download->local_path = (boost::filesystem::path(path) / file.name).string();
+            download->local_path = (std::filesystem::path(path) / file.name).string();
             file.download = download;
             ++n;
         }
@@ -440,10 +442,10 @@ void PrinterFileSystem::DownloadFiles(size_t index, std::string const &path)
         file.flags |= FF_DOWNLOAD;
         std::shared_ptr<Download> download(new Download);
         download->progress   = -1;
-        download->local_path = (boost::filesystem::path(path) / file.name).string();
+        download->local_path = (std::filesystem::path(path) / file.name).string();
         file.download        = download;
     }
-    boost::filesystem::create_directories(path);
+    std::filesystem::create_directories(path);
     if ((m_task_flags & FF_DOWNLOAD) == 0)
         DownloadNextFile();
 }
@@ -457,9 +459,9 @@ void PrinterFileSystem::DownloadCheckFiles(std::string const &path)
     for (size_t i = 0; i < m_file_list.size(); ++i) {
         auto &file = m_file_list[i];
         if ((file.flags & FF_DOWNLOAD) != 0 && file.download) continue;
-        auto path2 = boost::filesystem::path(path) / file.name;
+        auto path2 = std::filesystem::path(path) / file.name;
         boost::system::error_code ec;
-        if (boost::filesystem::file_size(path2, ec) == file.size) {
+        if (std::filesystem::file_size(path2, ec) == file.size) {
             file.flags |= FF_DOWNLOAD;
             file.local_path = path2.string();
         }
@@ -472,7 +474,7 @@ bool PrinterFileSystem::DownloadCheckFile(size_t index)
     auto &file = m_file_list[index];
     if ((file.flags & FF_DOWNLOAD) == 0 || file.local_path.empty())
         return false;
-    if (!boost::filesystem::exists(file.local_path)) {
+    if (!std::filesystem::exists(file.local_path)) {
         file.flags &= ~FF_DOWNLOAD;
         file.local_path.clear();
         SendChangedEvent(EVT_DOWNLOAD, index, file.local_path);
@@ -863,7 +865,7 @@ void PrinterFileSystem::DownloadNextFile()
                 if (!boost::iequals(str_md5, md5)) {
                     wxLogWarning("PrinterFileSystem::DownloadNextFile checksum error: %s != %s\n", str_md5, md5);
                     boost::system::error_code ec;
-                    boost::filesystem::rename(download->local_path, download->local_path + ".tmp", ec);
+                    std::filesystem::rename(download->local_path, download->local_path + ".tmp", ec);
                     result = FILE_CHECK_ERR;
                 }
             } else {
@@ -871,7 +873,7 @@ void PrinterFileSystem::DownloadNextFile()
             }
             if (result != 0) {
                 boost::system::error_code ec;
-                boost::filesystem::remove(download->local_path, ec);
+                std::filesystem::remove(download->local_path, ec);
             }
             return result;
         },
@@ -1261,9 +1263,9 @@ void PrinterFileSystem::RequestUploadFile()
     req["path"]    = m_upload_file->name;
 
     m_upload_file->upload = std::make_unique<Upload>();
-    boost::filesystem::path   path = boost::filesystem::path(m_upload_file->path);
+    std::filesystem::path   path = std::filesystem::path(m_upload_file->path);
     boost::system::error_code ec;
-    boost::uint32_t           file_size = boost::filesystem::file_size(path, ec);
+    boost::uint32_t           file_size = std::filesystem::file_size(path, ec);
 
     req["total"] = file_size;
     m_upload_file->size          = file_size;

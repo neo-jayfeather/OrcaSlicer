@@ -1414,11 +1414,11 @@ void Choice::BUILD()
 		} else {
 			// Append localized enum_labels
             int i = 0;
-            boost::filesystem::path image_path(Slic3r::resources_dir());
+            std::filesystem::path image_path(Slic3r::resources_dir());
             image_path /= "images";
             for (auto el : m_opt.enum_labels) {
                 auto icon_name = "param_" + m_opt.enum_values[i];
-                if (boost::filesystem::exists(image_path / (icon_name + ".svg"))) {
+                if (std::filesystem::exists(image_path / (icon_name + ".svg"))) {
                     ScalableBitmap bm(temp, icon_name, 24);
 				    temp->Append(_(el), bm.bmp());
                 } else {
@@ -1863,13 +1863,13 @@ void Choice::msw_rescale()
         field->SetSelection(idx);
 #else
     if (!m_opt.enum_labels.empty()) {
-        boost::filesystem::path image_path(Slic3r::resources_dir());
+        std::filesystem::path image_path(Slic3r::resources_dir());
         image_path /= "images";
         int i = 0;
         auto temp = dynamic_cast<choice_ctrl *>(window);
         for (auto el : m_opt.enum_values) {
             auto icon_name = "param_" + m_opt.enum_values[i];
-            if (boost::filesystem::exists(image_path / (icon_name + ".svg"))) {
+            if (std::filesystem::exists(image_path / (icon_name + ".svg"))) {
                 ScalableBitmap bm(window, icon_name, 24);
                 temp->SetItemBitmap(i, bm.bmp());
             }

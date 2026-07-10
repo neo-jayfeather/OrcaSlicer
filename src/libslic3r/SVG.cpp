@@ -1,21 +1,21 @@
 #include "SVG.hpp"
 #include <iostream>
+#include <filesystem>
 
-#include <boost/filesystem.hpp>
 #include <boost/nowide/cstdio.hpp>
 
 namespace Slic3r {
 
 void create_dir(const std::string& filePath)
 {
-    boost::filesystem::path path(filePath);
-    boost::filesystem::path dir = path.parent_path();
+    std::filesystem::path path(filePath);
+    std::filesystem::path dir = path.parent_path();
 
     if (!dir.empty()) {
-        if (!boost::filesystem::exists(dir)) {
+        if (!std::filesystem::exists(dir)) {
             try {
-                boost::filesystem::create_directories(dir);
-            } catch (const boost::filesystem::filesystem_error& e) {
+                std::filesystem::create_directories(dir);
+            } catch (const std::filesystem::filesystem_error& e) {
                 std::cerr << e.what() << std::endl;
             }
         }

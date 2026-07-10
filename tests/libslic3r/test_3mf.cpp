@@ -114,7 +114,7 @@ SCENARIO("Export+Import geometry to/from 3mf file cycle", "[3mf]") {
                 ConfigSubstitutionContext ctxt{ ForwardCompatibilitySubstitutionRule::Disable };
                 load_3mf(test_file.c_str(), dst_config, ctxt, &dst_model, false);
             }
-            boost::filesystem::remove(test_file);
+            std::filesystem::remove(test_file);
 
             // compare meshes
             TriangleMesh src_mesh = src_model.mesh();

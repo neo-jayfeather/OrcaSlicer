@@ -23,7 +23,6 @@
 #include <boost/property_tree/xml_parser.hpp>
 namespace pt = boost::property_tree;
 
-#include <boost/filesystem/operations.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/nowide/fstream.hpp>
@@ -1122,7 +1121,7 @@ bool load_amf(const char *path, DynamicPrintConfig *config, ConfigSubstitutionCo
     // forces ".zip.amf" extension
     std::string export_path = path;
     if (!boost::iends_with(export_path, ".zip.amf"))
-        export_path = boost::filesystem::path(export_path).replace_extension(".zip.amf").string();
+        export_path = std::filesystem::path(export_path).replace_extension(".zip.amf").string();
 
     mz_zip_archive archive;
     mz_zip_zero_struct(&archive);
@@ -1264,7 +1263,7 @@ bool load_amf(const char *path, DynamicPrintConfig *config, ConfigSubstitutionCo
             stream << "</metadata>\n";
             if (!volume->source.input_file.empty())
             {
-                std::string input_file = xml_escape(fullpath_sources ? volume->source.input_file : boost::filesystem::path(volume->source.input_file).filename().string());
+                std::string input_file = xml_escape(fullpath_sources ? volume->source.input_file : std::filesystem::path(volume->source.input_file).filename().string());
                 stream << "        <metadata type=\"slic3r.source_file\">" << input_file << "</metadata>\n";
                 stream << "        <metadata type=\"slic3r.source_object_id\">" << volume->source.object_idx << "</metadata>\n";
                 stream << "        <metadata type=\"slic3r.source_volume_id\">" << volume->source.volume_idx << "</metadata>\n";
@@ -1372,20 +1371,20 @@ bool load_amf(const char *path, DynamicPrintConfig *config, ConfigSubstitutionCo
 
     stream << "</amf>\n";
 
-    std::string internal_amf_filename = boost::ireplace_last_copy(boost::filesystem::path(export_path).filename().string(), ".zip.amf", ".amf");
+    std::string internal_amf_filename = boost::ireplace_last_copy(std::filesystem::path(export_path).filename().string(), ".zip.amf", ".amf");
     std::string out = stream.str();
 
     if (!mz_zip_writer_add_mem(&archive, internal_amf_filename.c_str(), (const void*)out.data(), out.length(), MZ_DEFAULT_COMPRESSION))
     {
         close_zip_writer(&archive);
-        boost::filesystem::remove(export_path);
+        std::filesystem::remove(export_path);
         return false;
     }
 
     if (!mz_zip_writer_finalize_archive(&archive))
     {
         close_zip_writer(&archive);
-        boost::filesystem::remove(export_path);
+        std::filesystem::remove(export_path);
         return false;
     }
 

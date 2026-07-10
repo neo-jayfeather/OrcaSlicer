@@ -9,6 +9,7 @@
 #include "slic3r/Utils/MacDarkMode.hpp"
 #endif
 #include <string>
+#include <filesystem>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -505,18 +506,18 @@ std::string into_u8(const wxString &str)
 	return std::string(buffer_utf8.data());
 }
 
-wxString from_path(const boost::filesystem::path &path)
+wxString from_path(const std::filesystem::path &path)
 {
 #ifdef _WIN32
-	return wxString(path.string<std::wstring>());
+	return wxString(path.wstring());
 #else
-	return from_u8(path.string<std::string>());
+	return from_u8(path.string());
 #endif
 }
 
-boost::filesystem::path into_path(const wxString &str)
+std::filesystem::path into_path(const wxString &str)
 {
-	return boost::filesystem::path(str.wx_str());
+	return std::filesystem::path(str.wx_str());
 }
 
 void about()
@@ -584,8 +585,8 @@ void desktop_open_any_folder( const std::string& path )
 
     // Orca#6449: Open containing dir instead of opening the file directly.
     std::string new_path = path;
-    boost::filesystem::path p(new_path);
-    if (!fs::is_directory(p)) {
+    std::filesystem::path p(new_path);
+    if (!std::filesystem::is_directory(p)) {
         new_path = p.parent_path().string();
     }
     const char* argv[] = {"xdg-open", new_path.data(), nullptr};

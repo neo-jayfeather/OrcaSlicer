@@ -6,7 +6,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/beast/core/detail/base64.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -1447,7 +1446,7 @@ void OrcaCloudServiceAgent::save_sync_state()
         if (ofs.good()) {
             ofs << std::to_string(sync_state.last_sync_timestamp);
             ofs.close();
-            boost::filesystem::rename(tmp_path, sync_state_path);
+            std::filesystem::rename(tmp_path, sync_state_path);
         }
     } catch (...) {}
 }
@@ -1456,8 +1455,8 @@ void OrcaCloudServiceAgent::clear_sync_state()
 {
     std::lock_guard<std::recursive_mutex> lock(state_mutex);
     sync_state = SyncState{};
-    if (!sync_state_path.empty() && boost::filesystem::exists(sync_state_path)) {
-        boost::filesystem::remove(sync_state_path);
+    if (!sync_state_path.empty() && std::filesystem::exists(sync_state_path)) {
+        std::filesystem::remove(sync_state_path);
     }
 }
 
@@ -1931,9 +1930,9 @@ bool OrcaCloudServiceAgent::set_user_session(const std::string& token,
 
     // Set per-user sync state path
     if (!config_dir.empty() && !user_id.empty()) {
-        boost::filesystem::path user_dir = boost::filesystem::path(config_dir) / "user" / user_id;
-        if (!boost::filesystem::exists(user_dir)) {
-            boost::filesystem::create_directories(user_dir);
+        std::filesystem::path user_dir = std::filesystem::path(config_dir) / "user" / user_id;
+        if (!std::filesystem::exists(user_dir)) {
+            std::filesystem::create_directories(user_dir);
         }
         sync_state_path = (user_dir / ORCA_SYNC_STATE_FILE).string();
         load_sync_state();

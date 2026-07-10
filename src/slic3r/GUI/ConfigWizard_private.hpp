@@ -7,7 +7,7 @@
 #include <set>
 #include <unordered_map>
 #include <functional>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/log/trivial.hpp>
 
 #include <wx/sizer.h>
@@ -28,9 +28,6 @@
 #include "GUI.hpp"
 #include "wxExtensions.hpp"
 #include "Widgets/Button.hpp"
-
-
-namespace fs = boost::filesystem;
 
 namespace Slic3r {
 namespace GUI {
@@ -73,7 +70,7 @@ struct Bundle
 
 	// Returns false if not loaded. Reason for that is logged as boost::log error.
 	//BBS: set BBL as default
-	bool load(fs::path source_path, bool is_in_resources, bool is_bbl_bundle = false);
+	bool load(std::filesystem::path source_path, bool is_in_resources, bool is_bbl_bundle = false);
 
 	const std::string& vendor_id() const { return vendor_profile->id; }
 };

@@ -31,7 +31,7 @@
 #include "Bonjour.hpp"
 #include "slic3r/GUI/BonjourDialog.hpp"
 
-namespace fs = boost::filesystem;
+
 namespace pt = boost::property_tree;
 #define MAX_UPLOAD_PACKAGE_LENGTH 1048576 //(1024*1024)
 
@@ -279,10 +279,10 @@ namespace Slic3r {
             }
             return ret_val;
         }
-        std::string escape_path_by_element(const boost::filesystem::path& path)
+        std::string escape_path_by_element(const std::filesystem::path& path)
         {
             std::string ret_val = escape_string(path.filename().string());
-            boost::filesystem::path parent(path.parent_path());
+            std::filesystem::path parent(path.parent_path());
             while (!parent.empty() && parent.string() != "/") // "/" check is for case "/file.gcode" was inserted. Then boost takes "/" as parent_path.
             {
                 ret_val = escape_string(parent.filename().string()) + "/" + ret_val;
@@ -291,7 +291,7 @@ namespace Slic3r {
             return ret_val;
         }
 
-            std::string path_to_utf8(const boost::filesystem::path& path)
+            std::string path_to_utf8(const std::filesystem::path& path)
             {
         #ifdef WIN32
                 return boost::nowide::narrow(path.wstring());
@@ -300,7 +300,7 @@ namespace Slic3r {
         #endif
             }
 
-            std::string filename_to_utf8(const boost::filesystem::path& path)
+            std::string filename_to_utf8(const std::filesystem::path& path)
             {
         #ifdef WIN32
                 return boost::nowide::narrow(path.filename().wstring());
@@ -877,7 +877,7 @@ namespace Slic3r {
                                    const std::string&             host_header,
                                    const std::string&             token,
                                    const std::string&             md5,
-                                   const boost::filesystem::path& path,
+                                   const std::filesystem::path& path,
                                    const std::string&             filename,
                                    size_t                         filesize,
                                    size_t                         offset,

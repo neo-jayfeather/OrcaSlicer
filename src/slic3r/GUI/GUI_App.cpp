@@ -413,14 +413,12 @@ private:
 };
 
 #ifdef __linux__
-static void migrate_flatpak_legacy_datadir(const boost::filesystem::path &data_dir_path)
+static void migrate_flatpak_legacy_datadir(const std::filesystem::path &data_dir_path)
 {
-    if(!boost::filesystem::exists("/.flatpak-info"))
+    if(!std::filesystem::exists("/.flatpak-info"))
         return; // Not running as a Flatpak, nothing to migrate.
     
-    namespace fs = boost::filesystem;
-
-    if (fs::exists(data_dir_path)){
+    if (std::filesystem::exists(data_dir_path)){
         std::cerr << "New Flatpak data dir: " << data_dir_path << std::endl;
         return;
     }
@@ -428,11 +426,11 @@ static void migrate_flatpak_legacy_datadir(const boost::filesystem::path &data_d
 
     std::string legacy_data_dir_str = data_dir_path.string();
     boost::replace_first(legacy_data_dir_str, "com.orcaslicer.OrcaSlicer", "io.github.softfever.OrcaSlicer");
-    const fs::path legacy_data_dir(legacy_data_dir_str);
+    const std::filesystem::path legacy_data_dir(legacy_data_dir_str);
 
     std::cerr << "Legacy Flatpak data dir: " << legacy_data_dir << std::endl;
 
-    if ( ! fs::exists(legacy_data_dir) || ! fs::is_directory(legacy_data_dir))
+    if ( ! std::filesystem::exists(legacy_data_dir) || ! std::filesystem::is_directory(legacy_data_dir))
         return;
     std::cerr << "Legacy Flatpak data dir exists: " << legacy_data_dir << std::endl;
 
@@ -452,8 +450,6 @@ bool static check_old_linux_datadir(const wxString& app_name) {
     // To be precise, the datadir should exist, it is created when single instance
     // lock happens. Instead of checking for existence, check the contents.
 
-    namespace fs = boost::filesystem;
-
     std::string new_path = Slic3r::data_dir();
 
     wxString dir;
@@ -467,11 +463,11 @@ bool static check_old_linux_datadir(const wxString& app_name) {
         return true;
     }
 
-    fs::path data_dir = fs::path(new_path);
-    if (! fs::is_directory(data_dir))
+    std::filesystem::path data_dir = std::filesystem::path(new_path);
+    if (! std::filesystem::is_directory(data_dir))
         return true; // This should not happen.
 
-    int file_count = std::distance(fs::directory_iterator(data_dir), fs::directory_iterator());
+    int file_count = std::distance(std::filesystem::directory_iterator(data_dir), std::filesystem::directory_iterator());
 
     if (file_count <= 1) { // just cache dir with an instance lock
         // BBS
@@ -1024,15 +1020,17 @@ void GUI_App::post_init()
     // remove old log files over LOG_FILES_MAX_NUM
     std::string log_addr = data_dir();
     if (!log_addr.empty()) {
-        auto log_folder = boost::filesystem::path(log_addr) / "log";
-        if (boost::filesystem::exists(log_folder)) {
+        auto log_folder = std::filesystem::path(log_addr) / "log";
+        if (std::filesystem::exists(log_folder)) {
            std::vector<std::pair<time_t, std::string>> files_vec;
-           for (auto& it : boost::filesystem::directory_iterator(log_folder)) {
+           for (auto& it : std::filesystem::directory_iterator(log_folder)) {
                auto temp_path = it.path();
                try {
-                   if (it.status().type() == boost::filesystem::regular_file) {
-                       std::time_t lw_t = boost::filesystem::last_write_time(temp_path) ;
-                       files_vec.push_back({ lw_t, temp_path.filename().string() });
+                   if (std::filesystem::is_regular_file(it.status())) {
+                        auto ftime = std::filesystem::last_write_time(temp_path);
+                        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+                        std::time_t lw_t = std::chrono::system_clock::to_time_t(sctp);
+                        files_vec.push_back({ lw_t, temp_path.filename().string() });
                    }
                } catch (const std::exception &) {
                }
@@ -1043,10 +1041,10 @@ void GUI_App::post_init()
            });
 
            while (files_vec.size() > LOG_FILES_MAX_NUM) {
-               auto full_path = log_folder / boost::filesystem::path(files_vec[files_vec.size() - 1].second);
+               auto full_path = log_folder / std::filesystem::path(files_vec[files_vec.size() - 1].second);
                BOOST_LOG_TRIVIAL(info) << "delete log file over " << LOG_FILES_MAX_NUM << ", filename: "<< files_vec[files_vec.size() - 1].second;
                try {
-                   boost::filesystem::remove(full_path);
+                   std::filesystem::remove(full_path);
                }
                catch (const std::exception& ex) {
                    BOOST_LOG_TRIVIAL(error) << "failed to delete log file: "<< files_vec[files_vec.size() - 1].second << ". Error: " << ex.what();
@@ -1222,8 +1220,8 @@ int GUI_App::download_plugin(std::string name, std::string package_name, Install
     BOOST_LOG_TRIVIAL(info) << "[download_plugin]: enter";
     m_networking_cancel_update = false;
     // get temp path
-    fs::path target_file_path = (fs::temp_directory_path() / package_name);
-    fs::path tmp_path = target_file_path;
+    std::filesystem::path target_file_path = (std::filesystem::temp_directory_path() / package_name);
+    std::filesystem::path tmp_path = target_file_path;
     tmp_path += format(".%1%%2%", get_current_pid(), ".tmp");
 
     // Determine OS type for plugin download (must be set per-request since global
@@ -1353,10 +1351,10 @@ int GUI_App::download_plugin(std::string name, std::string package_name, Install
             BOOST_LOG_TRIVIAL(info) << "[download_plugin 2] completed";
             bool cancel = false;
             int percent = 0;
-            fs::fstream file(tmp_path, std::ios::out | std::ios::binary | std::ios::trunc);
+            std::ofstream file(tmp_path, std::ios::out | std::ios::binary | std::ios::trunc);
             file.write(body.c_str(), body.size());
             file.close();
-            fs::rename(tmp_path, target_file_path);
+            std::filesystem::rename(tmp_path, target_file_path);
             if (pro_fn) pro_fn(InstallStatusDownloadCompleted, 80, cancel);
             })
         .on_error([&pro_fn, &result, &err_msg](std::string body, std::string error, unsigned int status) {
@@ -1375,22 +1373,22 @@ int GUI_App::download_plugin(std::string name, std::string package_name, Install
 int GUI_App::install_plugin(std::string name, std::string package_name, InstallProgressFn pro_fn, WasCancelledFn cancel_fn)
 {
     bool cancel = false;
-    std::string target_file_path = (fs::temp_directory_path() / package_name).string();
+    std::string target_file_path = (std::filesystem::temp_directory_path() / package_name).string();
 
     BOOST_LOG_TRIVIAL(info) << "[install_plugin] enter";
     // get plugin folder
     std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
+    std::filesystem::path data_dir_path(data_dir_str);
     auto plugin_folder = data_dir_path / name;
-    //auto plugin_folder = boost::filesystem::path(wxStandardPaths::Get().GetUserDataDir().ToUTF8().data()) / "plugins";
+    //auto plugin_folder = std::filesystem::path(wxStandardPaths::Get().GetUserDataDir().ToUTF8().data()) / "plugins";
     auto backup_folder = plugin_folder/"backup";
-    if (!boost::filesystem::exists(plugin_folder)) {
+    if (!std::filesystem::exists(plugin_folder)) {
         BOOST_LOG_TRIVIAL(info) << "[install_plugin] will create directory "<<plugin_folder.string();
-        boost::filesystem::create_directory(plugin_folder);
+        std::filesystem::create_directory(plugin_folder);
     }
-    if (!boost::filesystem::exists(backup_folder)) {
+    if (!std::filesystem::exists(backup_folder)) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", will create directory %1%")%backup_folder.string();
-        boost::filesystem::create_directory(backup_folder);
+        std::filesystem::create_directory(backup_folder);
     }
 
     if (m_networking_cancel_update) {
@@ -1409,7 +1407,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
         return InstallStatusUnzipFailed;
     }
 
-    boost::filesystem::path legacy_lib_path, legacy_lib_backup;
+    std::filesystem::path legacy_lib_path, legacy_lib_backup;
     bool had_existing_legacy = false;
     if (name == "plugins") {
 #if defined(_MSC_VER) || defined(_WIN32)
@@ -1422,10 +1420,10 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
         legacy_lib_backup = legacy_lib_path;
         legacy_lib_backup += ".backup";
 
-        if (boost::filesystem::exists(legacy_lib_path)) {
+        if (std::filesystem::exists(legacy_lib_path)) {
             had_existing_legacy = true;
             boost::system::error_code ec;
-            boost::filesystem::rename(legacy_lib_path, legacy_lib_backup, ec);
+            std::filesystem::rename(legacy_lib_path, legacy_lib_backup, ec);
             if (ec) {
                 BOOST_LOG_TRIVIAL(warning) << "[install_plugin] failed to backup existing legacy library: " << ec.message();
                 had_existing_legacy = false;
@@ -1455,12 +1453,12 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
                     dest_file = decode(extra.substr(0, n), stat.m_filename);
                 }
                 auto dest_path = plugin_folder / dest_file;
-                boost::filesystem::create_directories(dest_path.parent_path());
+                std::filesystem::create_directories(dest_path.parent_path());
                 std::string dest_zip_file = encode_path(dest_path.string().c_str());
                 try {
-                    if (fs::exists(dest_path)) {
+                    if (std::filesystem::exists(dest_path)) {
                         boost::system::error_code ec;
-                        fs::remove(dest_path, ec);
+                        std::filesystem::remove(dest_path, ec);
                         if (ec) {
                             // On Windows a currently-loaded DLL (e.g. BambuSource.dll, or the
                             // networking library in legacy mode) cannot be deleted or overwritten
@@ -1468,11 +1466,11 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
                             // be in use" (issue #14373). It CAN however be renamed aside: the
                             // running module keeps mapping the renamed file while we write the new
                             // one. The stale ".old" copy is cleared on the next install/launch.
-                            boost::filesystem::path aside = dest_path;
+                            std::filesystem::path aside = dest_path;
                             aside += ".old";
                             boost::system::error_code ec2;
-                            fs::remove(aside, ec2);
-                            fs::rename(dest_path, aside, ec2);
+                            std::filesystem::remove(aside, ec2);
+                            std::filesystem::rename(dest_path, aside, ec2);
                             if (ec2) {
                                 close_zip_reader(&archive);
                                 BOOST_LOG_TRIVIAL(error) << "[install_plugin] cannot replace in-use file "
@@ -1490,7 +1488,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
                         std::string link(stat.m_uncomp_size + 1, 0);
                         res = mz_zip_reader_extract_to_mem(&archive, stat.m_file_index, link.data(), stat.m_uncomp_size, 0);
                         try {
-                            boost::filesystem::create_symlink(link, dest_path);
+                            std::filesystem::create_symlink(link, dest_path);
                         } catch (const std::exception &e) {
                             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " create_symlink:" << e.what();
                         }
@@ -1545,7 +1543,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
                     app_config->save();
             });
         }
-        if (!config_version.empty() && boost::filesystem::exists(legacy_lib_path)) {
+        if (!config_version.empty() && std::filesystem::exists(legacy_lib_path)) {
 #if defined(_MSC_VER) || defined(_WIN32)
             auto versioned_lib = plugin_folder / (std::string(BAMBU_NETWORK_LIBRARY) + "_" + config_version + ".dll");
 #elif defined(__WXMAC__)
@@ -1555,19 +1553,19 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
 #endif
             BOOST_LOG_TRIVIAL(info) << "[install_plugin] renaming newly extracted " << legacy_lib_path.string() << " to " << versioned_lib.string();
             boost::system::error_code ec;
-            if (boost::filesystem::exists(versioned_lib)) {
-                boost::filesystem::remove(versioned_lib, ec);
+            if (std::filesystem::exists(versioned_lib)) {
+                std::filesystem::remove(versioned_lib, ec);
             }
-            boost::filesystem::rename(legacy_lib_path, versioned_lib, ec);
+            std::filesystem::rename(legacy_lib_path, versioned_lib, ec);
             if (ec) {
                 BOOST_LOG_TRIVIAL(error) << "[install_plugin] failed to rename to versioned: " << ec.message();
             }
         }
 
-        if (had_existing_legacy && boost::filesystem::exists(legacy_lib_backup)) {
+        if (had_existing_legacy && std::filesystem::exists(legacy_lib_backup)) {
             BOOST_LOG_TRIVIAL(info) << "[install_plugin] restoring backed up legacy library";
             boost::system::error_code ec;
-            boost::filesystem::rename(legacy_lib_backup, legacy_lib_path, ec);
+            std::filesystem::rename(legacy_lib_backup, legacy_lib_path, ec);
             if (ec) {
                 BOOST_LOG_TRIVIAL(warning) << "[install_plugin] failed to restore legacy library backup: " << ec.message();
             }
@@ -1575,24 +1573,24 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
     }
 
     {
-        fs::path dir_path(plugin_folder);
-        if (fs::exists(dir_path) && fs::is_directory(dir_path)) {
+        std::filesystem::path dir_path(plugin_folder);
+        if (std::filesystem::exists(dir_path) && std::filesystem::is_directory(dir_path)) {
             int file_count = 0, file_index = 0;
-            for (fs::directory_iterator it(dir_path); it != fs::directory_iterator(); ++it) {
-                if (fs::is_regular_file(it->status())) { ++file_count; }
+            for (std::filesystem::directory_iterator it(dir_path); it != std::filesystem::directory_iterator(); ++it) {
+                if (std::filesystem::is_regular_file(it->status())) { ++file_count; }
             }
-            for (fs::directory_iterator it(dir_path); it != fs::directory_iterator(); ++it) {
+            for (std::filesystem::directory_iterator it(dir_path); it != std::filesystem::directory_iterator(); ++it) {
                 BOOST_LOG_TRIVIAL(info) << " current path:" << it->path().string();
                 if (it->path().string() == backup_folder) {
                     continue;
                 }
                 auto dest_path = backup_folder.string() + "/" + it->path().filename().string();
-                if (fs::is_regular_file(it->status())) {
+                if (std::filesystem::is_regular_file(it->status())) {
                     BOOST_LOG_TRIVIAL(info) << " copy file:" << it->path().string() << "," << it->path().filename();
                     try {
                         if (pro_fn) { pro_fn(InstallStatusNormal, 50 + file_index / file_count, cancel); }
                         file_index++;
-                        if (fs::exists(dest_path)) { fs::remove(dest_path); }
+                        if (std::filesystem::exists(dest_path)) { std::filesystem::remove(dest_path); }
                         std::string    error_message;
                         CopyFileResult cfr = copy_file(it->path().string(), dest_path, error_message, false);
                         if (cfr != CopyFileResult::SUCCESS) { BOOST_LOG_TRIVIAL(error) << "Copying to backup failed(" << cfr << "): " << error_message; }
@@ -1904,13 +1902,13 @@ void GUI_App::show_network_plugin_download_dialog(bool is_update)
 void GUI_App::remove_old_networking_plugins()
 {
     std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
+    std::filesystem::path data_dir_path(data_dir_str);
     auto plugin_folder = data_dir_path / "plugins";
-    //auto plugin_folder = boost::filesystem::path(wxStandardPaths::Get().GetUserDataDir().ToUTF8().data()) / "plugins";
-    if (boost::filesystem::exists(plugin_folder)) {
+    //auto plugin_folder = std::filesystem::path(wxStandardPaths::Get().GetUserDataDir().ToUTF8().data()) / "plugins";
+    if (std::filesystem::exists(plugin_folder)) {
         BOOST_LOG_TRIVIAL(info) << "[remove_old_networking_plugins] remove the directory "<<plugin_folder.string();
         try {
-            fs::remove_all(plugin_folder);
+            std::filesystem::remove_all(plugin_folder);
         } catch (...) {
             BOOST_LOG_TRIVIAL(error) << "Failed  removing the plugins directory " << plugin_folder.string();
         }
@@ -2350,8 +2348,8 @@ void GUI_App::init_download_path()
         app_config->set("download_path", user_down_path);
     }
     else {
-        fs::path dp(down_path);
-        if (!fs::exists(dp)) {
+        std::filesystem::path dp(down_path);
+        if (!std::filesystem::exists(dp)) {
 
             std::string user_down_path = wxStandardPaths::Get().GetUserDir(wxStandardPaths::Dir_Downloads).ToUTF8().data();
             app_config->set("download_path", user_down_path);
@@ -2417,21 +2415,21 @@ void GUI_App::init_app_config()
         // Windows: "C:\Programs\AppFolder\exename.exe"
         // Mac: /Applications/exename.app/Contents/MacOS/exename
         // TODO: have no idea what to do with Linux bundles
-        auto _app_folder = boost::filesystem::path(wxStandardPaths::Get().GetExecutablePath().ToUTF8().data()).parent_path();
+        std::filesystem::path _app_folder = std::filesystem::path(wxStandardPaths::Get().GetExecutablePath().ToUTF8().data()).parent_path();
 #ifdef __APPLE__
         // On macOS, the executable is inside the .app bundle.
         _app_folder = _app_folder.parent_path().parent_path().parent_path();
 #endif
-        boost::filesystem::path app_data_dir_path = _app_folder / "data_dir";
-        if (boost::filesystem::exists(app_data_dir_path)) {
+        std::filesystem::path app_data_dir_path(_app_folder / "data_dir");
+        if (std::filesystem::exists(app_data_dir_path)) {
             set_data_dir(app_data_dir_path.string());
         }
         else{
-            boost::filesystem::path data_dir_path;
+            std::filesystem::path data_dir_path;
             #ifndef __linux__
                 std::string data_dir = wxStandardPaths::Get().GetUserDataDir().ToUTF8().data();
                 //BBS create folder if not exists
-                data_dir_path = boost::filesystem::path(data_dir);
+                data_dir_path = std::filesystem::path(data_dir);
                 set_data_dir(data_dir);
             #else
                 // Since version 2.3, config dir on Linux is in ${XDG_CONFIG_HOME}.
@@ -2439,12 +2437,12 @@ void GUI_App::init_app_config()
                 wxString dir;
                 if (! wxGetEnv(wxS("XDG_CONFIG_HOME"), &dir) || dir.empty() )
                     dir = wxFileName::GetHomeDir() + wxS("/.config");
-                data_dir_path = boost::filesystem::path((dir + "/" + GetAppName()).ToUTF8().data());
+                data_dir_path = std::filesystem::path((dir + "/" + GetAppName()).ToUTF8().data());
                 migrate_flatpak_legacy_datadir(data_dir_path);
                 set_data_dir(data_dir_path.string());
             #endif
-            if (!boost::filesystem::exists(data_dir_path)){
-                boost::filesystem::create_directory(data_dir_path);
+            if (!std::filesystem::exists(data_dir_path)){
+                std::filesystem::create_directory(data_dir_path);
             }
         }
 
@@ -2557,11 +2555,11 @@ std::string GUI_App::get_local_models_path()
         return local_path;
     }
 
-    auto models_folder = (boost::filesystem::path(data_dir()) / "models");
+    auto models_folder = (std::filesystem::path(data_dir()) / "models");
     local_path = models_folder.string();
 
-    if (!fs::exists(models_folder)) {
-        if (!fs::create_directory(models_folder)) {
+    if (!std::filesystem::exists(models_folder)) {
+        if (!std::filesystem::create_directory(models_folder)) {
             local_path = "";
         }
         BOOST_LOG_TRIVIAL(info) << "create models folder:" << models_folder.string();
@@ -2618,19 +2616,19 @@ int GUI_App::OnExit()
     // Orca: clean up encrypted bbl network log file if plugin is used
     // No point to keep them as they are encrypted and can't be used for debugging
     try {
-        auto              log_folder  = boost::filesystem::path(data_dir()) / "log";
+        auto              log_folder  = std::filesystem::path(data_dir()) / "log";
         const std::string filePattern = R"(debug_network_.*\.log\.enc)";
         std::regex        pattern(filePattern);
-        if (boost::filesystem::exists(log_folder)) {
-            std::vector<boost::filesystem::path> network_logs;
-            for (auto& it : boost::filesystem::directory_iterator(log_folder)) {
+        if (std::filesystem::exists(log_folder)) {
+            std::vector<std::filesystem::path> network_logs;
+            for (auto& it : std::filesystem::directory_iterator(log_folder)) {
                 auto temp_path = it.path();
-                if (boost::filesystem::is_regular_file(temp_path) && std::regex_match(temp_path.filename().string(), pattern)) {
+                if (std::filesystem::is_regular_file(temp_path) && std::regex_match(temp_path.filename().string(), pattern)) {
                     network_logs.push_back(temp_path.filename());
                 }
             }
             for (auto f : network_logs) {
-                boost::filesystem::remove(f);
+                std::filesystem::remove(f);
             }
         }
     } catch (...) {
@@ -3268,13 +3266,13 @@ void GUI_App::copy_network_if_available()
         return;
 
     std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
+    std::filesystem::path data_dir_path(data_dir_str);
     auto plugin_folder = data_dir_path / "plugins";
     auto cache_folder = data_dir_path / "ota";
     std::string changelog_file = cache_folder.string() + "/network_plugins.json";
 
     std::string cached_version;
-    if (boost::filesystem::exists(changelog_file)) {
+    if (std::filesystem::exists(changelog_file)) {
         try {
             boost::nowide::ifstream ifs(changelog_file);
             json j;
@@ -3318,54 +3316,57 @@ void GUI_App::copy_network_if_available()
 #endif
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": checking network_library " << network_library << ", player_library " << player_library;
-    if (!boost::filesystem::exists(plugin_folder)) {
+    if (!std::filesystem::exists(plugin_folder)) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": create directory " << plugin_folder.string();
-        boost::filesystem::create_directory(plugin_folder);
+        std::filesystem::create_directory(plugin_folder);
     }
     std::string error_message;
-    if (boost::filesystem::exists(network_library)) {
+    if (std::filesystem::exists(network_library)) {
         CopyFileResult cfr = copy_file(network_library, network_library_dst, error_message, false);
         if (cfr != CopyFileResult::SUCCESS) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Copying failed(" << cfr << "): " << error_message;
             return;
         }
 
-        static constexpr const auto perms = fs::owner_read | fs::owner_write | fs::group_read | fs::others_read;
-        fs::permissions(network_library_dst, perms);
-        fs::remove(network_library);
+        static constexpr const auto perms = std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | 
+                                            std::filesystem::perms::group_read | std::filesystem::perms::others_read;
+        std::filesystem::permissions(network_library_dst, perms);
+        std::filesystem::remove(network_library);
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Copying network library from " << network_library << " to " << network_library_dst << " successfully.";
 
         app_config->set_network_plugin_version(cached_version);
         app_config->save();
     }
 
-    if (boost::filesystem::exists(player_library)) {
+    if (std::filesystem::exists(player_library)) {
         CopyFileResult cfr = copy_file(player_library, player_library_dst, error_message, false);
         if (cfr != CopyFileResult::SUCCESS) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Copying failed(" << cfr << "): " << error_message;
             return;
         }
 
-        static constexpr const auto perms = fs::owner_read | fs::owner_write | fs::group_read | fs::others_read;
-        fs::permissions(player_library_dst, perms);
-        fs::remove(player_library);
+        static constexpr const auto perms = std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | 
+                                            std::filesystem::perms::group_read | std::filesystem::perms::others_read;
+        std::filesystem::permissions(player_library_dst, perms);
+        std::filesystem::remove(player_library);
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Copying player library from " << player_library << " to " << player_library_dst << " successfully.";
     }
 
-    if (boost::filesystem::exists(live555_library)) {
+    if (std::filesystem::exists(live555_library)) {
         CopyFileResult cfr = copy_file(live555_library, live555_library_dst, error_message, false);
         if (cfr != CopyFileResult::SUCCESS) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Copying failed(" << cfr << "): " << error_message;
             return;
         }
 
-        static constexpr const auto perms = fs::owner_read | fs::owner_write | fs::group_read | fs::others_read;
-        fs::permissions(live555_library_dst, perms);
-        fs::remove(live555_library);
+        static constexpr const auto perms = std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
+                                            std::filesystem::perms::group_read | std::filesystem::perms::others_read;
+        std::filesystem::permissions(live555_library_dst, perms);
+        std::filesystem::remove(live555_library);
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Copying live555 library from " << live555_library << " to " << live555_library_dst << " successfully.";
     }
-    if (boost::filesystem::exists(changelog_file))
-        fs::remove(changelog_file);
+    if (std::filesystem::exists(changelog_file))
+        std::filesystem::remove(changelog_file);
     app_config->set("update_network_plugin", "false");
 }
 
@@ -3376,13 +3377,13 @@ bool GUI_App::on_init_network(bool try_backup)
     // is (re)loaded - at startup nothing is mapped yet, and on a hot reload the previous
     // module has already been unloaded - so the previously locked files can now be removed.
     {
-        boost::filesystem::path plugin_folder = boost::filesystem::path(data_dir()) / "plugins";
+        std::filesystem::path plugin_folder = std::filesystem::path(data_dir()) / "plugins";
         boost::system::error_code ec;
-        if (boost::filesystem::is_directory(plugin_folder, ec)) {
-            for (boost::filesystem::directory_iterator it(plugin_folder, ec), end; !ec && it != end; it.increment(ec)) {
+        if (std::filesystem::is_directory(plugin_folder, ec)) {
+            for (std::filesystem::directory_iterator it(plugin_folder, ec), end; !ec && it != end; it.increment(ec)) {
                 if (it->path().extension() == ".old") {
                     boost::system::error_code rm_ec;
-                    boost::filesystem::remove(it->path(), rm_ec);
+                    std::filesystem::remove(it->path(), rm_ec);
                     if (rm_ec)
                         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": could not remove stale " << it->path().filename().string()
                                                 << " (" << rm_ec.message() << "), will retry next launch";
@@ -4825,7 +4826,7 @@ std::string GUI_App::handle_web_request(std::string cmd)
                     boost::optional<std::string> path      = data_node.get_optional<std::string>("path");
                     if (path.has_value())
                     {
-                        boost::filesystem::path NowFile(path.value());
+                        std::filesystem::path NowFile(path.value());
 
                         std::string FilePath = NowFile.make_preferred().string();
                         desktop_open_any_folder(FilePath);
@@ -6208,8 +6209,6 @@ void GUI_App::remove_user_presets()
 // Returns true if migration was performed, false otherwise.
 bool GUI_App::maybe_migrate_user_presets_on_login()
 {
-    namespace fs = boost::filesystem;
-
     BOOST_LOG_TRIVIAL(info) << "Migrate user presets to the OrcaCloud user folder if needed.";
 
     if (!m_agent || !m_agent->is_user_login())
@@ -6221,8 +6220,8 @@ bool GUI_App::maybe_migrate_user_presets_on_login()
         return false;
     }
 
-    fs::path user_base = fs::path(data_dir()) / PRESET_USER_DIR;
-    fs::path target_dir = user_base / new_user_id;
+    std::filesystem::path user_base = std::filesystem::path(data_dir()) / PRESET_USER_DIR;
+    std::filesystem::path target_dir = user_base / new_user_id;
 
     // Check if the user already has presets on OrcaCloud.
     // We must query the cloud (not the local folder) to avoid overwriting existing cloud profiles
@@ -6263,20 +6262,20 @@ bool GUI_App::maybe_migrate_user_presets_on_login()
     }
 
     // Helper to check if a local directory has any .json preset files.
-    auto has_json_presets = [](const fs::path& dir) -> bool {
+    auto has_json_presets = [](const std::filesystem::path& dir) -> bool {
         try {
-            if (!fs::exists(dir) || !fs::is_directory(dir))
+            if (!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir))
                 return false;
             boost::system::error_code ec;
-            for (auto it = fs::recursive_directory_iterator(dir, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
+            for (auto it = std::filesystem::recursive_directory_iterator(dir, ec); it != std::filesystem::recursive_directory_iterator(); it.increment(ec)) {
                 if (ec) {
                     BOOST_LOG_TRIVIAL(warning) << "Error scanning directory " << dir << ": " << ec.message();
                     continue;
                 }
-                if (fs::is_regular_file(*it) && it->path().extension() == ".json")
+                if (std::filesystem::is_regular_file(*it) && it->path().extension() == ".json")
                     return true;
             }
-        } catch (const fs::filesystem_error& e) {
+        } catch (const std::filesystem::filesystem_error& e) {
             BOOST_LOG_TRIVIAL(warning) << "Failed to scan directory for presets: " << e.what();
         }
         return false;
@@ -6284,16 +6283,16 @@ bool GUI_App::maybe_migrate_user_presets_on_login()
 
     // Determine the source directory to migrate from.
     // Priority: 1) Bambu Cloud user folder (if user was logged in), 2) "default" folder, 3) any other user-ID folder
-    fs::path source_dir;
+    std::filesystem::path source_dir;
     bool source_is_default = false;
     bool source_is_bbl = false;
-    fs::path default_dir = user_base / DEFAULT_USER_FOLDER_NAME;
+    std::filesystem::path default_dir = user_base / DEFAULT_USER_FOLDER_NAME;
 
     // Check if the user was previously logged into Bambu Cloud and has presets there
     if (m_agent->is_user_login(BBL_CLOUD_PROVIDER)) {
         std::string bbl_user_id = m_agent->get_user_id(BBL_CLOUD_PROVIDER);
         if (!bbl_user_id.empty() && bbl_user_id != new_user_id) {
-            fs::path bbl_dir = user_base / bbl_user_id;
+            std::filesystem::path bbl_dir = user_base / bbl_user_id;
             if (has_json_presets(bbl_dir)) {
                 source_dir = bbl_dir;
                 source_is_bbl = true;
@@ -6310,9 +6309,9 @@ bool GUI_App::maybe_migrate_user_presets_on_login()
     }
 
     // Last resort: scan for any other user-ID folder with presets
-    if (source_dir.empty() && fs::exists(user_base) && fs::is_directory(user_base)) {
-        for (auto& entry : fs::directory_iterator(user_base)) {
-            if (!fs::is_directory(entry))
+    if (source_dir.empty() && std::filesystem::exists(user_base) && std::filesystem::is_directory(user_base)) {
+        for (auto& entry : std::filesystem::directory_iterator(user_base)) {
+            if (!std::filesystem::is_directory(entry))
                 continue;
             std::string folder_name = entry.path().filename().string();
             if (folder_name == new_user_id || folder_name == DEFAULT_USER_FOLDER_NAME)
@@ -7175,9 +7174,9 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                                 preset_bundle->prints.delete_preset(print, true);
 
                             // Delete the bundle folder and bundle
-                            fs::path bundle_folder = fs::path(bundle.path.c_str()).parent_path();
+                            std::filesystem::path bundle_folder = std::filesystem::path(bundle.path.c_str()).parent_path();
                             boost::system::error_code ec;
-                            boost::filesystem::remove_all(bundle_folder, ec);
+                            std::filesystem::remove_all(bundle_folder, ec);
 
                             preset_bundle->bundles.WriteLock();
                             preset_bundle->bundles.m_bundles.erase(bundle.id);
@@ -8473,7 +8472,7 @@ void GUI_App::process_delete_presets()
 void GUI_App::delete_preset_from_cloud(std::string setting_id, std::string preset_file_path)
 {
     std::scoped_lock l(mutex_delete_cache_presets);
-    fs::path info_path = fs::path(preset_file_path);
+    std::filesystem::path info_path = std::filesystem::path(preset_file_path);
     info_path.replace_extension("info");
     need_delete_presets.emplace(setting_id, info_path.string());
 }
@@ -8486,7 +8485,7 @@ void GUI_App::preset_deleted_from_cloud(std::string setting_id)
     std::string preset_file_path = need_delete_presets[setting_id];
 
     // Delete the .info file after cloud deletion is confirmed
-    if (!preset_file_path.empty() && fs::exists(fs::path(preset_file_path))) {
+    if (!preset_file_path.empty() && std::filesystem::exists(std::filesystem::path(preset_file_path))) {
         boost::nowide::remove(preset_file_path.c_str());
         BOOST_LOG_TRIVIAL(info) << "Deleted .info file after cloud confirmation: " << preset_file_path;
     }
@@ -8531,8 +8530,8 @@ void GUI_App::scan_orphaned_info_files()
     std::vector<std::string> preset_types = {PRESET_PRINT_NAME, PRESET_FILAMENT_NAME, PRESET_PRINTER_NAME};
 
     for (const std::string& type : preset_types) {
-        fs::path type_dir = fs::path(dir_user_presets) / type;
-        if (!fs::exists(type_dir))
+        std::filesystem::path type_dir = std::filesystem::path(dir_user_presets) / type;
+        if (!std::filesystem::exists(type_dir))
             continue;
 
         // Iterate through all .info files. Use the error_code-based iterator so a transient
@@ -8540,17 +8539,17 @@ void GUI_App::scan_orphaned_info_files()
         // instead of throwing an uncaught exception that would terminate the app from the
         // background sync thread this runs on.
         boost::system::error_code ec;
-        for (boost::filesystem::directory_iterator it(type_dir, ec), end; !ec && it != end; it.increment(ec)) {
+        for (std::filesystem::directory_iterator it(type_dir, ec), end; !ec && it != end; it.increment(ec)) {
             const auto& entry = *it;
             if (entry.path().extension() != ".info")
                 continue;
 
-            fs::path info_file = entry.path();
-            fs::path preset_file = info_file;
+            std::filesystem::path info_file = entry.path();
+            std::filesystem::path preset_file = info_file;
             preset_file.replace_extension(".json");
 
             // If .json doesn't exist, .info is orphaned
-            if (!fs::exists(preset_file)) {
+            if (!std::filesystem::exists(preset_file)) {
                 // Extract setting_id from .info file
                 std::string setting_id = extract_setting_id_from_info(info_file.string());
                 if (!setting_id.empty()) {
@@ -9045,7 +9044,7 @@ void GUI_App::gcode_thumbnails_debug()
         return;
 
     std::string in_filename = into_u8(dialog.GetPath());
-    std::string out_path = boost::filesystem::path(in_filename).remove_filename().append(L"thumbnail").string();
+    std::string out_path = std::filesystem::path(in_filename).remove_filename().append(L"thumbnail").string();
 
     boost::nowide::ifstream in_file(in_filename.c_str());
     std::vector<std::string> rows;
@@ -9391,7 +9390,7 @@ bool GUI_App::check_url_association(std::wstring url_prefix, std::wstring& reg_b
     wxString reg_value = key_full.QueryDefaultValue();
     reg_bin = reg_value.ToStdWstring();
 
-    boost::filesystem::path binary_path(boost::filesystem::canonical(boost::dll::program_location()));
+    std::filesystem::path binary_path(std::filesystem::canonical(boost::dll::program_location()));
     wxString key_string = "\"" + from_path(binary_path) + "\" \"%1\"";
     return key_string == reg_value;
 #else
@@ -9404,7 +9403,7 @@ void GUI_App::associate_url(std::wstring url_prefix)
 #ifdef WIN32
     if (is_running_in_msix())
         return;
-    boost::filesystem::path binary_path(boost::filesystem::canonical(boost::dll::program_location()));
+    std::filesystem::path binary_path(std::filesystem::canonical(boost::dll::program_location()));
     wxString wbinary = from_path(binary_path);
     BOOST_LOG_TRIVIAL(info) << "Downloader registration: Path of binary: " << wbinary.ToUTF8().data();
 
@@ -9447,8 +9446,8 @@ void GUI_App::start_download(std::string url)
         return;
     }
     //lets always init so if the download dest folder was changed, new dest is used
-    boost::filesystem::path dest_folder(app_config->get("download_path"));
-    if (dest_folder.empty() || !boost::filesystem::is_directory(dest_folder)) {
+    std::filesystem::path dest_folder(app_config->get("download_path"));
+    if (dest_folder.empty() || !std::filesystem::is_directory(dest_folder)) {
         std::string msg = _u8L("Could not start URL download. Destination folder is not set. Please choose destination folder in Configuration Wizard.");
         BOOST_LOG_TRIVIAL(error) << msg;
         show_error(nullptr, msg);

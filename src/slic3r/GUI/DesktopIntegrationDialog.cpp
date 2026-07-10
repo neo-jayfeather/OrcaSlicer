@@ -10,7 +10,6 @@
 #include "libslic3r/Platform.hpp"
 #include "libslic3r/Config.hpp"
 
-#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -131,8 +130,8 @@ bool contains_path_dir(const std::string& p, const std::string& dir_name)
 {
     if (p.empty() || dir_name.empty()) 
        return false;
-    boost::filesystem::path path(p + (p[p.size()-1] == '/' ? "" : "/") + dir_name);
-    if (boost::filesystem::exists(path) && boost::filesystem::is_directory(path)) {
+    std::filesystem::path path(p + (p[p.size()-1] == '/' ? "" : "/") + dir_name);
+    if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
         //BOOST_LOG_TRIVIAL(debug) << path.string() << " " << std::oct << boost::filesystem::status(path).permissions();
         return true; //boost::filesystem::status(path).permissions() & boost::filesystem::owner_write;
     } else
@@ -140,13 +139,13 @@ bool contains_path_dir(const std::string& p, const std::string& dir_name)
     return false;
 }
 // Creates directory in path if not exists yet
-void create_dir(const boost::filesystem::path& path)
+void create_dir(const std::filesystem::path& path)
 {
-    if (boost::filesystem::exists(path))
+    if (std::filesystem::exists(path))
         return;
     BOOST_LOG_TRIVIAL(debug)<< "creating " << path.string();
     boost::system::error_code ec;
-    boost::filesystem::create_directory(path, ec);
+    std::filesystem::create_directory(path, ec);
     if (ec)
         BOOST_LOG_TRIVIAL(error)<< "create directory failed: " << ec.message();
 }
@@ -156,16 +155,16 @@ void create_path(const std::string& basic_path, const std::string& dir_path)
     if (basic_path.empty() || dir_path.empty())
        return;
 
-    boost::filesystem::path path(basic_path);
+    std::filesystem::path path(basic_path);
     std::string dirs = dir_path;
     for (size_t i = dirs.find('/'); i != std::string::npos; i = dirs.find('/'))
     {
         std::string dir = dirs.substr(0, i);
-        path = boost::filesystem::path(path.string() +"/"+ dir);
+        path = std::filesystem::path(path.string() +"/"+ dir);
         create_dir(path);
         dirs = dirs.substr(i+1);
     }
-    path = boost::filesystem::path(path.string() +"/"+ dirs);
+    path = std::filesystem::path(path.string() +"/"+ dirs);
     create_dir(path);
 }
 // Calls our internal copy_file function to copy file at icon_path to dest_path
@@ -226,10 +225,10 @@ void DesktopIntegrationDialog::perform_desktop_integration()
     std::string excutable_path;
     if (appimage_env) {
         try {
-            excutable_path = boost::filesystem::canonical(boost::filesystem::path(appimage_env)).string();
+            excutable_path = std::filesystem::canonical(std::filesystem::path(appimage_env)).string();
         } catch (std::exception &) {            
-            BOOST_LOG_TRIVIAL(error) << "Performing desktop integration failed - boost::filesystem::canonical did not return appimage path.";
-            show_error(nullptr, _L("Performing desktop integration failed - boost::filesystem::canonical did not return appimage path."));
+            BOOST_LOG_TRIVIAL(error) << "Performing desktop integration failed - std::filesystem::canonical did not return appimage path.";
+            show_error(nullptr, _L("Performing desktop integration failed - std::filesystem::canonical did not return appimage path."));
             return;
         }
     } else {
@@ -467,11 +466,11 @@ void DesktopIntegrationDialog::perform_downloader_desktop_integration(std::strin
     std::string excutable_path;
     if (appimage_env) {
         try {
-            excutable_path = boost::filesystem::canonical(boost::filesystem::path(appimage_env)).string();
+            excutable_path = std::filesystem::canonical(std::filesystem::path(appimage_env)).string();
         }
         catch (std::exception&) {
-            BOOST_LOG_TRIVIAL(error) << "Performing downloader desktop integration failed - boost::filesystem::canonical did not return appimage path.";
-            show_error(nullptr, _L("Performing downloader desktop integration failed - boost::filesystem::canonical did not return appimage path."));
+            BOOST_LOG_TRIVIAL(error) << "Performing downloader desktop integration failed - std::filesystem::canonical did not return appimage path.";
+            show_error(nullptr, _L("Performing downloader desktop integration failed - std::filesystem::canonical did not return appimage path."));
             return;
         }
     }

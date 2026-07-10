@@ -4,7 +4,7 @@
 #include "libslic3r/Model.hpp"
 #include "libslic3r/ModelArrange.hpp"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "test_helpers.hpp"
 #include "test_utils.hpp"
@@ -51,9 +51,9 @@ SCENARIO("Model construction", "[Model]") {
 				print.process();
 				ScopedTemporaryFile temp(".gcode");
                 print.export_gcode(temp.string(), nullptr, nullptr);
-                REQUIRE(boost::filesystem::exists(temp.path()));
-				REQUIRE(boost::filesystem::is_regular_file(temp.path()));
-				REQUIRE(boost::filesystem::file_size(temp.path()) > 0);
+                REQUIRE(std::filesystem::exists(temp.path()));
+				REQUIRE(std::filesystem::is_regular_file(temp.path()));
+				REQUIRE(std::filesystem::file_size(temp.path()) > 0);
 			}
         }
     }

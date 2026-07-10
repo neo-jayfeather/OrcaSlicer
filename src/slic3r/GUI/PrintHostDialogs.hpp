@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <boost/filesystem/path.hpp>
+#include <filesystem>
 
 #include <wx/string.h>
 #include <wx/event.h>
@@ -34,9 +34,9 @@ namespace GUI {
 class PrintHostSendDialog : public GUI::MsgDialog
 {
 public:
-    PrintHostSendDialog(const boost::filesystem::path &path, PrintHostPostUploadActions post_actions, const wxArrayString& groups, const wxArrayString& storage_paths, const wxArrayString& storage_names, bool switch_to_device_tab);
+    PrintHostSendDialog(const std::filesystem::path &path, PrintHostPostUploadActions post_actions, const wxArrayString& groups, const wxArrayString& storage_paths, const wxArrayString& storage_names, bool switch_to_device_tab);
     virtual ~PrintHostSendDialog() {}
-    boost::filesystem::path filename() const;
+    std::filesystem::path filename() const;
     PrintHostPostUploadAction post_action() const;
     std::string group() const;
     std::string storage() const;
@@ -56,7 +56,7 @@ protected:
     wxArrayString m_paths;
     bool m_switch_to_device_tab;
 
-    boost::filesystem::path m_path;
+    std::filesystem::path m_path;
     PrintHostPostUploadActions m_post_actions;
     wxArrayString m_storage_names;
 };
@@ -150,7 +150,7 @@ private:
 class ElegooPrintHostSendDialog : public PrintHostSendDialog
 {
 public:
-    ElegooPrintHostSendDialog(const boost::filesystem::path& path,
+    ElegooPrintHostSendDialog(const std::filesystem::path& path,
                               PrintHostPostUploadActions     post_actions,
                               const wxArrayString&           groups,
                               const wxArrayString&           storage_paths,
@@ -191,7 +191,7 @@ private:
 class CrealityPrintHostSendDialog : public PrintHostSendDialog
 {
 public:
-    CrealityPrintHostSendDialog(const boost::filesystem::path& path,
+    CrealityPrintHostSendDialog(const std::filesystem::path& path,
                                 PrintHostPostUploadActions     post_actions,
                                 const wxArrayString&           groups,
                                 const wxArrayString&           storage_paths,
@@ -222,7 +222,7 @@ private:
 class FlashforgePrintHostSendDialog : public PrintHostSendDialog
 {
 public:
-    FlashforgePrintHostSendDialog(const boost::filesystem::path&  path,
+    FlashforgePrintHostSendDialog(const std::filesystem::path&  path,
                                   PrintHostPostUploadActions      post_actions,
                                   const wxArrayString&            groups,
                                   const wxArrayString&            storage_paths,

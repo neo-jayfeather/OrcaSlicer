@@ -3624,11 +3624,10 @@ SurfaceCut priv::merge_patches(SurfacePatches &patches, const std::vector<bool>&
 
 #ifdef DEBUG_OUTPUT_DIR
 void priv::prepare_dir(const std::string &dir){
-    namespace fs = std::filesystem;
-    if (fs::exists(dir)) {
-        for (auto &path : fs::directory_iterator(dir)) fs::remove_all(path);
+    if (std::filesystem::exists(dir)) {
+        for (auto &path : std::filesystem::directory_iterator(dir)) std::filesystem::remove_all(path);
     } else {
-        fs::create_directories(dir);
+        std::filesystem::create_directories(dir);
     }
 }
 

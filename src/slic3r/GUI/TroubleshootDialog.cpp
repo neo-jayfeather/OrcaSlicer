@@ -120,7 +120,7 @@ TroubleshootDialog::TroubleshootDialog()
     SetFont(wxGetApp().normal_font());
     SetBackgroundColour(*wxWHITE);
 
-    auto data_dir   = boost::filesystem::path(Slic3r::data_dir());
+    auto data_dir   = std::filesystem::path(Slic3r::data_dir());
     auto app_config = wxGetApp().app_config;
     bool is_dark    = app_config->get("dark_color_mode") == "1";
  
@@ -295,7 +295,7 @@ TroubleshootDialog::TroubleshootDialog()
     auto log_pack_szr = create_label(_L("Stored logs"), _L("Packs all stored logs onto a zip file."));
     auto log_pack_btn = create_btn(_L("Pack") + "...", "");
     log_pack_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent &e) {
-        auto data_dir   = boost::filesystem::path(Slic3r::data_dir());
+        auto data_dir   = std::filesystem::path(Slic3r::data_dir());
         ExportAsZip({wxString((data_dir / "log").string())}, "OrcaSlicer_Logs_" + GetTimestamp());
     });
     log_pack_szr->Add(log_pack_btn, 0, wxALIGN_CENTER_VERTICAL);
@@ -900,17 +900,16 @@ wxString TroubleshootDialog::GetMONinfo()
 void TroubleshootDialog::PackAll()
 {
     std::vector<wxString> include_zip;
-    //auto data_dir   = boost::filesystem::path(Slic3r::data_dir());
+    //auto data_dir   = std::filesystem::path(Slic3r::data_dir());
     //include_zip.emplace_back(wxString((data_dir / "log").string()));
 
     // Collect logs for current session. does not includes debug_network_...
-    boost::filesystem::path current_log = get_log_file_name();
+    std::filesystem::path current_log = get_log_file_name();
     if (!current_log.empty()){
-        boost::filesystem::path base = current_log.parent_path() / current_log.stem(); // removes ".0"
-        std::vector<boost::filesystem::path> result;
+        std::filesystem::path base = current_log.parent_path() / current_log.stem(); // removes ".0"
         for (int n = 0; ; ++n) {
-            auto candidate = boost::filesystem::path(base.string() + "." + std::to_string(n));
-            if (!boost::filesystem::exists(candidate))
+            auto candidate = std::filesystem::path(base.string() + "." + std::to_string(n));
+            if (!std::filesystem::exists(candidate))
                 break;
             include_zip.emplace_back(wxString(candidate.string()));
         }
@@ -970,12 +969,12 @@ void TroubleshootDialog::RebuildSystemProfiles()
         , wxString(SLIC3R_APP_FULL_NAME), wxICON_QUESTION | wxOK | wxCANCEL
     );
     if (msg.ShowModal() == wxID_OK){
-        auto sys_folder = boost::filesystem::path(Slic3r::data_dir()) / "system";
-        if (boost::filesystem::exists(sys_folder)) {
+        auto sys_folder = std::filesystem::path(Slic3r::data_dir()) / "system";
+        if (std::filesystem::exists(sys_folder)) {
             bool is_deletable = true;
             try {
-                for (const auto& entry : boost::filesystem::recursive_directory_iterator(sys_folder)) {
-                    if (boost::filesystem::is_regular_file(entry.path())) {
+                for (const auto& entry : std::filesystem::recursive_directory_iterator(sys_folder)) {
+                    if (std::filesystem::is_regular_file(entry.path())) {
                         std::ofstream file(entry.path().string(), std::ios::in | std::ios::out);
                         if (!file.is_open()) {
                             BOOST_LOG_TRIVIAL(warning) << "File is locked: " << entry.path().string();
@@ -996,7 +995,7 @@ void TroubleshootDialog::RebuildSystemProfiles()
                 return;
             }
             try {
-                boost::filesystem::remove_all(sys_folder);
+                std::filesystem::remove_all(sys_folder);
                 EndModal(wxID_REMOVE);
                 RestartApplication();
             }
@@ -1065,16 +1064,18 @@ bool TroubleshootDialog::RestartApplication()
 void TroubleshootDialog::ClearLogs()
 {
     // Same method with GUI_App::post_init() only LOG_FILES_MAX_NUM replaced with 1
-    auto data_dir = boost::filesystem::path(Slic3r::data_dir());
+    auto data_dir = std::filesystem::path(Slic3r::data_dir());
     auto log_folder = data_dir / "log";
-    if (boost::filesystem::exists(log_folder)) {
+    if (std::filesystem::exists(log_folder)) {
        std::vector<std::pair<time_t, std::string>> files_vec;
-       for (auto& it : boost::filesystem::directory_iterator(log_folder)) {
+       for (auto& it : std::filesystem::directory_iterator(log_folder)) {
            auto temp_path = it.path();
            try {
-               if (it.status().type() == boost::filesystem::regular_file) {
-                   std::time_t lw_t = boost::filesystem::last_write_time(temp_path) ;
-                   files_vec.push_back({ lw_t, temp_path.filename().string() });
+               if (std::filesystem::is_regular_file(it.status())) {
+                    auto ftime = std::filesystem::last_write_time(temp_path);
+                    auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+                    std::time_t lw_t = std::chrono::system_clock::to_time_t(sctp);
+                    files_vec.push_back({ lw_t, temp_path.filename().string() });
                }
            } catch (const std::exception &) {
            }
@@ -1085,10 +1086,10 @@ void TroubleshootDialog::ClearLogs()
        });
 
        while (files_vec.size() > 1) {
-           auto full_path = log_folder / boost::filesystem::path(files_vec[files_vec.size() - 1].second);
+           auto full_path = log_folder / std::filesystem::path(files_vec[files_vec.size() - 1].second);
            BOOST_LOG_TRIVIAL(info) << "delete log file over " << LOG_FILES_MAX_NUM << ", filename: "<< files_vec[files_vec.size() - 1].second;
            try {
-               boost::filesystem::remove(full_path);
+               std::filesystem::remove(full_path);
            }
            catch (const std::exception& ex) {
                BOOST_LOG_TRIVIAL(error) << "failed to delete log file: "<< files_vec[files_vec.size() - 1].second << ". Error: " << ex.what();
@@ -1101,14 +1102,14 @@ void TroubleshootDialog::ClearLogs()
 
 void TroubleshootDialog::UpdateLogsStorage()
 {
-    boost::filesystem::path logs_path = boost::filesystem::path(Slic3r::data_dir()) / "log";
+    std::filesystem::path logs_path = std::filesystem::path(Slic3r::data_dir()) / "log";
     
     uintmax_t total_bytes = 0;
     int file_count = 0;
-    if (boost::filesystem::exists(logs_path) && boost::filesystem::is_directory(logs_path)) {
-        for (const auto& entry : boost::filesystem::recursive_directory_iterator(logs_path)) {
-            if (boost::filesystem::is_regular_file(entry.path())){
-                total_bytes += boost::filesystem::file_size(entry.path());
+    if (std::filesystem::exists(logs_path) && std::filesystem::is_directory(logs_path)) {
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(logs_path)) {
+            if (std::filesystem::is_regular_file(entry.path())){
+                total_bytes += std::filesystem::file_size(entry.path());
                 file_count++;
             }
         }

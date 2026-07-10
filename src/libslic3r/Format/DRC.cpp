@@ -1,6 +1,7 @@
 #include <string>
 #include <utility>
 #include <cstring>
+#include <filesystem>
 
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/nowide/cstdio.hpp>
@@ -26,7 +27,7 @@ namespace Slic3r {
 bool load_drc(const char *path, TriangleMesh *meshptr)
 {
     try {
-        boost::iostreams::mapped_file_source file{boost::filesystem::path{path}};
+        boost::iostreams::mapped_file_source file{std::filesystem::path{path}.string()};
 
         DecoderBuffer buffer;
         buffer.Init(file.data(), file.size());

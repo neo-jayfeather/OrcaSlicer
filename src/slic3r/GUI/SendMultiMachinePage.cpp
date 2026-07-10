@@ -471,7 +471,7 @@ PrintParams SendMultiMachinePage::request_params(MachineObject* obj)
     std::string temp_file = Slic3r::resources_dir() + "/check_access_code.txt";
     auto check_access_code_path = temp_file.c_str();
     BOOST_LOG_TRIVIAL(trace) << "sned_job: check_access_code_path = " << check_access_code_path;
-    job_data._temp_path = fs::path(check_access_code_path);
+    job_data._temp_path = std::filesystem::path(check_access_code_path);
 
     int curr_plate_idx;
     if (job_data.plate_idx >= 0)
@@ -1580,7 +1580,7 @@ void SendMultiMachinePage::set_default()
         if (filename.empty()) filename = _L("Untitled");
     }
 
-    fs::path filename_path(filename.c_str());
+    std::filesystem::path filename_path(filename.ToStdString());
     std::string file_name = filename_path.filename().string();
     if (from_u8(file_name).find(_L("Untitled")) != wxString::npos) {
         PartPlate* part_plate = m_plater->get_partplate_list().get_plate(m_print_plate_idx);

@@ -9,8 +9,6 @@
 
 #include <wx/display.h>
 
-namespace fs = boost::filesystem;
-
 namespace Slic3r { namespace GUI {
 
 // CMGUO
@@ -90,10 +88,10 @@ MarkdownTip::~MarkdownTip() { delete _timer; }
 void MarkdownTip::LoadStyle()
 {
     _language = GUI::into_u8(GUI::wxGetApp().current_language_code());
-    fs::path ph(data_dir());
+    std::filesystem::path ph(data_dir());
     ph /= "resources/tooltip/common/styled.html";
     _data_dir = true;
-    if (!fs::exists(ph)) {
+    if (!std::filesystem::exists(ph)) {
         ph = resources_dir();
         ph /= "tooltip/styled.html";
         _data_dir = false;
@@ -159,7 +157,7 @@ bool MarkdownTip::ShowTip(wxPoint pos, std::string const &tip, std::string const
 
 std::string MarkdownTip::LoadTip(std::string const &tip, std::string const &tooltip)
 {
-    fs::path ph;
+    std::filesystem::path ph;
     wxString file;
     wxFile   f;
     if (_data_dir) {

@@ -25,7 +25,6 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/nowide/iostream.hpp>
 
@@ -301,7 +300,7 @@ Model Model::read_from_file(const std::string&                                  
                     objFn(in_out);
                 }
             } /*else if (obj_info.has_uv_png && obj_info.uvs.size() > 0) {
-                boost::filesystem::path full_path(input_file);
+                std::filesystem::path full_path(input_file);
                 std::string             obj_directory = full_path.parent_path().string();
                 obj_info.obj_dircetory = obj_directory;
                 result = false;
@@ -784,7 +783,7 @@ void Model::convert_multipart_object(unsigned int max_extruders)
 
     ModelObject* object = new ModelObject(this);
     object->input_file = this->objects.front()->input_file;
-    object->name = boost::filesystem::path(this->objects.front()->input_file).stem().string();
+    object->name = std::filesystem::path(this->objects.front()->input_file).stem().string();
     //FIXME copy the config etc?
 
     unsigned int extruder_counter = 0;
@@ -960,7 +959,7 @@ std::string Model::get_backup_path()
     if (backup_path.empty())
     {
         auto pid = get_current_pid();
-        boost::filesystem::path parent_path(temporary_dir());
+        std::filesystem::path parent_path(temporary_dir());
         std::time_t t = std::time(0);
         std::tm* now_time = std::localtime(&t);
         std::stringstream buf;
@@ -971,21 +970,21 @@ std::string Model::get_backup_path()
 
         backup_path = parent_path.string() + buf.str();
         BOOST_LOG_TRIVIAL(info) << boost::format("model %1%, id %2%, backup_path empty, set to %3%")%this%this->id().id%backup_path;
-        boost::filesystem::path temp_path(backup_path);
-        if (boost::filesystem::exists(temp_path))
+        std::filesystem::path temp_path(backup_path);
+        if (std::filesystem::exists(temp_path))
         {
             BOOST_LOG_TRIVIAL(info) << boost::format("model %1%, id %2%, remove previous %3%")%this%this->id().id%backup_path;
-            boost::filesystem::remove_all(temp_path);
+            std::filesystem::remove_all(temp_path);
         }
     }
-    boost::filesystem::path temp_path(backup_path);
+    std::filesystem::path temp_path(backup_path);
     try {
-        if (!boost::filesystem::exists(temp_path))
+        if (!std::filesystem::exists(temp_path))
         {
             BOOST_LOG_TRIVIAL(info) << "create /3D/Objects in " << temp_path;
-            boost::filesystem::create_directories(backup_path + "/3D/Objects");
+            std::filesystem::create_directories(backup_path + "/3D/Objects");
             BOOST_LOG_TRIVIAL(info) << "create /Metadata in " << temp_path;
-            boost::filesystem::create_directories(backup_path + "/Metadata");
+            std::filesystem::create_directories(backup_path + "/Metadata");
             BOOST_LOG_TRIVIAL(info) << "create /lock.txt in " << temp_path;
             save_string_file(backup_path + "/lock.txt",
                 boost::lexical_cast<std::string>(get_current_pid()));
@@ -1000,11 +999,11 @@ std::string Model::get_backup_path()
 void Model::remove_backup_path_if_exist()
 {
     if (!backup_path.empty()) {
-        boost::filesystem::path temp_path(backup_path);
-        if (boost::filesystem::exists(temp_path))
+        std::filesystem::path temp_path(backup_path);
+        if (std::filesystem::exists(temp_path))
         {
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("model %1%, id %2% remove backup_path %3%")%this%this->id().id%backup_path;
-            boost::filesystem::remove_all(temp_path);
+            std::filesystem::remove_all(temp_path);
         }
 	backup_path.clear();
     }
@@ -1014,9 +1013,9 @@ std::string Model::get_backup_path(const std::string &sub_path)
 {
     auto path = get_backup_path() + "/" + sub_path;
     try {
-        if (!boost::filesystem::exists(path)) {
+        if (!std::filesystem::exists(path)) {
             BOOST_LOG_TRIVIAL(info) << "create missing sub_path" << path;
-            boost::filesystem::create_directories(path);
+            std::filesystem::create_directories(path);
         }
     } catch (std::exception &ex) {
         BOOST_LOG_TRIVIAL(error) << "Failed to create missing sub_path" << path << ": " << ex.what();
@@ -1069,7 +1068,7 @@ void Model::set_need_backup()
 
 std::string Model::propose_export_file_name_and_path(const std::string &new_extension) const
 {
-    return boost::filesystem::path(this->propose_export_file_name_and_path()).replace_extension(new_extension).string();
+    return std::filesystem::path(this->propose_export_file_name_and_path()).replace_extension(new_extension).string();
 }
 
 bool Model::is_fdm_support_painted() const
@@ -2383,7 +2382,7 @@ void ModelObject::print_info() const
 {
     using namespace std;
     cout << fixed;
-    boost::nowide::cout << "[" << boost::filesystem::path(this->input_file).filename().string() << "]" << endl;
+    boost::nowide::cout << "[" << std::filesystem::path(this->input_file).filename().string() << "]" << endl;
 
     TriangleMesh mesh = this->raw_mesh();
     BoundingBoxf3 bb = mesh.bounding_box();
@@ -2432,8 +2431,8 @@ std::string ModelObject::get_export_filename() const
         else
         {
             // Replace file name in input_file with name, but keep the path and file extension.
-            ret = (boost::filesystem::path(name).parent_path().empty()) ?
-                (boost::filesystem::path(ret).parent_path() / name).make_preferred().string() : name;
+            ret = (std::filesystem::path(name).parent_path().empty()) ?
+                (std::filesystem::path(ret).parent_path() / name).make_preferred().string() : name;
         }
     }
 
